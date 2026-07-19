@@ -1380,8 +1380,8 @@ function getFutureTiming() {
           : t("noSignal");
 
       $("resultTitle").textContent = result.confidence
-        ? `${badge.textContent} · ${result.confidence}`
-        : badge.textContent;
+  ? `Уверенность: ${result.confidence}`
+  : "";
 
       $("resultSummary").textContent = result.summary || "—";
       $("resultAsset").textContent = result.asset || state.asset;
