@@ -1,1074 +1,161 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Pulse Signal</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <style>
-    :root {
-      --bg: #090909;
-      --panel: #141414;
-      --panel-2: #1a1a1a;
-      --line: #303030;
-      --text: #f4f4f4;
-      --muted: #929292;
-      --green: #2bd879;
-      --red: #ff575d;
-      --blue: #58a6ff;
-      --silver: #d9d9d9;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 95% 0%, #152033 0%, transparent 31%),
-        radial-gradient(circle at 0% 40%, #111 0%, transparent 35%),
-        var(--bg);
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, Arial, sans-serif;
-    }
-
-    button, select, input { font: inherit; }
-    button { -webkit-tap-highlight-color: transparent; }
-
-    .app {
-      width: min(100%, 650px);
-      margin: 0 auto;
-      padding: 18px 16px 106px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 19px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .logo {
-      display: grid;
-      width: 42px;
-      height: 42px;
-      flex: 0 0 42px;
-      place-items: center;
-      border: 1px solid #515151;
-      border-radius: 14px;
-      color: white;
-      background: linear-gradient(145deg, #2a2a2a, #101010);
-      font-size: 22px;
-      box-shadow: inset 0 1px 0 #454545;
-    }
-
-    .brand-title {
-      overflow: hidden;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -.3px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .brand-subtitle {
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.3px;
-    }
-
-    .online {
-      flex: 0 0 auto;
-      padding: 8px 10px;
-      border: 1px solid #313131;
-      border-radius: 99px;
-      color: #d9d9d9;
-      background: rgba(15,15,15,.55);
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      margin-right: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 12px var(--green);
-    }
-
-    .page { display: none; }
-    .page.active { display: block; animation: enter .28s ease both; }
-
-    @keyframes enter {
-      from { opacity: 0; transform: translateY(7px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      background: linear-gradient(145deg, #191919, #111);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 20px;
-    }
-
-    .hero-chart {
-      position: absolute;
-      right: -35px;
-      bottom: -24px;
-      width: 230px;
-      opacity: .19;
-      pointer-events: none;
-    }
-
-    .spark-line {
-      fill: none;
-      stroke: var(--blue);
-      stroke-width: 2.2;
-      stroke-dasharray: 460;
-      stroke-dashoffset: 460;
-      animation: draw 4s ease-in-out infinite alternate;
-    }
-
-    @keyframes draw {
-      to { stroke-dashoffset: 0; }
-    }
-
-    .eyebrow {
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 1.4px;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      position: relative;
-      margin: 8px 0 7px;
-      font-size: 25px;
-      letter-spacing: -.7px;
-    }
-
-    .hero p {
-      position: relative;
-      max-width: 310px;
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .stats {
-      position: relative;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 18px;
-    }
-
-    .stat {
-      padding: 12px 10px;
-      border: 1px solid #303030;
-      border-radius: 13px;
-      background: rgba(10,10,10,.55);
-    }
-
-    .stat b {
-      display: block;
-      overflow: hidden;
-      font-size: 18px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .stat span {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 10px;
-    }
-
-    .section-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 25px 2px 12px;
-      font-size: 16px;
-      font-weight: 800;
-    }
-
-    .section-title small {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .setup-card, .form-card, .profile-card {
-      padding: 17px;
-    }
-
-    label {
-      display: block;
-      margin: 18px 0 8px;
-      color: #dedede;
-      font-size: 12px;
-      font-weight: 750;
-    }
-
-    label:first-child { margin-top: 0; }
-
-    select, .search-box {
-      width: 100%;
-      min-height: 48px;
-      padding: 0 13px;
-      border: 1px solid #363636;
-      outline: none;
-      border-radius: 13px;
-      color: var(--text);
-      background: #101010;
-      font-size: 14px;
-    }
-
-    .region-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9px;
-    }
-
-    .clock-box {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      min-height: 48px;
-      padding: 8px 13px;
-      border: 1px solid #363636;
-      border-radius: 13px;
-      background: #101010;
-    }
-
-    .clock-box b {
-      font-size: 17px;
-      letter-spacing: .7px;
-    }
-
-    .clock-box span {
-      margin-top: 2px;
-      overflow: hidden;
-      color: var(--muted);
-      font-size: 10px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .search-box {
-      margin-bottom: 9px;
-    }
-
-    .asset-select { min-height: 54px; font-size: 17px; font-weight: 750; }
-
-    .time-grid, .mode-grid, .entry-grid {
-      display: grid;
-      gap: 8px;
-    }
-
-    .time-grid { grid-template-columns: repeat(3, 1fr); }
-    .mode-grid { grid-template-columns: repeat(3, 1fr); }
-    .entry-grid { grid-template-columns: repeat(2, 1fr); }
-
-    .chip, .mode-btn, .entry-chip, .step-btn {
-      min-height: 44px;
-      border: 1px solid #343434;
-      border-radius: 11px;
-      color: #cfcfcf;
-      background: #111;
-      font-size: 12px;
-    }
-
-    .chip.selected, .mode-btn.selected, .entry-chip.selected {
-      border-color: var(--blue);
-      color: #fff;
-      background: #14263a;
-      box-shadow: inset 0 0 0 1px rgba(88,166,255,.12);
-    }
-
-    .live-entry {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      padding: 14px;
-      border: 1px solid #343434;
-      border-radius: 13px;
-      background: #101010;
-    }
-
-    .live-entry span {
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .live-entry b {
-      color: var(--silver);
-      font-size: 17px;
-      letter-spacing: .6px;
-    }
-
-    .custom-editor {
-      display: none;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .custom-editor.show { display: grid; animation: enter .22s ease both; }
-
-    .time-unit {
-      display: grid;
-      gap: 7px;
-      padding: 9px;
-      border: 1px solid #343434;
-      border-radius: 13px;
-      background: #101010;
-      text-align: center;
-    }
-
-    .time-unit small { color: var(--muted); font-size: 10px; }
-    .time-unit b { font-size: 19px; letter-spacing: 1px; }
-
-    .step-btn {
-      min-height: 29px;
-      color: #dedede;
-      font-size: 17px;
-    }
-
-    .primary-btn {
-      width: 100%;
-      min-height: 56px;
-      margin-top: 18px;
-      border: 0;
-      border-radius: 15px;
-      color: #07150c;
-      background: linear-gradient(135deg, #38e784, #1caf60);
-      box-shadow: 0 10px 27px rgba(43,216,121,.2);
-      font-size: 16px;
-      font-weight: 850;
-    }
-
-    .primary-btn:disabled { opacity: .7; }
-
-    .analysis {
-      display: none;
-      margin-top: 15px;
-      padding: 14px;
-      border: 1px solid #29435a;
-      border-radius: 14px;
-      color: #c6e1fb;
-      background: #101923;
-      font-size: 12px;
-    }
-
-    .analysis.show { display: block; animation: enter .22s ease both; }
-
-    .progress {
-      height: 4px;
-      margin-top: 11px;
-      overflow: hidden;
-      border-radius: 99px;
-      background: #243444;
-    }
-
-    .progress::after {
-      display: block;
-      width: 38%;
-      height: 100%;
-      border-radius: 99px;
-      background: var(--blue);
-      content: "";
-      animation: load 1.1s infinite ease-in-out;
-    }
-
-    @keyframes load {
-      from { transform: translateX(-120%); }
-      to { transform: translateX(310%); }
-    }
-
-    .result {
-      display: none;
-      margin-top: 15px;
-      padding: 18px;
-      border: 1px solid #424242;
-      border-radius: 18px;
-      background: linear-gradient(145deg, #1b1b1b, #101010);
-    }
-
-    .result.show { display: block; animation: result .4s cubic-bezier(.2,.8,.2,1) both; }
-
-    @keyframes result {
-      from { opacity: 0; transform: scale(.96) translateY(8px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    .result-top {
-      display: flex;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 1.2px;
-    }
-
-    .result-pair {
-      margin-top: 17px;
-      font-size: 28px;
-      font-weight: 850;
-      letter-spacing: -.5px;
-    }
-
-    .direction {
-      margin-top: 7px;
-      font-size: 18px;
-      font-weight: 850;
-    }
-
-    .buy { color: var(--green); }
-    .sell { color: var(--red); }
-
-    .result-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 17px;
-    }
-
-    .result-item {
-      padding: 12px;
-      border: 1px solid #303030;
-      border-radius: 12px;
-      background: #101010;
-    }
-
-    .result-item span {
-      display: block;
-      color: var(--muted);
-      font-size: 10px;
-    }
-
-    .result-item b {
-      display: block;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-
-    .signal-list {
-      display: grid;
-      gap: 9px;
-    }
-
-    .signal-card {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      padding: 15px;
-      border: 1px solid #303030;
-      border-radius: 16px;
-      background: var(--panel);
-    }
-
-    .pair { font-size: 16px; font-weight: 800; }
-    .meta { margin-top: 6px; color: var(--muted); font-size: 11px; }
-    .right { color: var(--muted); font-size: 11px; text-align: right; }
-
-    .disclaimer {
-      margin: 17px 3px 0;
-      color: #747474;
-      font-size: 10px;
-      line-height: 1.6;
-    }
-
-    .profile-name {
-      margin: 8px 0 4px;
-      font-size: 25px;
-      font-weight: 850;
-    }
-
-    .profile-text { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-
-    .bottom-nav {
-      position: fixed;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      z-index: 10;
-      display: flex;
-      justify-content: center;
-      padding: 10px 13px calc(10px + env(safe-area-inset-bottom));
-      border-top: 1px solid #252525;
-      background: rgba(9,9,9,.94);
-      backdrop-filter: blur(15px);
-    }
-
-    .nav-inner {
-      display: grid;
-      width: min(100%, 650px);
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    .nav-btn {
-      border: 0;
-      color: #787878;
-      background: transparent;
-      font-size: 11px;
-    }
-
-    .nav-btn span {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 18px;
-    }
-
-    .nav-btn.active { color: #fff; }
+    :root{
+      --bg:#07090d; --panel:rgba(21,24,31,.72); --panel2:rgba(255,255,255,.045);
+      --line:rgba(255,255,255,.11); --text:#f7f8fa; --muted:#98a0af;
+      --blue:#61aaff; --green:#38d982; --red:#ff5b66;
+    }
+    *{box-sizing:border-box} body{
+      margin:0; color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:radial-gradient(circle at 85% 0%,#182c49 0,transparent 34%),radial-gradient(circle at 0% 55%,#10251f 0,transparent 35%),var(--bg);
+    }
+    .app{max-width:650px;margin:auto;padding:20px 16px 100px}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
+    .brand{display:flex;align-items:center;gap:12px}.logo{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.03));border:1px solid var(--line);font-size:25px}
+    .brand b{display:block;font-size:20px}.brand small{display:block;color:var(--muted);margin-top:3px;font-size:10px;letter-spacing:1.5px}
+    .online{padding:9px 12px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.2);font-size:11px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;box-shadow:0 0 13px var(--green)}
+    .page{display:none;animation:fade .28s ease}.page.active{display:block}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .title-row{display:flex;justify-content:space-between;align-items:center;margin:5px 2px 18px}.title-row h1{margin:0;font-size:25px;letter-spacing:-.5px}.zone{color:var(--muted);font-size:13px}
+    .glass{padding:16px;border:1px solid var(--line);border-radius:21px;background:var(--panel);backdrop-filter:blur(18px);box-shadow:0 13px 40px rgba(0,0,0,.18);margin-bottom:14px}
+    label,.label{display:block;margin:0 0 9px;font-size:13px;font-weight:750;color:#e6e8ee}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    select,input{width:100%;border:1px solid var(--line);background:rgba(0,0,0,.22);color:var(--text);border-radius:14px;padding:15px;font:inherit;font-size:16px;outline:none}
+    input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(97,170,255,.12)}
+    .clock{height:100%;min-height:56px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.22)}
+    .clock b{display:block;font-size:21px;letter-spacing:1px}.clock small{display:block;color:var(--muted);margin-top:3px;font-size:11px}
+    .assets{margin-top:10px;display:none;max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#101319}.assets.show{display:block}.asset{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);font-weight:700}.asset:last-child{border:0}.asset:active{background:#1b3047}
+    .selected-asset{margin-top:10px;padding:15px;border:1px solid rgba(97,170,255,.4);border-radius:14px;background:rgba(43,102,162,.16);font-weight:800;font-size:18px}
+    .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.chip{border:1px solid var(--line);border-radius:14px;padding:13px 6px;color:#d8dce4;background:rgba(0,0,0,.18);font:inherit;font-size:13px}.chip.active{border-color:var(--blue);background:rgba(57,121,189,.25);color:#fff;box-shadow:inset 0 0 18px rgba(97,170,255,.08)}
+    .modes{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.modes .chip:last-child{grid-column:span 2}
+    .entry{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:15px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.2);color:var(--muted)}.entry b{color:var(--text);font-size:20px}
+    .main-btn{position:relative;overflow:hidden;width:100%;border:0;border-radius:16px;margin-top:17px;padding:17px;color:#041009;background:linear-gradient(135deg,#50f294,#20b96a);font:inherit;font-size:16px;font-weight:850;box-shadow:0 12px 30px rgba(38,218,125,.2)}.main-btn:active{transform:scale(.98)}.main-btn::after{content:"";position:absolute;top:-60%;left:-30%;width:25%;height:220%;transform:rotate(20deg);background:rgba(255,255,255,.36);animation:shine 3.8s infinite}@keyframes shine{0%,55%{left:-35%}75%,100%{left:125%}}
+    .loading{display:none;margin-top:13px;padding:14px;border:1px solid rgba(97,170,255,.28);border-radius:14px;background:rgba(35,80,124,.13);color:#cfe6ff;font-size:13px}.loading.show{display:block}.bar{height:4px;border-radius:9px;background:#20364a;margin-top:10px;overflow:hidden}.bar i{display:block;height:100%;width:35%;background:var(--blue);animation:scan 1s infinite ease-in-out}@keyframes scan{from{transform:translateX(-120%)}to{transform:translateX(330%)}}
+    .result{display:none;margin-top:15px;padding:17px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025));animation:fade .35s ease}.result.show{display:block}.result-top{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:1px}.pair{font-size:29px;font-weight:850;margin:17px 0 7px}.buy{color:var(--green)}.sell{color:var(--red)}.direction{font-weight:850;font-size:17px}.details{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:17px}.detail{padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(0,0,0,.16)}.detail small{display:block;color:var(--muted);font-size:11px}.detail b{display:block;margin-top:5px;font-size:14px}
+    .section-title{display:flex;justify-content:space-between;align-items:center;margin:24px 2px 11px;font-weight:800}.section-title small{font-weight:500;color:var(--muted)}
+    .signal{display:grid;grid-template-columns:1fr auto;gap:8px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);margin-bottom:9px}.signal b{font-size:16px}.signal small{display:block;color:var(--muted);margin-top:5px}.right{text-align:right;font-size:12px}.disclaimer{margin:16px 4px;color:#737b89;font-size:11px;line-height:1.55}
+    nav{position:fixed;bottom:0;left:0;right:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);background:rgba(7,9,13,.78);backdrop-filter:blur(22px)}.navin{max-width:650px;margin:auto;display:grid;grid-template-columns:repeat(3,1fr)}.nav{border:0;background:transparent;color:#78808d;padding:5px;font:inherit;font-size:11px}.nav span{display:block;font-size:20px;margin-bottom:4px}.nav.active{color:#fff}
   </style>
 </head>
-
 <body>
   <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">↗</div>
-        <div>
-          <div class="brand-title">Pulse Signal</div>
-          <div class="brand-subtitle">MARKET ANALYTICS</div>
-        </div>
-      </div>
-      <div class="online"><i class="dot"></i><span data-i18n="online">ONLINE</span></div>
+    <header class="top">
+      <div class="brand"><div class="logo">↗</div><div><b>Pulse Signal</b><small>MARKET ANALYTICS</small></div></div>
+      <div class="online"><i class="dot"></i><span data-i="online">ONLINE</span></div>
     </header>
 
-    <section id="signalsPage" class="page active">
-      <div class="card hero">
-        <svg class="hero-chart" viewBox="0 0 260 150">
-          <path class="spark-line" d="M0 130 L25 105 L47 118 L67 70 L95 90 L122 38 L147 74 L173 57 L196 15 L220 44 L260 5" />
-        </svg>
-        <div class="eyebrow" data-i18n="signals">СИГНАЛЫ</div>
-        <h1 data-i18n="lastActivity">Последняя активность</h1>
-        <p data-i18n="heroText">Выбирай инструмент, время и формат входа в разделе создания сигнала.</p>
-        <div class="stats">
-          <div class="stat"><b id="todayCount">0</b><span data-i18n="today">Сегодня</span></div>
-          <div class="stat"><b id="activeCount">0</b><span data-i18n="active">Активные</span></div>
-          <div class="stat"><b id="heroClock">--:--:--</b><span id="heroZone">UTC</span></div>
-        </div>
-      </div>
+    <section id="create" class="page active">
+      <div class="title-row"><h1 data-i="create">Создать сигнал</h1><span id="headerZone" class="zone"></span></div>
 
-      <div class="section-title">
-        <span data-i18n="recentSignals">Последние сигналы</span>
-        <small id="feedCount">0</small>
-      </div>
-      <div id="signalList" class="signal-list"></div>
-    </section>
-
-    <section id="createPage" class="page">
-      <div class="section-title" style="margin-top:0">
-        <span data-i18n="createSignal">Создать сигнал</span>
-        <small id="zoneTop">UTC</small>
-      </div>
-
-      <div class="card setup-card">
-        <label data-i18n="languageRegion">Язык и регион</label>
-        <div class="region-bar">
+      <div class="glass">
+        <label data-i="language">Язык и регион</label>
+        <div class="grid2">
           <select id="language">
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="pt">Português</option>
-            <option value="tr">Türkçe</option>
-            <option value="ar">العربية</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="id">Bahasa Indonesia</option>
-            <option value="hi">हिन्दी</option>
-            <option value="ja">日本語</option>
-            <option value="ko">한국어</option>
+            <option value="ru">Русский</option><option value="en">English</option>
+            <option value="es">Español</option><option value="pt">Português</option>
+            <option value="tr">Türkçe</option><option value="ar">العربية</option>
             <option value="zh">中文</option>
           </select>
-          <div class="clock-box">
-            <b id="liveClock">--:--:--</b>
-            <span id="timezoneName">UTC</span>
-          </div>
+          <div class="clock"><b id="clock">--:--:--</b><small id="region">--</small></div>
         </div>
       </div>
 
-      <div class="card form-card" style="margin-top:12px">
-        <label data-i18n="asset">Валютная пара / актив</label>
-        <input id="assetSearch" class="search-box" data-i18n-placeholder="searchAsset" placeholder="Поиск актива" />
-        <select id="pair" class="asset-select">
-          <optgroup label="Major Forex">
-            <option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option>
-            <option>USD/CHF</option><option>AUD/USD</option><option>USD/CAD</option><option>NZD/USD</option>
-          </optgroup>
-          <optgroup label="Minor Forex">
-            <option>EUR/GBP</option><option>EUR/JPY</option><option>EUR/CHF</option><option>EUR/AUD</option>
-            <option>EUR/CAD</option><option>EUR/NZD</option><option>GBP/JPY</option><option>GBP/CHF</option>
-            <option>GBP/AUD</option><option>GBP/CAD</option><option>GBP/NZD</option><option>AUD/JPY</option>
-            <option>AUD/CAD</option><option>AUD/CHF</option><option>AUD/NZD</option><option>CAD/JPY</option>
-            <option>CAD/CHF</option><option>CHF/JPY</option><option>NZD/JPY</option><option>NZD/CAD</option>
-            <option>NZD/CHF</option>
-          </optgroup>
-          <optgroup label="Exotic Forex">
-            <option>USD/TRY</option><option>USD/ZAR</option><option>USD/MXN</option><option>USD/BRL</option>
-            <option>USD/SGD</option><option>USD/HKD</option><option>USD/SEK</option><option>USD/NOK</option>
-            <option>USD/PLN</option><option>EUR/TRY</option><option>EUR/ZAR</option><option>GBP/TRY</option>
-          </optgroup>
-          <optgroup label="OTC">
-            <option>EUR/USD OTC</option><option>GBP/USD OTC</option><option>USD/JPY OTC</option>
-            <option>USD/CHF OTC</option><option>EUR/GBP OTC</option><option>EUR/JPY OTC</option>
-            <option>GBP/JPY OTC</option><option>AUD/NZD OTC</option><option>CAD/JPY OTC</option>
-          </optgroup>
-          <optgroup label="Crypto & Metals">
-            <option>BTC/USD</option><option>ETH/USD</option><option>SOL/USD</option>
-            <option>XRP/USD</option><option>XAU/USD</option><option>XAG/USD</option>
-          </optgroup>
-        </select>
+      <div class="glass">
+        <label data-i="asset">Валютная пара / актив</label>
+        <input id="search" autocomplete="off" data-p="search" placeholder="Поиск актива">
+        <div id="assets" class="assets"></div>
+        <div id="selectedAsset" class="selected-asset">EUR/USD</div>
 
-        <label data-i18n="interval">Интервал</label>
-        <div class="time-grid">
-          <button class="chip" data-seconds="15">15 сек</button>
-          <button class="chip" data-seconds="30">30 сек</button>
-          <button class="chip selected" data-seconds="60">1 мин</button>
-          <button class="chip" data-seconds="180">3 мин</button>
-          <button class="chip" data-seconds="300">5 мин</button>
-          <button class="chip" data-seconds="900">15 мин</button>
+        <div style="height:20px"></div>
+        <span class="label" data-i="interval">Интервал</span>
+        <div id="intervals" class="chips"></div>
+
+        <div style="height:20px"></div>
+        <span class="label" data-i="entryMode">Формат времени входа</span>
+        <div class="modes">
+          <button class="chip mode active" data-mode="after" data-i="after">Через интервал</button>
+          <button class="chip mode" data-mode="nearest" data-i="nearest">Ближайшая точка</button>
+          <button class="chip mode" data-mode="exact" data-i="exact">Точное время</button>
         </div>
 
-        <label data-i18n="entryFormat">Формат времени входа</label>
-        <div class="mode-grid">
-          <button class="mode-btn selected" data-mode="delay" data-i18n="afterInterval">Через интервал</button>
-          <button class="mode-btn" data-mode="nearest" data-i18n="nearestPoint">Ближайшая точка</button>
-          <button class="mode-btn" data-mode="custom" data-i18n="exactTime">Точное время</button>
-        </div>
-
-        <div id="customEditor" class="custom-editor">
-          <div class="time-unit">
-            <button class="step-btn" data-unit="hour" data-step="1">+</button>
-            <b id="customHour">00</b>
-            <small data-i18n="hours">Часы</small>
-            <button class="step-btn" data-unit="hour" data-step="-1">−</button>
-          </div>
-          <div class="time-unit">
-            <button class="step-btn" data-unit="minute" data-step="1">+</button>
-            <b id="customMinute">00</b>
-            <small data-i18n="minutes">Минуты</small>
-            <button class="step-btn" data-unit="minute" data-step="-1">−</button>
-          </div>
-          <div class="time-unit">
-            <button class="step-btn" data-unit="second" data-step="5">+</button>
-            <b id="customSecond">00</b>
-            <small data-i18n="seconds">Секунды</small>
-            <button class="step-btn" data-unit="second" data-step="-5">−</button>
-          </div>
-        </div>
-
-        <div class="live-entry">
-          <span data-i18n="entryTime">Время входа</span>
-          <b id="entryPreview">--:--:--</b>
-        </div>
-
-        <button id="getSignal" class="primary-btn" data-i18n="getSignal">Получить сигнал</button>
-
-        <div id="analysis" class="analysis">
-          <span data-i18n="analysisText">Обработка выбранного инструмента…</span>
-          <div class="progress"></div>
-        </div>
+        <div class="entry"><span data-i="entry">Время входа</span><b id="entryTime">--:--:--</b></div>
+        <button id="get" class="main-btn" data-i="get">Получить сигнал</button>
+        <div id="loading" class="loading"><span data-i="processing">Обработка выбранного инструмента…</span><div class="bar"><i></i></div></div>
 
         <div id="result" class="result">
-          <div class="result-top">
-            <span data-i18n="newSignal">НОВЫЙ СИГНАЛ</span>
-            <span id="resultCreated">--:--:--</span>
-          </div>
-          <div id="resultPair" class="result-pair">EUR/USD</div>
+          <div class="result-top"><span data-i="newSignal">НОВЫЙ СИГНАЛ</span><span id="resultNow"></span></div>
+          <div id="resultPair" class="pair">EUR/USD</div>
           <div id="resultDirection" class="direction buy">BUY ↑</div>
-          <div class="result-grid">
-            <div class="result-item"><span data-i18n="entryTime">Время входа</span><b id="resultEntry">--:--:--</b></div>
-            <div class="result-item"><span data-i18n="interval">Интервал</span><b id="resultInterval">1 мин</b></div>
-            <div class="result-item"><span data-i18n="status">Статус</span><b data-i18n="active">Активен</b></div>
-            <div class="result-item"><span data-i18n="timezone">Часовой пояс</span><b id="resultZone">UTC</b></div>
+          <div class="details">
+            <div class="detail"><small data-i="entry">Время входа</small><b id="resultEntry"></b></div>
+            <div class="detail"><small data-i="interval">Интервал</small><b id="resultInterval"></b></div>
+            <div class="detail"><small data-i="status">Статус</small><b data-i="active">Активен</b></div>
+            <div class="detail"><small data-i="region">Регион</small><b id="resultZone"></b></div>
           </div>
         </div>
       </div>
-
-      <p class="disclaimer" data-i18n="disclaimer">
-        Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей.
-        Они не являются финансовой рекомендацией, гарантией результата или призывом к совершению сделок.
-        Трейдинг связан с риском потери средств.
-      </p>
+      <p class="disclaimer" data-i="risk">Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.</p>
     </section>
 
-    <section id="profilePage" class="page">
-      <div class="section-title" style="margin-top:0"><span data-i18n="profile">Профиль</span></div>
-      <div class="card profile-card">
-        <div class="eyebrow" data-i18n="account">АККАУНТ</div>
-        <div id="profileName" class="profile-name">Пользователь</div>
-        <p class="profile-text" data-i18n="profileText">История сигналов хранится локально на этом устройстве.</p>
-        <div class="stats">
-          <div class="stat"><b id="profileTotal">0</b><span data-i18n="allSignals">Всего сигналов</span></div>
-          <div class="stat"><b id="profileLanguage">RU</b><span data-i18n="language">Язык</span></div>
-          <div class="stat"><b id="profileZone">UTC</b><span data-i18n="timezone">Часовой пояс</span></div>
-        </div>
-      </div>
+    <section id="signals" class="page">
+      <div class="title-row"><h1 data-i="signals">Сигналы</h1><span id="today" class="zone"></span></div>
+      <div id="history"></div>
+    </section>
+
+    <section id="profile" class="page">
+      <div class="title-row"><h1 data-i="profile">Профиль</h1></div>
+      <div class="glass"><label data-i="saved">Настройки сохранены</label><div id="profileText" style="color:var(--muted);line-height:1.6"></div></div>
     </section>
   </main>
 
-  <nav class="bottom-nav">
-    <div class="nav-inner">
-      <button class="nav-btn active" data-page="signalsPage"><span>◫</span><i data-i18n="signals">Сигналы</i></button>
-      <button class="nav-btn" data-page="createPage"><span>＋</span><i data-i18n="create">Создать</i></button>
-      <button class="nav-btn" data-page="profilePage"><span>◉</span><i data-i18n="profile">Профиль</i></button>
-    </div>
-  </nav>
+  <nav><div class="navin">
+    <button class="nav" data-page="signals"><span>▣</span><i data-i="signals">Сигналы</i></button>
+    <button class="nav active" data-page="create"><span>＋</span><i data-i="create">Создать</i></button>
+    <button class="nav" data-page="profile"><span>◉</span><i data-i="profile">Профиль</i></button>
+  </div></nav>
 
-  <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-
-    const translations = {
-      ru: {
-        online: "ONLINE", signals: "Сигналы", lastActivity: "Последняя активность",
-        heroText: "Выбирай инструмент, время и формат входа в разделе создания сигнала.",
-        today: "Сегодня", active: "Активные", recentSignals: "Последние сигналы",
-        createSignal: "Создать сигнал", languageRegion: "Язык и регион",
-        asset: "Валютная пара / актив", searchAsset: "Поиск актива", interval: "Интервал",
-        entryFormat: "Формат времени входа", afterInterval: "Через интервал",
-        nearestPoint: "Ближайшая точка", exactTime: "Точное время",
-        hours: "Часы", minutes: "Минуты", seconds: "Секунды", entryTime: "Время входа",
-        getSignal: "Получить сигнал", analysisText: "Обработка выбранного инструмента…",
-        newSignal: "НОВЫЙ СИГНАЛ", status: "Статус", timezone: "Часовой пояс",
-        profile: "Профиль", account: "АККАУНТ", profileText: "История сигналов хранится локально на этом устройстве.",
-        allSignals: "Всего сигналов", language: "Язык", create: "Создать",
-        noSignals: "Сигналов пока нет", noSignalsText: "Создай первый сигнал во вкладке «Создать».",
-        closed: "Закрыт",
-        disclaimer: "Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией, гарантией результата или призывом к совершению сделок. Трейдинг связан с риском потери средств."
-      },
-      en: {
-        online: "ONLINE", signals: "Signals", lastActivity: "Latest activity",
-        heroText: "Choose an asset, time and entry format in the signal creation section.",
-        today: "Today", active: "Active", recentSignals: "Recent signals",
-        createSignal: "Create signal", languageRegion: "Language and region",
-        asset: "Currency pair / asset", searchAsset: "Search asset", interval: "Interval",
-        entryFormat: "Entry time format", afterInterval: "After interval",
-        nearestPoint: "Nearest point", exactTime: "Exact time",
-        hours: "Hours", minutes: "Minutes", seconds: "Seconds", entryTime: "Entry time",
-        getSignal: "Get signal", analysisText: "Processing selected asset…",
-        newSignal: "NEW SIGNAL", status: "Status", timezone: "Timezone",
-        profile: "Profile", account: "ACCOUNT", profileText: "Signal history is stored locally on this device.",
-        allSignals: "Total signals", language: "Language", create: "Create",
-        noSignals: "No signals yet", noSignalsText: "Create your first signal in the Create tab.",
-        closed: "Closed",
-        disclaimer: "Signals are provided for personal information and entertainment only. They are not financial advice, a guarantee of results, or an invitation to trade. Trading involves a risk of losing funds."
-      }
-    };
-
-    const fallback = translations.en;
-    const storageKey = "pulseSignalHistoryV2";
-    const languageStorage = "pulseSignalLanguage";
-    const userLanguage = tg?.initDataUnsafe?.user?.language_code || navigator.language.slice(0, 2);
-    let language = localStorage.getItem(languageStorage) || (translations[userLanguage] ? userLanguage : "en");
-    let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-    let selectedSeconds = 60;
-    let entryMode = "delay";
-    let history = JSON.parse(localStorage.getItem(storageKey) || "[]");
-
-    const custom = { hour: 0, minute: 0, second: 0 };
-
-    function text(key) {
-      return (translations[language] || fallback)[key] || fallback[key] || key;
-    }
-
-    function formatTime(date) {
-      return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-GB", {
-        timeZone: timezone,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      }).format(date);
-    }
-
-    function formatZone() {
-      try {
-        const now = new Date();
-        const parts = new Intl.DateTimeFormat("en-US", {
-          timeZone: timezone,
-          timeZoneName: "shortOffset"
-        }).formatToParts(now);
-        return parts.find(part => part.type === "timeZoneName")?.value || timezone;
-      } catch {
-        return timezone;
-      }
-    }
-
-    function updateTranslations() {
-      document.documentElement.lang = language;
-      document.querySelectorAll("[data-i18n]").forEach(node => {
-        node.textContent = text(node.dataset.i18n);
-      });
-
-      document.querySelectorAll("[data-i18n-placeholder]").forEach(node => {
-        node.placeholder = text(node.dataset.i18nPlaceholder);
-      });
-
-      document.getElementById("profileLanguage").textContent = language.toUpperCase();
-      document.getElementById("language").value = language;
-      renderHistory();
-    }
-
-    function getCustomDate() {
-      const now = new Date();
-      const date = new Date(now);
-      date.setHours(custom.hour, custom.minute, custom.second, 0);
-
-      if (date.getTime() <= now.getTime()) {
-        date.setDate(date.getDate() + 1);
-      }
-
-      return date;
-    }
-
-    function getEntryDate() {
-      const now = new Date();
-
-      if (entryMode === "custom") return getCustomDate();
-
-      if (entryMode === "nearest") {
-        const next = Math.ceil(now.getTime() / (selectedSeconds * 1000)) * (selectedSeconds * 1000);
-        return new Date(next);
-      }
-
-      return new Date(now.getTime() + selectedSeconds * 1000);
-    }
-
-    function intervalLabel() {
-      const labels = {
-        15: "15 сек", 30: "30 сек", 60: "1 мин",
-        180: "3 мин", 300: "5 мин", 900: "15 мин"
-      };
-
-      return labels[selectedSeconds];
-    }
-
-    function updateClock() {
-      const now = new Date();
-      const zone = formatZone();
-
-      document.getElementById("liveClock").textContent = formatTime(now);
-      document.getElementById("heroClock").textContent = formatTime(now);
-      document.getElementById("entryPreview").textContent = formatTime(getEntryDate());
-      document.getElementById("timezoneName").textContent = timezone;
-      document.getElementById("heroZone").textContent = zone;
-      document.getElementById("zoneTop").textContent = zone;
-      document.getElementById("resultZone").textContent = zone;
-      document.getElementById("profileZone").textContent = zone;
-    }
-
-    function setCustomFromNow() {
-      const now = new Date();
-      custom.hour = now.getHours();
-      custom.minute = now.getMinutes();
-      custom.second = now.getSeconds();
-      updateCustomEditor();
-    }
-
-    function updateCustomEditor() {
-      document.getElementById("customHour").textContent = String(custom.hour).padStart(2, "0");
-      document.getElementById("customMinute").textContent = String(custom.minute).padStart(2, "0");
-      document.getElementById("customSecond").textContent = String(custom.second).padStart(2, "0");
-    }
-
-    function itemStatus(item) {
-      return Date.now() < item.expiresAt ? text("active") : text("closed");
-    }
-
-    function renderHistory() {
-      const list = document.getElementById("signalList");
-      const active = history.filter(item => Date.now() < item.expiresAt).length;
-
-      document.getElementById("todayCount").textContent = history.length;
-      document.getElementById("activeCount").textContent = active;
-      document.getElementById("profileTotal").textContent = history.length;
-      document.getElementById("feedCount").textContent = history.length;
-
-      if (!history.length) {
-        list.innerHTML = `
-          <div class="signal-card">
-            <div>
-              <div class="pair">${text("noSignals")}</div>
-              <div class="meta">${text("noSignalsText")}</div>
-            </div>
-            <div class="right">—</div>
-          </div>`;
-        return;
-      }
-
-      list.innerHTML = history.slice(0, 12).map(item => {
-        const isBuy = item.direction === "BUY";
-        return `
-          <div class="signal-card">
-            <div>
-              <div class="pair">${item.pair}</div>
-              <div class="meta">${text("entryTime")}: ${item.entry} · ${item.interval}</div>
-            </div>
-            <div class="right">
-              <div class="${isBuy ? "buy" : "sell"}" style="font-weight:850;font-size:13px">
-                ${isBuy ? "BUY ↑" : "SELL ↓"}
-              </div>
-              <div style="margin-top:7px">${itemStatus(item)}</div>
-            </div>
-          </div>`;
-      }).join("");
-    }
-
-    document.getElementById("language").addEventListener("change", event => {
-      language = event.target.value;
-      localStorage.setItem(languageStorage, language);
-      updateTranslations();
-      updateClock();
-    });
-
-    document.getElementById("assetSearch").addEventListener("input", event => {
-      const query = event.target.value.toLowerCase().trim();
-      const select = document.getElementById("pair");
-
-      [...select.querySelectorAll("option")].forEach(option => {
-        option.hidden = query && !option.textContent.toLowerCase().includes(query);
-      });
-    });
-
-    document.querySelectorAll(".chip").forEach(button => {
-      button.addEventListener("click", () => {
-        document.querySelectorAll(".chip").forEach(item => item.classList.remove("selected"));
-        button.classList.add("selected");
-        selectedSeconds = Number(button.dataset.seconds);
-        updateClock();
-      });
-    });
-
-    document.querySelectorAll(".mode-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        document.querySelectorAll(".mode-btn").forEach(item => item.classList.remove("selected"));
-        button.classList.add("selected");
-        entryMode = button.dataset.mode;
-
-        const editor = document.getElementById("customEditor");
-        editor.classList.toggle("show", entryMode === "custom");
-
-        if (entryMode === "custom") setCustomFromNow();
-        updateClock();
-      });
-    });
-
-    document.querySelectorAll(".step-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        const unit = button.dataset.unit;
-        const step = Number(button.dataset.step);
-
-        if (unit === "hour") custom.hour = (custom.hour + step + 24) % 24;
-        if (unit === "minute") custom.minute = (custom.minute + step + 60) % 60;
-        if (unit === "second") custom.second = (custom.second + step + 60) % 60;
-
-        updateCustomEditor();
-        updateClock();
-
-        if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-      });
-    });
-
-    document.getElementById("getSignal").addEventListener("click", () => {
-      const button = document.getElementById("getSignal");
-      const analysis = document.getElementById("analysis");
-      const result = document.getElementById("result");
-
-      button.disabled = true;
-      button.textContent = text("analysisText");
-      analysis.classList.add("show");
-      result.classList.remove("show");
-
-      setTimeout(() => {
-        const pair = document.getElementById("pair").value;
-        const direction = Math.random() >= .5 ? "BUY" : "SELL";
-        const entryDate = getEntryDate();
-        const entry = formatTime(entryDate);
-        const expiresAt = entryDate.getTime() + selectedSeconds * 1000;
-
-        document.getElementById("resultCreated").textContent = formatTime(new Date());
-        document.getElementById("resultPair").textContent = pair;
-        document.getElementById("resultEntry").textContent = entry;
-        document.getElementById("resultInterval").textContent = intervalLabel();
-
-        const directionNode = document.getElementById("resultDirection");
-        directionNode.textContent = direction === "BUY" ? "BUY ↑" : "SELL ↓";
-        directionNode.className = `direction ${direction === "BUY" ? "buy" : "sell"}`;
-
-        history.unshift({
-          pair,
-          direction,
-          entry,
-          interval: intervalLabel(),
-          expiresAt
-        });
-
-        localStorage.setItem(storageKey, JSON.stringify(history));
-        analysis.classList.remove("show");
-        result.classList.add("show");
-        button.disabled = false;
-        button.textContent = text("getSignal");
-
-        renderHistory();
-
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      }, 2600);
-    });
-
-    document.querySelectorAll(".nav-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        document.querySelectorAll(".nav-btn").forEach(item => item.classList.remove("active"));
-        document.querySelectorAll(".page").forEach(item => item.classList.remove("active"));
-
-        button.classList.add("active");
-        document.getElementById(button.dataset.page).classList.add("active");
-
-        if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-      });
-    });
-
-    const telegramName = tg?.initDataUnsafe?.user?.first_name;
-    if (telegramName) document.getElementById("profileName").textContent = telegramName;
-
-    setCustomFromNow();
-    updateTranslations();
-    updateClock();
-    renderHistory();
-    setInterval(() => {
-      updateClock();
-      renderHistory();
-    }, 1000);
-  </script>
+<script>
+const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand()}
+const assets=["EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","NZD/USD","EUR/GBP","EUR/JPY","EUR/CHF","EUR/AUD","EUR/CAD","GBP/JPY","GBP/CHF","GBP/AUD","AUD/JPY","AUD/CAD","CAD/JPY","CHF/JPY","USD/TRY","USD/ZAR","USD/MXN","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","EUR/GBP OTC","GBP/JPY OTC","BTC/USD","ETH/USD","SOL/USD","XRP/USD","XAU/USD","XAG/USD"];
+const i18n={
+ru:{online:"ОНЛАЙН",create:"Создать сигнал",language:"Язык и регион",asset:"Валютная пара / актив",search:"Поиск актива",interval:"Интервал",entryMode:"Формат времени входа",after:"Через интервал",nearest:"Ближайшая точка",exact:"Точное время",entry:"Время входа",get:"Получить сигнал",processing:"Обработка выбранного инструмента…",newSignal:"НОВЫЙ СИГНАЛ",status:"Статус",active:"Активен",region:"Регион",risk:"Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.",signals:"Сигналы",profile:"Профиль",saved:"Настройки сохранены",noSignals:"Сигналов пока нет"},
+en:{online:"ONLINE",create:"Create signal",language:"Language and region",asset:"Currency pair / asset",search:"Search asset",interval:"Interval",entryMode:"Entry time format",after:"After interval",nearest:"Nearest point",exact:"Exact time",entry:"Entry time",get:"Get signal",processing:"Processing selected asset…",newSignal:"NEW SIGNAL",status:"Status",active:"Active",region:"Region",risk:"Signals are provided only for personal information and entertainment. They are not financial advice or a guarantee of results.",signals:"Signals",profile:"Profile",saved:"Settings saved",noSignals:"No signals yet"},
+es:{online:"EN LÍNEA",create:"Crear señal",language:"Idioma y región",asset:"Par de divisas / activo",search:"Buscar activo",interval:"Intervalo",entryMode:"Formato de entrada",after:"Después del intervalo",nearest:"Punto más cercano",exact:"Hora exacta",entry:"Hora de entrada",get:"Obtener señal",processing:"Procesando activo…",newSignal:"NUEVA SEÑAL",status:"Estado",active:"Activo",region:"Región",risk:"Solo para información personal y entretenimiento. No es asesoramiento financiero.",signals:"Señales",profile:"Perfil",saved:"Ajustes guardados",noSignals:"No hay señales"},
+pt:{online:"ONLINE",create:"Criar sinal",language:"Idioma e região",asset:"Par de moedas / ativo",search:"Buscar ativo",interval:"Intervalo",entryMode:"Formato de entrada",after:"Após o intervalo",nearest:"Ponto mais próximo",exact:"Hora exata",entry:"Hora de entrada",get:"Obter sinal",processing:"Processando ativo…",newSignal:"NOVO SINAL",status:"Status",active:"Ativo",region:"Região",risk:"Apenas para informação pessoal e entretenimento. Não é aconselhamento financeiro.",signals:"Sinais",profile:"Perfil",saved:"Configurações salvas",noSignals:"Sem sinais"},
+tr:{online:"ÇEVRİMİÇİ",create:"Sinyal oluştur",language:"Dil ve bölge",asset:"Döviz çifti / varlık",search:"Varlık ara",interval:"Aralık",entryMode:"Giriş zamanı biçimi",after:"Aralıktan sonra",nearest:"En yakın nokta",exact:"Tam zaman",entry:"Giriş zamanı",get:"Sinyal al",processing:"Varlık işleniyor…",newSignal:"YENİ SİNYAL",status:"Durum",active:"Aktif",region:"Bölge",risk:"Yalnızca kişisel bilgi ve eğlence içindir. Finansal tavsiye değildir.",signals:"Sinyaller",profile:"Profil",saved:"Ayarlar kaydedildi",noSignals:"Sinyal yok"},
+ar:{online:"متصل",create:"إنشاء إشارة",language:"اللغة والمنطقة",asset:"زوج العملات / الأصل",search:"البحث عن أصل",interval:"الفترة",entryMode:"تنسيق وقت الدخول",after:"بعد الفترة",nearest:"أقرب نقطة",exact:"وقت محدد",entry:"وقت الدخول",get:"الحصول على إشارة",processing:"جارٍ تحليل الأصل…",newSignal:"إشارة جديدة",status:"الحالة",active:"نشط",region:"المنطقة",risk:"للمعلومات الشخصية والترفيه فقط. ليست نصيحة مالية.",signals:"الإشارات",profile:"الملف الشخصي",saved:"تم حفظ الإعدادات",noSignals:"لا توجد إشارات"},
+zh:{online:"在线",create:"创建信号",language:"语言和地区",asset:"货币对 / 资产",search:"搜索资产",interval:"周期",entryMode:"入场时间格式",after:"间隔后",nearest:"最近时间点",exact:"准确时间",entry:"入场时间",get:"获取信号",processing:"正在处理资产…",newSignal:"新信号",status:"状态",active:"有效",region:"地区",risk:"仅供个人参考和娱乐使用，不构成金融建议。",signals:"信号",profile:"个人资料",saved:"设置已保存",noSignals:"暂无信号"}
+};
+let lang=localStorage.getItem("pulse_lang")||(tg?.initDataUnsafe?.user?.language_code||navigator.language||"en").slice(0,2); if(!i18n[lang])lang="en";
+let selectedAsset=localStorage.getItem("pulse_asset")||"EUR/USD", seconds=60, mode="after";
+let history=JSON.parse(localStorage.getItem("pulse_history")||"[]");
+const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Local time";
+const intervalData=[[15,15],[30,30],[60,60],[180,180],[300,300],[900,900]];
+function intervalText(s){if(lang==="ru")return s<60?`${s} сек`:`${s/60} мин`; if(lang==="zh")return s<60?`${s} 秒`:`${s/60} 分`; return s<60?`${s} sec`:`${s/60} min`}
+function time(d=new Date()){return new Intl.DateTimeFormat(lang,{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d)}
+function entryDate(){const now=new Date();if(mode==="after")return new Date(now.getTime()+seconds*1000);if(mode==="nearest"){const d=new Date(now);d.setSeconds(0,0);d.setMinutes(d.getMinutes()+1);return d}const d=new Date(now);d.setSeconds(0,0);d.setMinutes(d.getMinutes()+Math.max(1,Math.round(seconds/60)));return d}
+function renderIntervals(){document.getElementById("intervals").innerHTML=intervalData.map(([s])=>`<button class="chip ${seconds===s?"active":""}" data-sec="${s}">${intervalText(s)}</button>`).join("");document.querySelectorAll("[data-sec]").forEach(b=>b.onclick=()=>{seconds=+b.dataset.sec;renderIntervals();updateClock()})}
+function applyLanguage(){
+ document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+ document.querySelectorAll("[data-i]").forEach(e=>e.textContent=i18n[lang][e.dataset.i]||e.textContent);
+ document.querySelectorAll("[data-p]").forEach(e=>e.placeholder=i18n[lang][e.dataset.p]||e.placeholder);
+ document.getElementById("language").value=lang;renderIntervals();renderHistory();updateClock();
+ document.getElementById("profileText").textContent=`${zone} · ${lang.toUpperCase()} · ${history.length}`;
+}
+function updateClock(){document.getElementById("clock").textContent=time();document.getElementById("region").textContent=zone;document.getElementById("headerZone").textContent=zone;document.getElementById("entryTime").textContent=time(entryDate())}
+function renderAssets(query=""){const list=assets.filter(x=>x.toLowerCase().includes(query.toLowerCase()));const box=document.getElementById("assets");box.innerHTML=list.map(a=>`<div class="asset" data-asset="${a}">${a}</div>`).join("")||`<div class="asset">—</div>`;box.classList.toggle("show",!!query);document.querySelectorAll("[data-asset]").forEach(x=>x.onclick=()=>{selectedAsset=x.dataset.asset;localStorage.setItem("pulse_asset",selectedAsset);document.getElementById("selectedAsset").textContent=selectedAsset;document.getElementById("search").value="";box.classList.remove("show")})}
+function renderHistory(){const el=document.getElementById("history");document.getElementById("today").textContent=history.length?`${history.length}`:"";el.innerHTML=history.length?history.map(x=>`<div class="signal"><div><b>${x.pair}</b><small>${x.entry} · ${x.interval}</small></div><div class="right ${x.dir==="BUY"?"buy":"sell"}"><b>${x.dir} ${x.dir==="BUY"?"↑":"↓"}</b><small>${i18n[lang].active}</small></div></div>`).join(""):`<div class="glass">${i18n[lang].noSignals}</div>`}
+document.getElementById("language").onchange=e=>{lang=e.target.value;localStorage.setItem("pulse_lang",lang);applyLanguage()}
+document.getElementById("search").oninput=e=>renderAssets(e.target.value);document.getElementById("selectedAsset").textContent=selectedAsset;
+document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>{document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.mode;updateClock()});
+document.getElementById("get").onclick=()=>{const load=document.getElementById("loading"),result=document.getElementById("result");load.classList.add("show");result.classList.remove("show");setTimeout(()=>{const dir=Math.random()>.5?"BUY":"SELL",entry=time(entryDate());document.getElementById("resultNow").textContent=time();document.getElementById("resultPair").textContent=selectedAsset;const de=document.getElementById("resultDirection");de.textContent=`${dir} ${dir==="BUY"?"↑":"↓"}`;de.className=`direction ${dir==="BUY"?"buy":"sell"}`;document.getElementById("resultEntry").textContent=entry;document.getElementById("resultInterval").textContent=intervalText(seconds);document.getElementById("resultZone").textContent=zone;history.unshift({pair:selectedAsset,dir,entry,interval:intervalText(seconds)});history=history.slice(0,30);localStorage.setItem("pulse_history",JSON.stringify(history));load.classList.remove("show");result.classList.add("show");renderHistory();tg?.HapticFeedback?.notificationOccurred("success")},2200)}
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.page).classList.add("active")});
+renderAssets();applyLanguage();setInterval(updateClock,1000);
+</script>
 </body>
 </html>
