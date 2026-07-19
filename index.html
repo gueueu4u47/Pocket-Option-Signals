@@ -1366,6 +1366,7 @@ function getFutureTiming() {
   };
 }
    function showAnalysis(result) {
+     const timing = getFutureTiming();
       const direction = ["BUY", "SELL", "NO_SIGNAL"].includes(result.direction)
         ? result.direction
         : "NO_SIGNAL";
