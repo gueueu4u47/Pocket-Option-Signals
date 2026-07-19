@@ -1386,7 +1386,7 @@ function getFutureTiming() {
       $("resultSummary").textContent = result.summary || "—";
       $("resultAsset").textContent = result.asset || state.asset;
       $("resultTimeframe").textContent = timing.duration;
-      $("resultEntry").textContent = result.entryWindow || "—";
+      $("resultEntry").textContent = timing.entry;
       $("resultExpiry").textContent = result.expiry || state.interval;
       $("resultRisk").textContent = result.risk || t("profileNotice");
 
