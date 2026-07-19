@@ -1382,9 +1382,9 @@
 
         showAnalysis(data);
       } catch (error) {
-        console.error(error);
-        alert(t("analyzeError"));
-      } finally {
+  console.error(error);
+  alert(error.message || t("analyzeError"));
+} finally {
         $("analyzeButton").disabled = false;
         $("analysisLoader").classList.remove("show");
       }
