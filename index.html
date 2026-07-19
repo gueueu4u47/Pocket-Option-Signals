@@ -1322,7 +1322,50 @@
       });
     }
 
-    function showAnalysis(result) {
+    function getDurationSeconds() {
+  const durations = {
+    "15 сек": 15,
+    "30 сек": 30,
+    "1 мин": 60,
+    "3 мин": 180,
+    "5 мин": 300,
+    "15 мин": 900
+  };
+
+  return durations[state.interval] || 30;
+}
+
+function getFutureTiming() {
+  const durationSeconds = getDurationSeconds();
+  const safetyBufferSeconds = 12;
+
+  const now = new Date();
+  const targetTime = now.getTime() + safetyBufferSeconds * 1000;
+  const durationMs = durationSeconds * 1000;
+
+  const entryTimeMs = Math.ceil(targetTime / durationMs) * durationMs;
+  const outcomeTimeMs = entryTimeMs + durationMs;
+
+  const formatTime = (time) =>
+    new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Asia/Oral",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }).format(new Date(time));
+
+  const durationText = durationSeconds < 60
+    ? `${durationSeconds} сек`
+    : `${durationSeconds / 60} мин`;
+
+  return {
+    entry: formatTime(entryTimeMs),
+    outcome: formatTime(outcomeTimeMs),
+    duration: durationText
+  };
+}
+   function showAnalysis(result) {
       const direction = ["BUY", "SELL", "NO_SIGNAL"].includes(result.direction)
         ? result.direction
         : "NO_SIGNAL";
