@@ -91,7 +91,7 @@ Return JSON only, without Markdown:
           ],
           generationConfig: {
             temperature: 0.2,
-            response_mime_type: "application/json"
+            responseMimeType: "application/json"
           }
         })
       }
