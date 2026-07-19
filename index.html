@@ -7,155 +7,434 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{
-      --bg:#07090d; --panel:rgba(21,24,31,.72); --panel2:rgba(255,255,255,.045);
-      --line:rgba(255,255,255,.11); --text:#f7f8fa; --muted:#98a0af;
-      --blue:#61aaff; --green:#38d982; --red:#ff5b66;
+      --bg:#08090c;--panel:#14161b;--line:#292d36;--text:#f5f7fb;
+      --muted:#9098a8;--blue:#58a6ff;--green:#31d47b;--red:#ff5964;
     }
-    *{box-sizing:border-box} body{
-      margin:0; color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      background:radial-gradient(circle at 85% 0%,#182c49 0,transparent 34%),radial-gradient(circle at 0% 55%,#10251f 0,transparent 35%),var(--bg);
+    *{box-sizing:border-box}
+    body{
+      margin:0;color:var(--text);
+      font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:radial-gradient(circle at 85% 0%,#162a45 0,transparent 35%),var(--bg);
     }
     .app{max-width:650px;margin:auto;padding:20px 16px 100px}
-    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
-    .brand{display:flex;align-items:center;gap:12px}.logo{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.03));border:1px solid var(--line);font-size:25px}
-    .brand b{display:block;font-size:20px}.brand small{display:block;color:var(--muted);margin-top:3px;font-size:10px;letter-spacing:1.5px}
-    .online{padding:9px 12px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.2);font-size:11px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;box-shadow:0 0 13px var(--green)}
-    .page{display:none;animation:fade .28s ease}.page.active{display:block}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-    .title-row{display:flex;justify-content:space-between;align-items:center;margin:5px 2px 18px}.title-row h1{margin:0;font-size:25px;letter-spacing:-.5px}.zone{color:var(--muted);font-size:13px}
-    .glass{padding:16px;border:1px solid var(--line);border-radius:21px;background:var(--panel);backdrop-filter:blur(18px);box-shadow:0 13px 40px rgba(0,0,0,.18);margin-bottom:14px}
-    label,.label{display:block;margin:0 0 9px;font-size:13px;font-weight:750;color:#e6e8ee}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    select,input{width:100%;border:1px solid var(--line);background:rgba(0,0,0,.22);color:var(--text);border-radius:14px;padding:15px;font:inherit;font-size:16px;outline:none}
-    input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(97,170,255,.12)}
-    .clock{height:100%;min-height:56px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.22)}
-    .clock b{display:block;font-size:21px;letter-spacing:1px}.clock small{display:block;color:var(--muted);margin-top:3px;font-size:11px}
-    .assets{margin-top:10px;display:none;max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#101319}.assets.show{display:block}.asset{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);font-weight:700}.asset:last-child{border:0}.asset:active{background:#1b3047}
-    .selected-asset{margin-top:10px;padding:15px;border:1px solid rgba(97,170,255,.4);border-radius:14px;background:rgba(43,102,162,.16);font-weight:800;font-size:18px}
-    .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.chip{border:1px solid var(--line);border-radius:14px;padding:13px 6px;color:#d8dce4;background:rgba(0,0,0,.18);font:inherit;font-size:13px}.chip.active{border-color:var(--blue);background:rgba(57,121,189,.25);color:#fff;box-shadow:inset 0 0 18px rgba(97,170,255,.08)}
-    .modes{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.modes .chip:last-child{grid-column:span 2}
-    .entry{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:15px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.2);color:var(--muted)}.entry b{color:var(--text);font-size:20px}
-    .main-btn{position:relative;overflow:hidden;width:100%;border:0;border-radius:16px;margin-top:17px;padding:17px;color:#041009;background:linear-gradient(135deg,#50f294,#20b96a);font:inherit;font-size:16px;font-weight:850;box-shadow:0 12px 30px rgba(38,218,125,.2)}.main-btn:active{transform:scale(.98)}.main-btn::after{content:"";position:absolute;top:-60%;left:-30%;width:25%;height:220%;transform:rotate(20deg);background:rgba(255,255,255,.36);animation:shine 3.8s infinite}@keyframes shine{0%,55%{left:-35%}75%,100%{left:125%}}
-    .loading{display:none;margin-top:13px;padding:14px;border:1px solid rgba(97,170,255,.28);border-radius:14px;background:rgba(35,80,124,.13);color:#cfe6ff;font-size:13px}.loading.show{display:block}.bar{height:4px;border-radius:9px;background:#20364a;margin-top:10px;overflow:hidden}.bar i{display:block;height:100%;width:35%;background:var(--blue);animation:scan 1s infinite ease-in-out}@keyframes scan{from{transform:translateX(-120%)}to{transform:translateX(330%)}}
-    .result{display:none;margin-top:15px;padding:17px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025));animation:fade .35s ease}.result.show{display:block}.result-top{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:1px}.pair{font-size:29px;font-weight:850;margin:17px 0 7px}.buy{color:var(--green)}.sell{color:var(--red)}.direction{font-weight:850;font-size:17px}.details{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:17px}.detail{padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(0,0,0,.16)}.detail small{display:block;color:var(--muted);font-size:11px}.detail b{display:block;margin-top:5px;font-size:14px}
-    .section-title{display:flex;justify-content:space-between;align-items:center;margin:24px 2px 11px;font-weight:800}.section-title small{font-weight:500;color:var(--muted)}
-    .signal{display:grid;grid-template-columns:1fr auto;gap:8px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);margin-bottom:9px}.signal b{font-size:16px}.signal small{display:block;color:var(--muted);margin-top:5px}.right{text-align:right;font-size:12px}.disclaimer{margin:16px 4px;color:#737b89;font-size:11px;line-height:1.55}
-    nav{position:fixed;bottom:0;left:0;right:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);background:rgba(7,9,13,.78);backdrop-filter:blur(22px)}.navin{max-width:650px;margin:auto;display:grid;grid-template-columns:repeat(3,1fr)}.nav{border:0;background:transparent;color:#78808d;padding:5px;font:inherit;font-size:11px}.nav span{display:block;font-size:20px;margin-bottom:4px}.nav.active{color:#fff}
+    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .brand{display:flex;align-items:center;gap:11px}
+    .logo{
+      display:grid;place-items:center;width:45px;height:45px;border-radius:15px;
+      border:1px solid #4b4f58;background:linear-gradient(145deg,#2a2d34,#111216);font-size:23px
+    }
+    .brand b{display:block;font-size:20px}.brand small{display:block;margin-top:3px;color:var(--muted);font-size:10px;letter-spacing:1.4px}
+    .online{border:1px solid var(--line);border-radius:99px;padding:8px 10px;color:#dce2eb;font-size:11px}
+    .dot{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+    .page{display:none;animation:enter .3s ease}.page.active{display:block}
+    @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .title{display:flex;justify-content:space-between;align-items:center;margin:3px 2px 16px}
+    .title h1{margin:0;font-size:25px}.timezone{color:var(--muted);font-size:12px}
+    .card{
+      margin-bottom:13px;padding:16px;border:1px solid var(--line);border-radius:20px;
+      background:linear-gradient(145deg,rgba(27,30,37,.92),rgba(16,18,23,.92));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 35px rgba(0,0,0,.16)
+    }
+    label,.label{display:block;margin:0 0 9px;color:#e6eaf0;font-size:13px;font-weight:750}
+    select,input{
+      width:100%;border:1px solid #353943;border-radius:14px;padding:14px;
+      outline:0;color:var(--text);background:#0e1014;font:inherit
+    }
+    select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.12)}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .clock{
+      padding:10px 13px;border:1px solid #353943;border-radius:14px;background:#0e1014
+    }
+    .clock b{display:block;font-size:18px;letter-spacing:1px}.clock small{display:block;margin-top:4px;color:var(--muted);font-size:10px}
+    .assets{display:none;max-height:155px;margin-top:8px;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#111318}
+    .assets.show{display:block}.asset{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);font-weight:700}.asset:last-child{border:0}
+    .asset:active{background:#1d3754}
+    .current-asset{margin-top:10px;padding:14px;border:1px solid rgba(88,166,255,.4);border-radius:14px;background:rgba(51,111,174,.17);font-size:18px;font-weight:850}
+    .market{
+      display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px;padding:15px;
+      border:1px solid rgba(88,166,255,.26);border-radius:16px;background:linear-gradient(135deg,rgba(34,72,106,.28),rgba(16,18,24,.55))
+    }
+    .market small{display:block;color:var(--muted);font-size:10px}.price{margin-top:5px;font-size:25px;font-weight:850;letter-spacing:.2px}
+    .market-right{text-align:right}.change{margin-top:6px;font-size:14px;font-weight:800}.up{color:var(--green)}.down{color:var(--red)}
+    .refresh{margin-top:8px;color:var(--muted);font-size:10px}
+    .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .chip{
+      min-height:45px;border:1px solid #353943;border-radius:13px;color:#d9dfe8;background:#0e1014;font:inherit;font-size:13px
+    }
+    .chip.active{border-color:var(--blue);color:#fff;background:#162c46;box-shadow:inset 0 0 12px rgba(88,166,255,.1)}
+    .entry{
+      display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:14px;
+      border:1px solid var(--line);border-radius:14px;background:#0e1014;color:var(--muted);font-size:12px
+    }
+    .entry b{color:var(--text);font-size:18px;letter-spacing:1px}
+    .main{
+      position:relative;overflow:hidden;width:100%;margin-top:17px;padding:17px;border:0;border-radius:16px;
+      color:#06130a;background:linear-gradient(135deg,#4ded90,#1bb665);font:inherit;font-size:16px;font-weight:850;
+      box-shadow:0 12px 29px rgba(49,212,123,.2)
+    }
+    .main:active{transform:scale(.98)}.main:disabled{opacity:.65}
+    .load{display:none;margin-top:13px;padding:14px;border:1px solid #2b5378;border-radius:14px;background:#102031;color:#cde6ff;font-size:12px}
+    .load.show{display:block}.bar{height:4px;overflow:hidden;margin-top:10px;border-radius:9px;background:#29445e}.bar i{display:block;width:35%;height:100%;background:var(--blue);animation:scan 1s infinite ease-in-out}
+    @keyframes scan{from{transform:translateX(-120%)}to{transform:translateX(320%)}}
+    .result{display:none;margin-top:14px;padding:17px;border:1px solid #3a3e47;border-radius:18px;background:linear-gradient(145deg,#1d2027,#101216);animation:enter .35s ease}
+    .result.show{display:block}.result-top{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;letter-spacing:1px}
+    .pair{margin:17px 0 7px;font-size:28px;font-weight:850}.direction{font-size:17px;font-weight:850}
+    .details{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.detail{padding:12px;border:1px solid #30343d;border-radius:13px;background:#101216}.detail small{display:block;color:var(--muted);font-size:10px}.detail b{display:block;margin-top:5px;font-size:14px}
+    .section{display:flex;justify-content:space-between;margin:23px 2px 11px;font-size:16px;font-weight:850}.section small{color:var(--muted);font-weight:500}
+    .signal{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:9px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}.signal b{font-size:16px}.signal small{display:block;margin-top:5px;color:var(--muted);font-size:11px}.right{text-align:right;font-size:12px}
+    .risk{margin:16px 3px;color:#737b89;font-size:10px;line-height:1.6}
+    nav{position:fixed;right:0;bottom:0;left:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #242831;background:rgba(8,9,12,.89);backdrop-filter:blur(20px)}
+    .navwrap{display:grid;max-width:650px;margin:auto;grid-template-columns:repeat(3,1fr)}.nav{border:0;background:transparent;color:#7a8391;font:inherit;font-size:11px}.nav span{display:block;margin-bottom:4px;font-size:20px}.nav.active{color:#fff}
   </style>
 </head>
 <body>
   <main class="app">
     <header class="top">
       <div class="brand"><div class="logo">↗</div><div><b>Pulse Signal</b><small>MARKET ANALYTICS</small></div></div>
-      <div class="online"><i class="dot"></i><span data-i="online">ONLINE</span></div>
+      <div class="online"><i class="dot"></i><span id="onlineText">ONLINE</span></div>
     </header>
 
-    <section id="create" class="page active">
-      <div class="title-row"><h1 data-i="create">Создать сигнал</h1><span id="headerZone" class="zone"></span></div>
+    <section id="createPage" class="page active">
+      <div class="title"><h1 id="createTitle">Создать сигнал</h1><span id="zoneTop" class="timezone"></span></div>
 
-      <div class="glass">
-        <label data-i="language">Язык и регион</label>
-        <div class="grid2">
+      <div class="card">
+        <label id="languageLabel">Язык и регион</label>
+        <div class="two">
           <select id="language">
-            <option value="ru">Русский</option><option value="en">English</option>
-            <option value="es">Español</option><option value="pt">Português</option>
-            <option value="tr">Türkçe</option><option value="ar">العربية</option>
-            <option value="zh">中文</option>
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
           </select>
           <div class="clock"><b id="clock">--:--:--</b><small id="region">--</small></div>
         </div>
       </div>
 
-      <div class="glass">
-        <label data-i="asset">Валютная пара / актив</label>
-        <input id="search" autocomplete="off" data-p="search" placeholder="Поиск актива">
-        <div id="assets" class="assets"></div>
-        <div id="selectedAsset" class="selected-asset">EUR/USD</div>
+      <div class="card">
+        <label id="assetLabel">Валютная пара / актив</label>
+        <input id="search" placeholder="Поиск актива" autocomplete="off">
+        <div id="assetList" class="assets"></div>
+        <div id="currentAsset" class="current-asset">EUR/USD</div>
+
+        <div class="market">
+          <div><small id="priceLabel">Текущая цена</small><div id="price" class="price">Загрузка…</div></div>
+          <div class="market-right"><small id="changeLabel">Изменение</small><div id="change" class="change">—</div><div id="updated" class="refresh">—</div></div>
+        </div>
 
         <div style="height:20px"></div>
-        <span class="label" data-i="interval">Интервал</span>
+        <span id="intervalLabel" class="label">Интервал</span>
         <div id="intervals" class="chips"></div>
 
         <div style="height:20px"></div>
-        <span class="label" data-i="entryMode">Формат времени входа</span>
-        <div class="modes">
-          <button class="chip mode active" data-mode="after" data-i="after">Через интервал</button>
-          <button class="chip mode" data-mode="nearest" data-i="nearest">Ближайшая точка</button>
-          <button class="chip mode" data-mode="exact" data-i="exact">Точное время</button>
+        <span id="formatLabel" class="label">Время входа</span>
+        <div id="modes" class="chips">
+          <button class="chip active" data-mode="after">Через интервал</button>
+          <button class="chip" data-mode="nearest">Ближайшая точка</button>
+          <button class="chip" data-mode="exact">Точное время</button>
         </div>
 
-        <div class="entry"><span data-i="entry">Время входа</span><b id="entryTime">--:--:--</b></div>
-        <button id="get" class="main-btn" data-i="get">Получить сигнал</button>
-        <div id="loading" class="loading"><span data-i="processing">Обработка выбранного инструмента…</span><div class="bar"><i></i></div></div>
+        <div class="entry"><span id="entryLabel">Вход в</span><b id="entryTime">--:--:--</b></div>
+        <button id="getSignal" class="main">Получить сигнал</button>
+
+        <div id="loading" class="load"><span id="loadingText">Обработка выбранного инструмента…</span><div class="bar"><i></i></div></div>
 
         <div id="result" class="result">
-          <div class="result-top"><span data-i="newSignal">НОВЫЙ СИГНАЛ</span><span id="resultNow"></span></div>
+          <div class="result-top"><span id="newSignalText">НОВЫЙ СИГНАЛ</span><span id="resultNow"></span></div>
           <div id="resultPair" class="pair">EUR/USD</div>
-          <div id="resultDirection" class="direction buy">BUY ↑</div>
+          <div id="resultDirection" class="direction up">BUY ↑</div>
           <div class="details">
-            <div class="detail"><small data-i="entry">Время входа</small><b id="resultEntry"></b></div>
-            <div class="detail"><small data-i="interval">Интервал</small><b id="resultInterval"></b></div>
-            <div class="detail"><small data-i="status">Статус</small><b data-i="active">Активен</b></div>
-            <div class="detail"><small data-i="region">Регион</small><b id="resultZone"></b></div>
+            <div class="detail"><small id="detailEntry">Время входа</small><b id="resultEntry"></b></div>
+            <div class="detail"><small id="detailInterval">Интервал</small><b id="resultInterval"></b></div>
+            <div class="detail"><small id="detailPrice">Цена</small><b id="resultPrice">—</b></div>
+            <div class="detail"><small id="detailStatus">Статус</small><b id="activeText">Активен</b></div>
           </div>
         </div>
       </div>
-      <p class="disclaimer" data-i="risk">Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.</p>
+
+      <p id="risk" class="risk">Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.</p>
     </section>
 
-    <section id="signals" class="page">
-      <div class="title-row"><h1 data-i="signals">Сигналы</h1><span id="today" class="zone"></span></div>
+    <section id="signalsPage" class="page">
+      <div class="title"><h1 id="signalsTitle">Сигналы</h1><span id="signalCount" class="timezone"></span></div>
       <div id="history"></div>
     </section>
 
-    <section id="profile" class="page">
-      <div class="title-row"><h1 data-i="profile">Профиль</h1></div>
-      <div class="glass"><label data-i="saved">Настройки сохранены</label><div id="profileText" style="color:var(--muted);line-height:1.6"></div></div>
+    <section id="profilePage" class="page">
+      <div class="title"><h1 id="profileTitle">Профиль</h1></div>
+      <div class="card"><label id="settingsTitle">Настройки</label><p id="settingsInfo" style="margin:0;color:var(--muted);line-height:1.6"></p></div>
     </section>
   </main>
 
-  <nav><div class="navin">
-    <button class="nav" data-page="signals"><span>▣</span><i data-i="signals">Сигналы</i></button>
-    <button class="nav active" data-page="create"><span>＋</span><i data-i="create">Создать</i></button>
-    <button class="nav" data-page="profile"><span>◉</span><i data-i="profile">Профиль</i></button>
+  <nav><div class="navwrap">
+    <button class="nav" data-page="signalsPage"><span>▣</span><i id="navSignals">Сигналы</i></button>
+    <button class="nav active" data-page="createPage"><span>＋</span><i id="navCreate">Создать</i></button>
+    <button class="nav" data-page="profilePage"><span>◉</span><i id="navProfile">Профиль</i></button>
   </div></nav>
 
-<script>
-const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand()}
-const assets=["EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","NZD/USD","EUR/GBP","EUR/JPY","EUR/CHF","EUR/AUD","EUR/CAD","GBP/JPY","GBP/CHF","GBP/AUD","AUD/JPY","AUD/CAD","CAD/JPY","CHF/JPY","USD/TRY","USD/ZAR","USD/MXN","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","EUR/GBP OTC","GBP/JPY OTC","BTC/USD","ETH/USD","SOL/USD","XRP/USD","XAU/USD","XAG/USD"];
-const i18n={
-ru:{online:"ОНЛАЙН",create:"Создать сигнал",language:"Язык и регион",asset:"Валютная пара / актив",search:"Поиск актива",interval:"Интервал",entryMode:"Формат времени входа",after:"Через интервал",nearest:"Ближайшая точка",exact:"Точное время",entry:"Время входа",get:"Получить сигнал",processing:"Обработка выбранного инструмента…",newSignal:"НОВЫЙ СИГНАЛ",status:"Статус",active:"Активен",region:"Регион",risk:"Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.",signals:"Сигналы",profile:"Профиль",saved:"Настройки сохранены",noSignals:"Сигналов пока нет"},
-en:{online:"ONLINE",create:"Create signal",language:"Language and region",asset:"Currency pair / asset",search:"Search asset",interval:"Interval",entryMode:"Entry time format",after:"After interval",nearest:"Nearest point",exact:"Exact time",entry:"Entry time",get:"Get signal",processing:"Processing selected asset…",newSignal:"NEW SIGNAL",status:"Status",active:"Active",region:"Region",risk:"Signals are provided only for personal information and entertainment. They are not financial advice or a guarantee of results.",signals:"Signals",profile:"Profile",saved:"Settings saved",noSignals:"No signals yet"},
-es:{online:"EN LÍNEA",create:"Crear señal",language:"Idioma y región",asset:"Par de divisas / activo",search:"Buscar activo",interval:"Intervalo",entryMode:"Formato de entrada",after:"Después del intervalo",nearest:"Punto más cercano",exact:"Hora exacta",entry:"Hora de entrada",get:"Obtener señal",processing:"Procesando activo…",newSignal:"NUEVA SEÑAL",status:"Estado",active:"Activo",region:"Región",risk:"Solo para información personal y entretenimiento. No es asesoramiento financiero.",signals:"Señales",profile:"Perfil",saved:"Ajustes guardados",noSignals:"No hay señales"},
-pt:{online:"ONLINE",create:"Criar sinal",language:"Idioma e região",asset:"Par de moedas / ativo",search:"Buscar ativo",interval:"Intervalo",entryMode:"Formato de entrada",after:"Após o intervalo",nearest:"Ponto mais próximo",exact:"Hora exata",entry:"Hora de entrada",get:"Obter sinal",processing:"Processando ativo…",newSignal:"NOVO SINAL",status:"Status",active:"Ativo",region:"Região",risk:"Apenas para informação pessoal e entretenimento. Não é aconselhamento financeiro.",signals:"Sinais",profile:"Perfil",saved:"Configurações salvas",noSignals:"Sem sinais"},
-tr:{online:"ÇEVRİMİÇİ",create:"Sinyal oluştur",language:"Dil ve bölge",asset:"Döviz çifti / varlık",search:"Varlık ara",interval:"Aralık",entryMode:"Giriş zamanı biçimi",after:"Aralıktan sonra",nearest:"En yakın nokta",exact:"Tam zaman",entry:"Giriş zamanı",get:"Sinyal al",processing:"Varlık işleniyor…",newSignal:"YENİ SİNYAL",status:"Durum",active:"Aktif",region:"Bölge",risk:"Yalnızca kişisel bilgi ve eğlence içindir. Finansal tavsiye değildir.",signals:"Sinyaller",profile:"Profil",saved:"Ayarlar kaydedildi",noSignals:"Sinyal yok"},
-ar:{online:"متصل",create:"إنشاء إشارة",language:"اللغة والمنطقة",asset:"زوج العملات / الأصل",search:"البحث عن أصل",interval:"الفترة",entryMode:"تنسيق وقت الدخول",after:"بعد الفترة",nearest:"أقرب نقطة",exact:"وقت محدد",entry:"وقت الدخول",get:"الحصول على إشارة",processing:"جارٍ تحليل الأصل…",newSignal:"إشارة جديدة",status:"الحالة",active:"نشط",region:"المنطقة",risk:"للمعلومات الشخصية والترفيه فقط. ليست نصيحة مالية.",signals:"الإشارات",profile:"الملف الشخصي",saved:"تم حفظ الإعدادات",noSignals:"لا توجد إشارات"},
-zh:{online:"在线",create:"创建信号",language:"语言和地区",asset:"货币对 / 资产",search:"搜索资产",interval:"周期",entryMode:"入场时间格式",after:"间隔后",nearest:"最近时间点",exact:"准确时间",entry:"入场时间",get:"获取信号",processing:"正在处理资产…",newSignal:"新信号",status:"状态",active:"有效",region:"地区",risk:"仅供个人参考和娱乐使用，不构成金融建议。",signals:"信号",profile:"个人资料",saved:"设置已保存",noSignals:"暂无信号"}
-};
-let lang=localStorage.getItem("pulse_lang")||(tg?.initDataUnsafe?.user?.language_code||navigator.language||"en").slice(0,2); if(!i18n[lang])lang="en";
-let selectedAsset=localStorage.getItem("pulse_asset")||"EUR/USD", seconds=60, mode="after";
-let history=JSON.parse(localStorage.getItem("pulse_history")||"[]");
-const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Local time";
-const intervalData=[[15,15],[30,30],[60,60],[180,180],[300,300],[900,900]];
-function intervalText(s){if(lang==="ru")return s<60?`${s} сек`:`${s/60} мин`; if(lang==="zh")return s<60?`${s} 秒`:`${s/60} 分`; return s<60?`${s} sec`:`${s/60} min`}
-function time(d=new Date()){return new Intl.DateTimeFormat(lang,{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d)}
-function entryDate(){const now=new Date();if(mode==="after")return new Date(now.getTime()+seconds*1000);if(mode==="nearest"){const d=new Date(now);d.setSeconds(0,0);d.setMinutes(d.getMinutes()+1);return d}const d=new Date(now);d.setSeconds(0,0);d.setMinutes(d.getMinutes()+Math.max(1,Math.round(seconds/60)));return d}
-function renderIntervals(){document.getElementById("intervals").innerHTML=intervalData.map(([s])=>`<button class="chip ${seconds===s?"active":""}" data-sec="${s}">${intervalText(s)}</button>`).join("");document.querySelectorAll("[data-sec]").forEach(b=>b.onclick=()=>{seconds=+b.dataset.sec;renderIntervals();updateClock()})}
-function applyLanguage(){
- document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
- document.querySelectorAll("[data-i]").forEach(e=>e.textContent=i18n[lang][e.dataset.i]||e.textContent);
- document.querySelectorAll("[data-p]").forEach(e=>e.placeholder=i18n[lang][e.dataset.p]||e.placeholder);
- document.getElementById("language").value=lang;renderIntervals();renderHistory();updateClock();
- document.getElementById("profileText").textContent=`${zone} · ${lang.toUpperCase()} · ${history.length}`;
-}
-function updateClock(){document.getElementById("clock").textContent=time();document.getElementById("region").textContent=zone;document.getElementById("headerZone").textContent=zone;document.getElementById("entryTime").textContent=time(entryDate())}
-function renderAssets(query=""){const list=assets.filter(x=>x.toLowerCase().includes(query.toLowerCase()));const box=document.getElementById("assets");box.innerHTML=list.map(a=>`<div class="asset" data-asset="${a}">${a}</div>`).join("")||`<div class="asset">—</div>`;box.classList.toggle("show",!!query);document.querySelectorAll("[data-asset]").forEach(x=>x.onclick=()=>{selectedAsset=x.dataset.asset;localStorage.setItem("pulse_asset",selectedAsset);document.getElementById("selectedAsset").textContent=selectedAsset;document.getElementById("search").value="";box.classList.remove("show")})}
-function renderHistory(){const el=document.getElementById("history");document.getElementById("today").textContent=history.length?`${history.length}`:"";el.innerHTML=history.length?history.map(x=>`<div class="signal"><div><b>${x.pair}</b><small>${x.entry} · ${x.interval}</small></div><div class="right ${x.dir==="BUY"?"buy":"sell"}"><b>${x.dir} ${x.dir==="BUY"?"↑":"↓"}</b><small>${i18n[lang].active}</small></div></div>`).join(""):`<div class="glass">${i18n[lang].noSignals}</div>`}
-document.getElementById("language").onchange=e=>{lang=e.target.value;localStorage.setItem("pulse_lang",lang);applyLanguage()}
-document.getElementById("search").oninput=e=>renderAssets(e.target.value);document.getElementById("selectedAsset").textContent=selectedAsset;
-document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>{document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.mode;updateClock()});
-document.getElementById("get").onclick=()=>{const load=document.getElementById("loading"),result=document.getElementById("result");load.classList.add("show");result.classList.remove("show");setTimeout(()=>{const dir=Math.random()>.5?"BUY":"SELL",entry=time(entryDate());document.getElementById("resultNow").textContent=time();document.getElementById("resultPair").textContent=selectedAsset;const de=document.getElementById("resultDirection");de.textContent=`${dir} ${dir==="BUY"?"↑":"↓"}`;de.className=`direction ${dir==="BUY"?"buy":"sell"}`;document.getElementById("resultEntry").textContent=entry;document.getElementById("resultInterval").textContent=intervalText(seconds);document.getElementById("resultZone").textContent=zone;history.unshift({pair:selectedAsset,dir,entry,interval:intervalText(seconds)});history=history.slice(0,30);localStorage.setItem("pulse_history",JSON.stringify(history));load.classList.remove("show");result.classList.add("show");renderHistory();tg?.HapticFeedback?.notificationOccurred("success")},2200)}
-document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.page).classList.add("active")});
-renderAssets();applyLanguage();setInterval(updateClock,1000);
-</script>
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.ready(); tg.expand(); }
+
+    const assets = [
+      "EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","NZD/USD",
+      "EUR/GBP","EUR/JPY","EUR/CHF","EUR/AUD","EUR/CAD","GBP/JPY","GBP/CHF",
+      "GBP/AUD","AUD/JPY","AUD/CAD","CAD/JPY","CHF/JPY","USD/TRY","USD/ZAR",
+      "USD/MXN","BTC/USD","ETH/USD","SOL/USD","XRP/USD","XAU/USD","XAG/USD"
+    ];
+
+    const words = {
+      ru: {
+        online:"ОНЛАЙН", create:"Создать сигнал", language:"Язык и регион",
+        asset:"Валютная пара / актив", search:"Поиск актива", price:"Текущая цена",
+        change:"Изменение", interval:"Интервал", entry:"Время входа",
+        after:"Через интервал", nearest:"Ближайшая точка", exact:"Точное время",
+        enter:"Вход в", get:"Получить сигнал", loading:"Обработка выбранного инструмента…",
+        new:"НОВЫЙ СИГНАЛ", status:"Статус", active:"Активен", signals:"Сигналы",
+        profile:"Профиль", settings:"Настройки", risk:"Сигналы предоставляются исключительно для личного ознакомления и развлекательных целей. Они не являются финансовой рекомендацией или гарантией результата.",
+        noSignals:"Сигналов пока нет"
+      },
+      en: {
+        online:"ONLINE", create:"Create signal", language:"Language and region",
+        asset:"Currency pair / asset", search:"Search asset", price:"Current price",
+        change:"Change", interval:"Interval", entry:"Entry time",
+        after:"After interval", nearest:"Nearest point", exact:"Exact time",
+        enter:"Entry at", get:"Get signal", loading:"Processing selected asset…",
+        new:"NEW SIGNAL", status:"Status", active:"Active", signals:"Signals",
+        profile:"Profile", settings:"Settings", risk:"Signals are provided only for personal information and entertainment. They are not financial advice or a guarantee of results.",
+        noSignals:"No signals yet"
+      }
+    };
+
+    let lang = localStorage.getItem("pulse_lang") || (navigator.language.startsWith("ru") ? "ru" : "en");
+    let pair = localStorage.getItem("pulse_pair") || "EUR/USD";
+    let seconds = 60;
+    let mode = "after";
+    let quote = null;
+    let history = JSON.parse(localStorage.getItem("pulse_history") || "[]");
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
+
+    const intervals = [15,30,60,180,300,900];
+
+    function w(key) { return words[lang][key]; }
+
+    function intervalText(value) {
+      if (lang === "ru") return value < 60 ? `${value} сек` : `${value / 60} мин`;
+      return value < 60 ? `${value} sec` : `${value / 60} min`;
+    }
+
+    function formatTime(date = new Date()) {
+      return new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", {
+        hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false
+      }).format(date);
+    }
+
+    function entryDate() {
+      const now = new Date();
+      if (mode === "after") return new Date(now.getTime() + seconds * 1000);
+
+      const next = new Date(now);
+      next.setSeconds(0,0);
+      next.setMinutes(next.getMinutes() + 1);
+
+      if (mode === "exact") next.setMinutes(next.getMinutes() + Math.max(1, seconds / 60));
+      return next;
+    }
+
+    function renderIntervals() {
+      document.getElementById("intervals").innerHTML = intervals.map(value =>
+        `<button class="chip ${seconds === value ? "active" : ""}" data-seconds="${value}">${intervalText(value)}</button>`
+      ).join("");
+
+      document.querySelectorAll("[data-seconds]").forEach(button => {
+        button.onclick = () => {
+          seconds = Number(button.dataset.seconds);
+          renderIntervals();
+          updateClock();
+        };
+      });
+    }
+
+    function renderAssets(search = "") {
+      const found = assets.filter(item => item.toLowerCase().includes(search.toLowerCase()));
+      const list = document.getElementById("assetList");
+      list.innerHTML = found.map(item => `<div class="asset" data-asset="${item}">${item}</div>`).join("");
+
+      list.classList.toggle("show", search.length > 0);
+
+      document.querySelectorAll("[data-asset]").forEach(item => {
+        item.onclick = () => {
+          pair = item.dataset.asset;
+          localStorage.setItem("pulse_pair", pair);
+          document.getElementById("currentAsset").textContent = pair;
+          document.getElementById("search").value = "";
+          list.classList.remove("show");
+          loadQuote();
+        };
+      });
+    }
+
+    async function loadQuote() {
+      const price = document.getElementById("price");
+      const change = document.getElementById("change");
+
+      price.textContent = lang === "ru" ? "Загрузка…" : "Loading…";
+      change.textContent = "—";
+      change.className = "change";
+      quote = null;
+
+      try {
+        const response = await fetch(`/api/market?symbol=${encodeURIComponent(pair)}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.price) throw new Error(data.error || "Market data unavailable");
+
+        quote = data;
+        price.textContent = Number(data.price).toFixed(pair.includes("JPY") ? 3 : 5);
+
+        const percent = Number(data.percent_change || 0);
+        change.textContent = `${percent >= 0 ? "+" : ""}${percent.toFixed(4)}%`;
+        change.className = `change ${percent >= 0 ? "up" : "down"}`;
+
+        document.getElementById("updated").textContent = `${lang === "ru" ? "Обновлено" : "Updated"}: ${formatTime(new Date(data.updated_at))}`;
+      } catch {
+        price.textContent = lang === "ru" ? "Нет данных" : "No data";
+        change.textContent = "—";
+        document.getElementById("updated").textContent = lang === "ru"
+          ? "Пара может быть недоступна"
+          : "Asset may be unavailable";
+      }
+    }
+
+    function updateClock() {
+      document.getElementById("clock").textContent = formatTime();
+      document.getElementById("region").textContent = timezone;
+      document.getElementById("zoneTop").textContent = timezone;
+      document.getElementById("entryTime").textContent = formatTime(entryDate());
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = lang;
+      document.getElementById("language").value = lang;
+      document.getElementById("onlineText").textContent = w("online");
+      document.getElementById("createTitle").textContent = w("create");
+      document.getElementById("languageLabel").textContent = w("language");
+      document.getElementById("assetLabel").textContent = w("asset");
+      document.getElementById("search").placeholder = w("search");
+      document.getElementById("priceLabel").textContent = w("price");
+      document.getElementById("changeLabel").textContent = w("change");
+      document.getElementById("intervalLabel").textContent = w("interval");
+      document.getElementById("formatLabel").textContent = w("entry");
+      document.querySelector('[data-mode="after"]').textContent = w("after");
+      document.querySelector('[data-mode="nearest"]').textContent = w("nearest");
+      document.querySelector('[data-mode="exact"]').textContent = w("exact");
+      document.getElementById("entryLabel").textContent = w("enter");
+      document.getElementById("getSignal").textContent = w("get");
+      document.getElementById("loadingText").textContent = w("loading");
+      document.getElementById("newSignalText").textContent = w("new");
+      document.getElementById("detailEntry").textContent = w("entry");
+      document.getElementById("detailInterval").textContent = w("interval");
+      document.getElementById("detailPrice").textContent = w("price");
+      document.getElementById("detailStatus").textContent = w("status");
+      document.getElementById("activeText").textContent = w("active");
+      document.getElementById("risk").textContent = w("risk");
+      document.getElementById("signalsTitle").textContent = w("signals");
+      document.getElementById("profileTitle").textContent = w("profile");
+      document.getElementById("settingsTitle").textContent = w("settings");
+      document.getElementById("navSignals").textContent = w("signals");
+      document.getElementById("navCreate").textContent = w("create");
+      document.getElementById("navProfile").textContent = w("profile");
+      document.getElementById("settingsInfo").textContent = `${timezone} · ${lang.toUpperCase()} · ${history.length}`;
+      renderIntervals();
+      renderHistory();
+      loadQuote();
+    }
+
+    function renderHistory() {
+      const element = document.getElementById("history");
+      document.getElementById("signalCount").textContent = history.length ? history.length : "";
+
+      if (!history.length) {
+        element.innerHTML = `<div class="card">${w("noSignals")}</div>`;
+        return;
+      }
+
+      element.innerHTML = history.map(item => `
+        <div class="signal">
+          <div><b>${item.pair}</b><small>${item.entry} · ${item.interval}</small></div>
+          <div class="right ${item.direction === "BUY" ? "up" : "down"}">
+            <b>${item.direction} ${item.direction === "BUY" ? "↑" : "↓"}</b>
+            <small>${w("active")}</small>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("language").onchange = event => {
+      lang = event.target.value;
+      localStorage.setItem("pulse_lang", lang);
+      applyLanguage();
+    };
+
+    document.getElementById("search").oninput = event => renderAssets(event.target.value);
+
+    document.querySelectorAll("[data-mode]").forEach(button => {
+      button.onclick = () => {
+        document.querySelectorAll("[data-mode]").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        mode = button.dataset.mode;
+        updateClock();
+      };
+    });
+
+    document.getElementById("getSignal").onclick = () => {
+      const button = document.getElementById("getSignal");
+      const loading = document.getElementById("loading");
+      const result = document.getElementById("result");
+
+      button.disabled = true;
+      loading.classList.add("show");
+      result.classList.remove("show");
+
+      setTimeout(() => {
+        const direction = Math.random() >= .5 ? "BUY" : "SELL";
+        const entry = formatTime(entryDate());
+
+        document.getElementById("resultNow").textContent = formatTime();
+        document.getElementById("resultPair").textContent = pair;
+        document.getElementById("resultEntry").textContent = entry;
+        document.getElementById("resultInterval").textContent = intervalText(seconds);
+        document.getElementById("resultPrice").textContent = quote?.price || "—";
+
+        const directionElement = document.getElementById("resultDirection");
+        directionElement.textContent = `${direction} ${direction === "BUY" ? "↑" : "↓"}`;
+        directionElement.className = `direction ${direction === "BUY" ? "up" : "down"}`;
+
+        history.unshift({ pair, direction, entry, interval: intervalText(seconds) });
+        history = history.slice(0, 30);
+        localStorage.setItem("pulse_history", JSON.stringify(history));
+
+        loading.classList.remove("show");
+        result.classList.add("show");
+        button.disabled = false;
+        renderHistory();
+
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      }, 2400);
+    };
+
+    document.querySelectorAll(".nav").forEach(button => {
+      button.onclick = () => {
+        document.querySelectorAll(".nav").forEach(item => item.classList.remove("active"));
+        document.querySelectorAll(".page").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        document.getElementById(button.dataset.page).classList.add("active");
+      };
+    });
+
+    document.getElementById("currentAsset").textContent = pair;
+    renderAssets();
+    applyLanguage();
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(loadQuote, 30000);
+  </script>
 </body>
-</html>
+  </html>
