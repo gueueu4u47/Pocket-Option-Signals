@@ -1310,7 +1310,7 @@
             canvas.height = height;
             canvas.getContext("2d").drawImage(image, 0, 0, width, height);
 
-            resolve(canvas.toDataURL("image/jpeg", 0.78));
+            resolve(canvas.toDataURL("image/jpeg", 0.82));
           };
 
           image.onerror = reject;
