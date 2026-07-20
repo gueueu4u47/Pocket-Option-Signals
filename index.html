@@ -1506,5 +1506,49 @@ document.addEventListener("pointerup",function(){
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",apply);
   else apply();
 })();
-</script></body>
+</script>
+<style id="vibeNav">
+.bottom-nav{
+  background:linear-gradient(180deg,rgba(16,18,26,.5),rgba(8,9,14,.72))!important;
+  backdrop-filter:blur(34px) saturate(1.9)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(1.9)!important;
+  border-top:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:0 -14px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+  gap:4px!important;
+}
+.nav-item{
+  position:relative!important;
+  display:flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  gap:5px!important;padding:9px 6px!important;
+  border-radius:16px!important;
+  font-size:11px!important;font-weight:600!important;letter-spacing:.01em!important;
+  color:rgba(255,255,255,.5)!important;
+  background:transparent!important;border:0!important;
+  transition:color .28s ease,background .28s ease,transform .18s cubic-bezier(.34,1.56,.64,1)!important;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-item svg,.nav-item img{
+  width:22px!important;height:22px!important;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),filter .3s ease!important;
+}
+.nav-item:active{transform:scale(.9)!important;}
+.nav-item.active{
+  color:var(--accent)!important;
+  background:linear-gradient(180deg,var(--accent-soft),transparent)!important;
+}
+.nav-item.active svg,.nav-item.active img{
+  transform:translateY(-2px) scale(1.14)!important;
+  filter:drop-shadow(0 4px 12px var(--glow1));
+}
+.nav-item.active::before{
+  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:26px;height:3px;border-radius:0 0 4px 4px;
+  background:var(--accent);box-shadow:0 0 12px var(--accent);
+  animation:navGlow .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes navGlow{from{width:0;opacity:0}to{width:26px;opacity:1}}
+  </style>
+</body>
 </html>
