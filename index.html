@@ -1,1648 +1,1175 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Signal Pulse</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg: #0a0a0a;
-      --bg2: #111111;
-      --card: #151515;
-      --card2: #1b1b1b;
-      --line: #2a2a2a;
-      --text: #f4f4f4;
-      --muted: #969696;
-      --silver: #d7d9dd;
-      --accent: #2f80ed;
-      --accent-soft: rgba(47, 128, 237, .14);
-      --green: #39c879;
-      --red: #ef5b68;
-      --logo: #e7e8ea;
-      --shadow: 0 18px 44px rgba(0, 0, 0, .5);
-      --radius: 18px;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Signal Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#0A0A0A; --bg2:#111111; --card:#151515; --card2:#1B1B1B; --line:#2A2A2A;
+    --text:#F4F4F4; --muted:#969696; --silver:#D7D9DD;
+    --accent:#2F80ED; --accent-soft:rgba(47,128,237,.14);
+    --up:#39C879; --up-soft:rgba(57,200,121,.14);
+    --down:#EF5B68; --down-soft:rgba(239,91,104,.14);
+    --none-soft:rgba(215,217,221,.10);
+    --radius:18px; --tab:200ms;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{
+    min-height:100vh; color:var(--text); background:var(--bg);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    transition:background .5s ease,color .5s ease;
+  }
+  body::before{content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(42% 34% at 16% 10%, color-mix(in srgb,var(--accent) 22%,transparent), transparent 70%),
+      radial-gradient(38% 30% at 86% 6%, rgba(215,217,221,.07), transparent 72%),
+      radial-gradient(52% 42% at 74% 92%, color-mix(in srgb,var(--accent) 14%,transparent), transparent 74%);
+    filter:blur(32px);opacity:.6;transform:translateZ(0);
+    animation:ambient 28s ease-in-out infinite alternate;transition:background .5s ease;}
+  body::after{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:radial-gradient(125% 90% at 50% -10%, transparent 52%, rgba(0,0,0,.6) 100%);}
+  @keyframes ambient{
+    0%{transform:translate3d(-2%,-1%,0) scale(1.05);}
+    50%{transform:translate3d(2%,1.5%,0) scale(1.12);}
+    100%{transform:translate3d(-1%,2%,0) scale(1.06);}}
+  button,input,select{font:inherit;color:inherit;}
+  button{border:0;background:none;cursor:pointer;}
+  h1,h2,h3{letter-spacing:-.02em;}
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  .app{width:min(100%,560px);margin:0 auto;
+    padding:env(safe-area-inset-top) 18px calc(96px + env(safe-area-inset-bottom));}
 
-    html, body { margin: 0; padding: 0; }
+  /* Topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 0 18px;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0;}
+  .brand-mark{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;
+    border:1px solid rgba(215,217,221,.35);border-radius:13px;background:#0C0C0C;
+    box-shadow:inset 0 0 20px rgba(255,255,255,.04),0 8px 22px rgba(0,0,0,.4);}
+  .brand-mark svg{width:30px;height:30px;}
+  .brand h1{margin:0;font-size:16px;font-weight:800;}
+  .brand p{margin:3px 0 0;color:var(--muted);font-size:11px;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis;}
+  .clock{text-align:right;font-variant-numeric:tabular-nums;}
+  .clock b{font-size:14px;font-weight:800;color:var(--silver);}
+  .clock small{display:block;margin-top:2px;color:var(--muted);font-size:10px;font-weight:600;}
 
-    body {
-      min-height: 100vh;
-      color: var(--text);
-      background: var(--bg);
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      overflow-x: hidden;
-      transition: background .4s ease, color .4s ease;
-    }
+  /* Views */
+  .view{display:none;}
+  .view.active{display:block;animation:viewIn var(--tab) cubic-bezier(.22,.9,.32,1);}
+  @keyframes viewIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .view.active .hero{animation:riseIn .5s cubic-bezier(.22,.9,.32,1) both;}
+  .view.active > .card{animation:riseIn .55s cubic-bezier(.22,.9,.32,1) .05s both;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background:
-        radial-gradient(circle at 50% -12%, rgba(255, 255, 255, .04), transparent 32%),
-        linear-gradient(180deg, var(--bg) 0%, #070707 100%);
-    }
+  .hero{position:relative;overflow:hidden;padding:22px;margin-top:18px;
+    border:1px solid var(--line);border-radius:22px;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--card) 78%,transparent),color-mix(in srgb,var(--card2) 74%,transparent));
+    backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
+    box-shadow:0 20px 44px -26px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);transform:translateZ(0);}
+  .hero::after{content:"";position:absolute;top:-45%;right:-15%;width:230px;height:230px;
+    border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%);
+    filter:blur(22px);pointer-events:none;}
+  .eyebrow{margin:0 0 8px;color:var(--silver);font-size:10px;font-weight:800;letter-spacing:.14em;}
+  .hero h2{margin:0;font-size:23px;line-height:1.15;}
+  .hero p{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.5;max-width:440px;}
 
-    button, input, select { font: inherit; }
-    button { border: 0; color: inherit; cursor: pointer; background: none; }
+  .card{margin-top:14px;padding:18px;border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:color-mix(in srgb,var(--card) 80%,transparent);
+    backdrop-filter:blur(14px) saturate(115%);-webkit-backdrop-filter:blur(14px) saturate(115%);
+    box-shadow:0 16px 36px -28px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.04);transform:translateZ(0);}
+  .section-title{margin:22px 0 10px;font-size:17px;}
+  .section-text{margin:0;color:var(--muted);font-size:13px;line-height:1.5;}
 
-    .app {
-      width: min(100%, 560px);
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: env(safe-area-inset-top) 18px calc(104px + env(safe-area-inset-bottom));
-    }
+  .field-label{display:block;margin:18px 0 9px;color:var(--silver);font-size:13px;font-weight:700;}
+  .field-label:first-of-type{margin-top:0;}
 
-    /* Topbar */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 16px 0 18px;
-      border-bottom: 1px solid var(--line);
-    }
-    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .brand-mark {
-      width: 44px; height: 44px; flex: 0 0 auto;
-      display: grid; place-items: center;
-      border: 1px solid rgba(255, 255, 255, .5);
-      border-radius: 14px;
-      background: #0b0b0b;
-      box-shadow: inset 0 0 18px rgba(255, 255, 255, .05), 0 8px 22px rgba(0, 0, 0, .4);
-      overflow: hidden;
-    }
-    .brand-mark svg { width: 30px; height: 30px; }
-    .brand h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
-    .brand p {
-      margin: 3px 0 0; overflow: hidden; color: var(--muted);
-      font-size: 11px; text-overflow: ellipsis; white-space: nowrap; max-width: 210px;
-    }
-    .clock { text-align: right; color: var(--silver); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .clock small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; font-weight: 700; }
+  .btn{position:relative;overflow:hidden;transition:transform .16s cubic-bezier(.34,1.4,.5,1),
+    background .2s ease,border-color .2s ease,box-shadow .2s ease;}
+  .btn:active{transform:scale(.97);}
+  .primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;
+    margin-top:16px;padding:14px;border-radius:15px;background:var(--accent);
+    background-image:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 55%);
+    color:#fff;font-size:15px;font-weight:800;
+    box-shadow:0 12px 30px -8px var(--accent),inset 0 1px 0 rgba(255,255,255,.35);}
+  .primary:disabled{opacity:.4;box-shadow:none;}
+  .secondary{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;
+    margin-top:11px;padding:12px;border:1px solid rgba(215,217,221,.4);border-radius:15px;
+    background:var(--bg2);color:var(--silver);font-size:14px;font-weight:700;}
 
-    /* Views */
-    .view { display: none; }
-    .view.active { display: block; animation: rise .22s ease; }
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+  .search{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;
+    background:var(--bg2);color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;}
+  .search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
 
-    .hero {
-      margin-top: 16px; padding: 20px;
-      border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--bg2); box-shadow: var(--shadow);
-    }
-    .eyebrow { margin: 0 0 8px; color: var(--silver); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
-    .hero h2 { margin: 0; font-size: 23px; line-height: 1.14; letter-spacing: -.03em; }
-    .hero p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .asset-list{display:grid;gap:8px;max-height:250px;margin-top:10px;overflow-y:auto;
+    scrollbar-width:thin;}
+  .asset-option{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--bg2);text-align:left;}
+  .asset-option.selected{border-color:var(--accent);background:var(--accent-soft);
+    box-shadow:inset 3px 0 0 var(--accent);}
+  .asset-option b{font-size:14px;}
+  .asset-option span{color:var(--muted);font-size:11px;font-weight:700;}
 
-    .card {
-      margin-top: 13px; padding: 16px;
-      border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--card);
-    }
-    .section-title { margin: 22px 0 4px; font-size: 17px; letter-spacing: -.02em; }
-    .section-text { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px;}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:8px;}
+  .choice{min-height:50px;padding:9px 6px;border:1px solid var(--line);border-radius:13px;
+    background:var(--bg2);font-size:13px;font-weight:700;color:var(--text);}
+  .choice.active{border-color:var(--accent);background:var(--accent-soft);color:var(--text);
+    box-shadow:inset 0 0 0 1px var(--accent);}
 
-    /* Buttons */
-    .primary, .secondary, .choice, .asset-option, .mode-card, .outcome, .nav-item, .theme-chip, .seg-btn {
-      transition: transform .16s ease, border-color .16s ease, background .2s ease, box-shadow .2s ease, opacity .16s ease;
-    }
-    .primary:active, .secondary:active, .choice:active, .asset-option:active,
-    .mode-card:active, .outcome:active, .theme-chip:active, .seg-btn:active { transform: scale(.975); }
+  .mode-stack{display:grid;gap:10px;margin-top:8px;}
+  .mode-card{display:flex;align-items:center;gap:14px;padding:15px;border:1px solid var(--line);
+    border-radius:15px;background:var(--bg2);text-align:left;}
+  .mode-card.selected{border-color:var(--accent);background:var(--accent-soft);
+    box-shadow:inset 3px 0 0 var(--accent);}
+  .mode-icon{width:40px;height:40px;flex:0 0 auto;display:grid;place-items:center;border-radius:12px;
+    border:1px solid var(--line);background:var(--card2);color:var(--silver);}
+  .mode-icon svg{width:20px;height:20px;}
+  .mode-card b{display:block;font-size:14px;}
+  .mode-card small{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35;}
 
-    .primary {
-      position: relative; overflow: hidden;
-      width: 100%; min-height: 54px; margin-top: 15px; padding: 15px;
-      border-radius: 14px; background: var(--accent);
-      box-shadow: 0 12px 26px rgba(47, 128, 237, .22);
-      font-size: 15px; font-weight: 800; color: #fff;
-    }
-    .primary::after {
-      content: ""; position: absolute; top: 0; left: -60%;
-      width: 45%; height: 100%; transform: skewX(-20deg);
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent);
-      opacity: 0;
-    }
-    .primary:active::after { animation: shine .5s ease; }
-    @keyframes shine { from { left: -60%; opacity: 1; } to { left: 120%; opacity: 0; } }
-    .primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-    .secondary {
-      width: 100%; min-height: 50px; margin-top: 10px; padding: 13px;
-      border: 1px solid rgba(215, 217, 221, .4); border-radius: 14px;
-      background: #101010; color: var(--silver); font-size: 14px; font-weight: 700;
-    }
+  /* Upload */
+  .upload{display:block;padding:28px 14px;border:1px dashed rgba(215,217,221,.4);
+    border-radius:16px;background:var(--bg2);text-align:center;cursor:pointer;}
+  .upload input{display:none;}
+  .upload-ic{width:44px;height:44px;margin:0 auto;display:grid;place-items:center;border-radius:13px;
+    border:1px solid var(--line);background:var(--card2);color:var(--silver);}
+  .upload strong{display:block;margin-top:11px;font-size:15px;}
+  .upload span{display:block;margin-top:6px;color:var(--muted);font-size:12px;}
+  .preview{display:none;position:relative;margin-top:12px;overflow:hidden;border:1px solid var(--line);
+    border-radius:15px;background:#050505;}
+  .preview.show{display:block;}
+  .preview img{display:block;width:100%;height:auto;object-fit:contain;}
+  .rm-img{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;
+    background:rgba(0,0,0,.75);color:#fff;font-size:20px;display:grid;place-items:center;}
 
-    .field-label { display: block; margin: 18px 0 8px; color: var(--silver); font-size: 13px; font-weight: 800; }
-    .search {
-      width: 100%; padding: 14px; outline: none;
-      border: 1px solid var(--line); border-radius: 13px;
-      background: #0d0d0d; color: var(--text);
-    }
-    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  /* Processing */
+  .processing{display:none;margin-top:14px;padding:24px 18px;border:1px solid var(--line);
+    border-radius:var(--radius);background:var(--card2);text-align:center;}
+  .processing.show{display:block;animation:viewIn .3s ease;}
+  .proc-meta{display:flex;justify-content:center;gap:22px;margin-bottom:18px;color:var(--muted);font-size:12px;}
+  .proc-meta b{display:block;margin-top:3px;color:var(--text);font-size:13px;}
+  .ring{width:132px;height:132px;margin:0 auto;transform:rotate(-90deg);}
+  .ring circle{fill:none;stroke-width:8;stroke-linecap:round;}
+  .ring .bg{stroke:var(--line);}
+  .ring .fg{stroke:var(--accent);transition:stroke-dashoffset .4s ease;}
+  .ring-wrap{position:relative;width:132px;height:132px;margin:0 auto;}
+  .ring-pct{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:800;}
+  .proc-stage{margin-top:16px;color:var(--silver);font-size:13px;font-weight:600;min-height:18px;}
 
-    .asset-list { display: grid; gap: 8px; max-height: 232px; margin-top: 10px; overflow-y: auto; }
-    .asset-option {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 13px; border: 1px solid var(--line); border-radius: 13px;
-      background: #111111; text-align: left;
-    }
-    .asset-option.selected { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 3px 0 0 var(--accent); }
-    .asset-option b { font-size: 14px; }
-    .asset-option span { color: var(--muted); font-size: 11px; font-weight: 700; }
+  /* Result */
+  .result{display:none;margin-top:14px;padding:18px;border:1px solid var(--line);
+    border-radius:var(--radius);background:var(--card2);}
+  .result.show{display:block;animation:pop .45s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes pop{0%{opacity:0;transform:scale(.96);}100%{opacity:1;transform:none;}}
+  .r-asset{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em;}
+  .r-dir{margin:10px 0 4px;font-size:34px;font-weight:900;line-height:1;}
+  .r-dir.up{color:var(--up);} .r-dir.down{color:var(--down);} .r-dir.none{color:var(--silver);}
+  .r-conf{display:inline-block;margin-bottom:6px;padding:5px 10px;border-radius:99px;
+    font-size:11px;font-weight:800;background:var(--accent-soft);color:var(--silver);}
+  .facts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;}
+  .fact{padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--line);}
+  .fact small{display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em;}
+  .fact b{font-size:13px;font-variant-numeric:tabular-nums;}
+  .countdown{margin-top:12px;padding:12px;border-radius:12px;background:var(--card);
+    border:1px solid var(--line);text-align:center;font-size:13px;font-weight:700;
+    color:var(--silver);font-variant-numeric:tabular-nums;}
+  .reasons{margin:14px 0 0;padding-left:18px;color:var(--silver);font-size:13px;line-height:1.6;}
+  .disclaimer{margin-top:14px;padding:12px;border-radius:12px;border:1px solid var(--line);
+    background:var(--bg2);color:var(--muted);font-size:11px;line-height:1.5;}
+  .r-actions{display:grid;gap:8px;margin-top:14px;}
+  .r-actions .secondary{margin-top:0;}
 
-    .choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 8px; }
-    .choice-grid.two { grid-template-columns: repeat(2, 1fr); }
-    .choice {
-      min-height: 49px; padding: 8px 6px; border: 1px solid var(--line);
-      border-radius: 13px; background: #111111; color: var(--text);
-      font-size: 13px; font-weight: 800;
-    }
-    .choice.active { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 0 -2px 0 var(--accent); }
+  /* Empty */
+  .empty{text-align:center;padding:30px 16px;}
+  .empty-ic{width:56px;height:56px;margin:0 auto 12px;display:grid;place-items:center;border-radius:16px;
+    border:1px solid var(--line);background:var(--card2);color:var(--silver);}
+  .empty h3{margin:0;font-size:17px;}
+  .empty p{margin:8px auto 0;max-width:320px;color:var(--muted);font-size:13px;line-height:1.5;}
 
-    .mode-stack { display: grid; gap: 10px; margin-top: 13px; }
-    .mode-card {
-      display: flex; align-items: center; gap: 13px; padding: 15px;
-      border: 1px solid var(--line); border-radius: 15px; background: #111111; text-align: left;
-    }
-    .mode-card.selected { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 3px 0 0 var(--accent); }
-    .mode-icon {
-      display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto;
-      border: 1px solid var(--line); border-radius: 12px; background: #0d0d0d; color: var(--silver); font-size: 19px;
-    }
-    .mode-card b { display: block; font-size: 14px; }
-    .mode-card small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+  /* History */
+  .h-item{margin-top:10px;padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--card);
+    animation:viewIn .3s ease both;}
+  .h-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .h-head b{font-size:14px;}
+  .badge{padding:6px 10px;border-radius:99px;font-size:11px;font-weight:900;white-space:nowrap;}
+  .badge.up{background:var(--up-soft);color:var(--up);}
+  .badge.down{background:var(--down-soft);color:var(--down);}
+  .badge.none{background:var(--none-soft);color:var(--silver);}
+  .h-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:10px;
+    color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;}
+  .h-sum{margin:10px 0 0;color:var(--silver);font-size:12px;line-height:1.45;}
+  .oc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px;}
+  .oc{min-height:38px;border:1px solid var(--line);border-radius:11px;background:var(--bg2);
+    color:var(--silver);font-size:11px;font-weight:800;}
+  .oc.win.active{border-color:var(--up);color:var(--up);background:var(--up-soft);}
+  .oc.loss.active{border-color:var(--down);color:var(--down);background:var(--down-soft);}
+  .oc.skip.active{border-color:var(--silver);color:var(--silver);background:var(--none-soft);}
 
-    /* Upload */
-    .upload-zone {
-      display: block; padding: 28px 14px; border: 1px dashed rgba(215, 217, 221, .45);
-      border-radius: 16px; background: #101010; text-align: center; cursor: pointer;
-    }
-    .upload-zone input { display: none; }
-    .upload-icon { font-size: 28px; color: var(--silver); }
-    .upload-zone strong { display: block; margin-top: 9px; font-size: 15px; }
-    .upload-zone span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+  /* Profile */
+  .p-row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:15px 0;border-bottom:1px solid var(--line);}
+  .p-row:last-child{border-bottom:0;}
+  .p-row b{display:block;font-size:14px;}
+  .p-row span{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.35;}
+  select{padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:var(--bg2);
+    color:var(--text);outline:none;}
+  .toggle{min-width:64px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;
+    background:var(--bg2);color:var(--silver);font-size:12px;font-weight:700;}
+  .toggle.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  .stat{padding:14px 8px;border-radius:13px;background:var(--card);border:1px solid var(--line);text-align:center;}
+  .stat b{display:block;font-size:20px;}
+  .stat small{display:block;margin-top:4px;color:var(--muted);font-size:10px;}
 
-    .preview-wrap {
-      display: none; position: relative; margin-top: 12px; overflow: hidden;
-      border: 1px solid var(--line); border-radius: 15px; background: #050505;
-    }
-    .preview-wrap.show { display: block; }
-    #previewImage { display: block; width: 100%; height: auto; object-fit: contain; }
-    .remove-image {
-      position: absolute; top: 10px; right: 10px; width: 36px; height: 36px;
-      display: grid; place-items: center; border-radius: 50%;
-      background: rgba(5, 5, 5, .9); color: #fff; font-size: 20px; border: 1px solid var(--line);
-    }
+  /* Design control */
+  .theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:8px;}
+  .theme-chip{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid var(--line);
+    border-radius:13px;background:var(--bg2);text-align:left;}
+  .theme-chip.selected{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
+  .theme-dot{width:20px;height:20px;flex:0 0 auto;border-radius:50%;border:1px solid rgba(255,255,255,.2);}
+  .theme-chip b{font-size:13px;}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;}
+  .seg-btn{min-height:42px;padding:8px 4px;border:1px solid var(--line);border-radius:11px;
+    background:var(--bg2);color:var(--silver);font-size:11px;font-weight:700;}
+  .seg-btn.active{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
+  .sched{display:none;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;}
+  .sched.show{display:grid;}
+  .sched label{display:block;color:var(--muted);font-size:11px;margin-bottom:5px;}
+  .sched input{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;
+    background:var(--bg2);color:var(--text);outline:none;}
 
-    /* Vision processing card */
-    .processing {
-      display: none; margin-top: 14px; padding: 22px 16px;
-      border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--card2); text-align: center;
-    }
-    .processing.show { display: block; animation: rise .24s ease; }
-    .ring-wrap { position: relative; width: 128px; height: 128px; margin: 0 auto 14px; }
-    .ring-wrap svg { transform: rotate(-90deg); }
-    .ring-bg { fill: none; stroke: var(--line); stroke-width: 8; }
-    .ring-fg { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
-    .ring-pct {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      font-size: 26px; font-weight: 800; color: var(--silver); font-variant-numeric: tabular-nums;
-    }
-    .processing-meta { display: flex; justify-content: center; gap: 18px; margin-bottom: 12px; }
-    .processing-meta div { text-align: center; }
-    .processing-meta small { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
-    .processing-meta b { font-size: 13px; }
-    .stage { color: var(--silver); font-size: 13px; font-weight: 600; min-height: 18px; transition: opacity .3s ease; }
+  /* Bottom nav */
+  .nav{position:fixed;z-index:20;bottom:0;left:50%;transform:translateX(-50%);
+    display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,560px);
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);gap:4px;}
+  .nav-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:5px;padding:8px 2px;border-radius:14px;color:var(--muted);font-size:11px;font-weight:600;
+    transition:color .25s,background .25s,transform .16s cubic-bezier(.34,1.4,.5,1);}
+  .nav-item svg{width:22px;height:22px;transition:transform .28s cubic-bezier(.34,1.4,.5,1);}
+  .nav-item:active{transform:scale(.92);}
+  .nav-item.active{color:var(--accent);background:var(--accent-soft);}
+  .nav-item.active svg{transform:translateY(-1px) scale(1.06);}
+  .nav-item.active::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:24px;height:3px;border-radius:0 0 4px 4px;background:var(--accent);
+    box-shadow:0 0 10px var(--accent);animation:navGlow .4s cubic-bezier(.34,1.4,.5,1);}
+  @keyframes navGlow{from{width:0;opacity:0;}to{width:24px;opacity:1;}}
 
-    .status {
-      display: none; align-items: center; justify-content: center; gap: 9px;
-      margin-top: 13px; min-height: 42px; padding: 12px; border-radius: 12px;
-      border: 1px solid rgba(47, 128, 237, .28); background: var(--accent-soft);
-      color: #bcd8ff; font-size: 12px; font-weight: 700; text-align: center;
-    }
-    .status.show { display: flex; }
-    .status.error { border-color: rgba(239, 91, 104, .3); background: rgba(239, 91, 104, .1); color: #ff9da5; }
-
-    /* Result card */
-    .result-card {
-      display: none; margin-top: 14px; padding: 18px;
-      border: 1px solid var(--line); border-radius: var(--radius); background: var(--card2);
-    }
-    .result-card.show { display: block; animation: rise .26s ease; }
-    .result-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .result-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
-    .direction {
-      padding: 7px 12px; border-radius: 99px; font-size: 12px; font-weight: 900; white-space: nowrap;
-    }
-    .direction.UP { background: rgba(57, 200, 121, .14); color: #7ce5a8; }
-    .direction.DOWN { background: rgba(239, 91, 104, .14); color: #ff9da5; }
-    .direction.NONE { background: rgba(255, 255, 255, .08); color: var(--silver); }
-
-    .direction-big {
-      margin: 16px 0 2px; font-size: 34px; font-weight: 900; letter-spacing: -.03em; text-align: center;
-    }
-    .direction-big.UP { color: var(--green); }
-    .direction-big.DOWN { color: var(--red); }
-    .direction-big.NONE { color: var(--silver); }
-    .result-asset { text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
-    .confidence-line { margin: 12px 0 0; text-align: center; color: var(--silver); font-size: 13px; font-weight: 700; }
-    .result-summary { margin: 12px 0 0; color: #cfd3da; font-size: 13px; line-height: 1.5; }
-
-    .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 14px; }
-    .fact { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #111111; }
-    .fact small { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; }
-    .fact b { font-size: 13px; font-variant-numeric: tabular-nums; }
-    .fact b.count { color: var(--accent); }
-
-    .reasons-toggle {
-      width: 100%; margin-top: 12px; padding: 12px; text-align: left;
-      border: 1px solid var(--line); border-radius: 12px; background: #111111;
-      color: var(--silver); font-size: 13px; font-weight: 700;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .reasons { margin: 10px 0 0; padding-left: 18px; color: #cfd3da; font-size: 13px; line-height: 1.6; }
-    .reasons.collapsed { display: none; }
-
-    .disclaimer {
-      margin-top: 14px; padding: 11px 13px; border-left: 2px solid var(--line);
-      border-radius: 8px; background: rgba(255, 255, 255, .03);
-      color: var(--muted); font-size: 11px; line-height: 1.45;
-    }
-
-    .result-actions { display: grid; gap: 8px; margin-top: 14px; }
-
-    /* Empty / history */
-    .empty { padding: 28px 16px; text-align: center; }
-    .empty-icon {
-      display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 12px;
-      border: 1px solid var(--line); border-radius: 18px; background: #0d0d0d; color: var(--silver); font-size: 24px;
-    }
-    .empty h3 { margin: 0; font-size: 17px; }
-    .empty p { margin: 8px auto 0; max-width: 300px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-
-    .history-item { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: #111111; }
-    .history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .history-head b { font-size: 14px; }
-    .history-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .history-summary { margin: 10px 0 0; color: #c4c8cf; font-size: 12px; line-height: 1.45; }
-    .tag { display: inline-block; margin-bottom: 6px; padding: 3px 9px; border-radius: 99px; background: #0d0d0d; border: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; }
-
-    .outcome-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
-    .outcome { min-height: 38px; border: 1px solid var(--line); border-radius: 10px; background: #0d0d0d; color: var(--muted); font-size: 11px; font-weight: 800; }
-    .outcome.win.active { border-color: var(--green); color: #8df2bd; background: rgba(57, 200, 121, .12); }
-    .outcome.loss.active { border-color: var(--red); color: #ff9da5; background: rgba(239, 91, 104, .12); }
-    .outcome.skip.active { border-color: var(--silver); color: var(--silver); background: rgba(255, 255, 255, .06); }
-
-    /* Profile */
-    .profile-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--line); }
-    .profile-row:last-child { border-bottom: 0; }
-    .profile-row b { display: block; font-size: 14px; }
-    .profile-row span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
-    select { padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; outline: none; background: #0d0d0d; color: var(--text); }
-    .toggle { min-width: 70px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 11px; background: #0d0d0d; color: var(--silver); font-size: 12px; font-weight: 800; }
-    .toggle.on { border-color: var(--accent); background: var(--accent-soft); color: #dceaff; }
-
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-    .stat { padding: 14px 8px; border: 1px solid var(--line); border-radius: 13px; background: #111111; text-align: center; }
-    .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
-    .stat small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; font-weight: 700; }
-
-    /* Owner Pulse Control + Design Control */
-    .owner-block { display: none; }
-    .owner-block.show { display: block; }
-    .theme-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
-    .theme-chip { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #111111; text-align: left; }
-    .theme-chip.selected { border-color: rgba(215, 217, 221, .7); box-shadow: inset 3px 0 0 var(--accent); }
-    .theme-dot { width: 22px; height: 22px; flex: 0 0 auto; border-radius: 7px; border: 1px solid rgba(255, 255, 255, .2); }
-    .theme-chip b { font-size: 12px; }
-    .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
-    .seg-btn { min-height: 40px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 10px; background: #111111; color: var(--muted); font-size: 11px; font-weight: 800; }
-    .seg-btn.active { border-color: var(--accent); color: var(--silver); background: var(--accent-soft); }
-    .schedule-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-    .schedule-row input { width: 70px; padding: 9px; text-align: center; border: 1px solid var(--line); border-radius: 10px; background: #0d0d0d; color: var(--text); outline: none; }
-    .schedule-row span { color: var(--muted); font-size: 12px; }
-
-    /* Bottom nav */
-    .bottom-nav {
-      position: fixed; z-index: 20; bottom: 0; left: 50%; transform: translateX(-50%);
-      display: grid; grid-template-columns: repeat(4, 1fr); width: min(100%, 560px);
-      padding: 9px 8px calc(10px + env(safe-area-inset-bottom));
-      border-top: 1px solid var(--line); background: rgba(10, 10, 10, .94); backdrop-filter: blur(18px);
-    }
-    .nav-item { padding: 8px 2px; border-radius: 12px; color: #6f6f6f; font-size: 10px; font-weight: 700; }
-    .nav-item i { display: block; margin-bottom: 5px; font-size: 18px; font-style: normal; }
-    .nav-item.active { color: var(--silver); box-shadow: inset 0 -2px 0 var(--accent); }
-
-    /* Launch */
-    .launch {
-      position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 26px;
-      background: var(--bg); transition: opacity .4s ease, visibility .4s ease;
-    }
-    .launch.hide { opacity: 0; visibility: hidden; pointer-events: none; }
-    .launch-inner { width: min(100%, 380px); text-align: center; }
-    .launch-logo { width: 128px; height: 128px; margin: 0 auto 26px; }
-    .launch-logo svg { width: 100%; height: 100%; }
-    .draw { stroke-dasharray: 260; stroke-dashoffset: 260; animation: draw .7s ease forwards; }
-    .arrowhead { opacity: 0; animation: fadein .4s ease .7s forwards; }
-    @keyframes draw { to { stroke-dashoffset: 0; } }
-    @keyframes fadein { to { opacity: 1; } }
-
-    .loader-content, .welcome-content { transition: opacity .35s ease; }
-    .loader-content.hide { display: none; }
-    .welcome-content { display: none; }
-    .welcome-content.show { display: block; animation: rise .4s ease; }
-    .launch h2 { margin: 0; font-size: 27px; letter-spacing: -.03em; }
-    .launch p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
-    .launch-bar { width: 180px; height: 3px; margin: 24px auto 0; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .1); }
-    .launch-bar span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--silver); animation: loading 1.1s ease-in-out infinite; }
-    @keyframes loading { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
-    .welcome-btns { margin-top: 26px; }
-  </style>
+  /* Launch */
+  .launch{position:fixed;z-index:100;inset:0;display:grid;place-items:center;padding:28px;
+    background:var(--bg);transition:opacity .4s ease,visibility .4s ease;}
+  .launch.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  .launch-inner{width:min(100%,380px);text-align:center;}
+  .launch-logo{width:120px;height:120px;margin:0 auto 22px;}
+  .launch-logo path{fill:none;stroke:var(--silver);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 8px rgba(215,217,221,.35));}
+  .l-line{stroke-dasharray:210;stroke-dashoffset:210;animation:draw .7s ease forwards;}
+  .l-arrow{stroke-dasharray:44;stroke-dashoffset:44;animation:draw .5s ease .7s forwards;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .launch-title{margin:0;font-size:28px;opacity:0;animation:fadeUp .6s ease 1.15s forwards;}
+  .launch-sub{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.5;opacity:0;
+    animation:fadeUp .6s ease 1.3s forwards;}
+  .welcome{margin-top:26px;opacity:0;animation:fadeUp .6s ease 1.45s forwards;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .btn>.ripple{position:absolute;border-radius:50%;transform:scale(0);pointer-events:none;
+    background:radial-gradient(circle,rgba(255,255,255,.3),rgba(255,255,255,0) 70%);
+    animation:ripple .6s cubic-bezier(.22,.9,.32,1) forwards;}
+  @keyframes ripple{to{transform:scale(2.6);opacity:0;}}
+  .launch{overflow:hidden;}
+  .launch-inner{position:relative;z-index:1;}
+  .launch::before{content:"";position:absolute;width:360px;height:360px;border-radius:50%;
+    background:radial-gradient(circle,color-mix(in srgb,var(--accent) 24%,transparent),transparent 68%);
+    filter:blur(26px);pointer-events:none;animation:breathe 3.6s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{opacity:.35;transform:scale(.9);}50%{opacity:.7;transform:scale(1.08);}}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;}}
+</style>
 </head>
-
 <body>
-  <!-- Launch -->
-  <div class="launch" id="launch">
-    <div class="launch-inner">
-      <div class="launch-logo" id="launchLogo"></div>
-      <div class="loader-content" id="loaderContent">
-        <h2>Signal Pulse</h2>
-        <p id="loaderText">Готовим Signal Pulse…</p>
-        <div class="launch-bar"><span></span></div>
+<div class="launch" id="launch">
+  <div class="launch-inner">
+    <svg class="launch-logo" viewBox="0 0 120 120" aria-hidden="true">
+      <path class="l-line" d="M14 74 H40 L53 50 L66 86 L80 40"/>
+      <path class="l-arrow" d="M72 40 H86 V54"/>
+    </svg>
+    <h1 class="launch-title" id="welcomeTitle">Signal Pulse</h1>
+    <p class="launch-sub" id="welcomeSub">Личный помощник для работы с графиком.</p>
+    <div class="welcome">
+      <button class="btn primary" id="wVision">Pulse Vision</button>
+      <button class="btn secondary" id="wQuick">Pulse Quick</button>
+    </div>
+  </div>
+</div>
+
+<main class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark"></div>
+      <div>
+        <h1>Signal Pulse</h1>
+        <p id="brandText">Личный помощник для работы с графиком</p>
       </div>
-      <div class="welcome-content" id="welcomeContent">
-        <h2 id="welcomeTitle">Добро пожаловать</h2>
-        <p id="welcomeText">Signal Pulse готов к работе.</p>
-        <div class="welcome-btns">
-          <button class="primary" id="welcomeVision">Pulse Vision</button>
-          <button class="secondary" id="welcomeQuick">Pulse Quick</button>
+    </div>
+    <div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div>
+  </header>
+
+  <!-- HISTORY -->
+  <section class="view active" id="historyView">
+    <div class="hero">
+      <p class="eyebrow" id="historyEyebrow">ИСТОРИЯ</p>
+      <h2 id="historyTitle">История результатов</h2>
+      <p id="historyText">Здесь появляются результаты Pulse Vision и Pulse Quick.</p>
+    </div>
+    <div id="historyList"></div>
+    <div class="card empty" id="emptyHistory">
+      <div class="empty-ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      </div>
+      <h3 id="emptyTitle">История пока пуста</h3>
+      <p id="emptyText">Загрузи график в Pulse Vision или создай быстрый результат.</p>
+      <button class="btn primary" id="emptyGoVision">Перейти к Pulse Vision</button>
+    </div>
+  </section>
+
+  <!-- CREATE -->
+  <section class="view" id="createView">
+    <div class="hero">
+      <p class="eyebrow" id="createEyebrow">СОЗДАТЬ</p>
+      <h2 id="createTitle">Параметры результата</h2>
+      <p id="createText">Выбери OTC-актив, длительность, тип входа и режим.</p>
+    </div>
+    <div class="card">
+      <label class="field-label" id="assetLabel">OTC-актив</label>
+      <input class="search" id="assetSearch" type="text" autocomplete="off" placeholder="Поиск актива" />
+      <div class="asset-list" id="assetList"></div>
+
+      <label class="field-label" id="durationLabel">Длительность</label>
+      <div class="grid3" id="durationGrid"></div>
+
+      <label class="field-label" id="entryLabel">Тип входа</label>
+      <div class="grid2">
+        <button class="btn choice active" data-entry="nearest" id="entryNearest">Ближайшая точка</button>
+        <button class="btn choice" data-entry="later" id="entryLater">После длительности</button>
+      </div>
+
+      <label class="field-label" id="modeLabel">Режим</label>
+      <div class="mode-stack">
+        <button class="btn mode-card selected" data-mode="vision">
+          <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
+        </button>
+        <button class="btn mode-card" data-mode="quick">
+          <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L4 14 h7 l-1 8 9-12 h-7 z"/></svg></span>
+          <span><b>Pulse Quick</b><small id="quickModeText">Работает без анализа загруженного графика</small></span>
+        </button>
+      </div>
+
+      <button class="btn primary" id="createAction">Перейти к Pulse Vision</button>
+    </div>
+
+    <div class="result" id="quickResult">
+      <div class="r-asset" id="quickAssetTop">—</div>
+      <div class="r-dir none" id="quickDir">—</div>
+      <div class="facts">
+        <div class="fact"><small id="qL1">АКТИВ</small><b id="quickAsset">—</b></div>
+        <div class="fact"><small id="qL2">ДЛИТЕЛЬНОСТЬ</small><b id="quickDuration">—</b></div>
+        <div class="fact"><small id="qL3">ВХОД</small><b id="quickEntry">—</b></div>
+        <div class="fact"><small id="qL4">ДО РЕЗУЛЬТАТА</small><b id="quickOutcome">—</b></div>
+      </div>
+      <div class="countdown" id="quickCountdown">—</div>
+      <div class="disclaimer" id="quickNotice">Режим работает без анализа загруженного графика.</div>
+      <div class="r-actions">
+        <button class="btn primary" id="quickAgain">Новый Pulse Quick</button>
+        <button class="btn secondary" id="quickHistory">Открыть историю</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISION -->
+  <section class="view" id="visionView">
+    <div class="hero">
+      <p class="eyebrow" id="visionEyebrow">PULSE VISION</p>
+      <h2 id="visionTitle">Анализ графика</h2>
+      <p id="visionText">Загрузи полный скриншот — приложение сохранит пропорции без обрезки.</p>
+    </div>
+    <div class="card">
+      <label class="upload" for="imageInput">
+        <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <span class="upload-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></span>
+        <strong id="uploadTitle">Выбрать скриншот</strong>
+        <span id="uploadHint">PNG, JPG или WEBP · до 8 МБ</span>
+      </label>
+      <div class="preview" id="preview"><img id="previewImg" alt="" /><button class="rm-img" id="removeImg" type="button">×</button></div>
+      <button class="btn primary" id="analyzeBtn" disabled>Анализировать график</button>
+
+      <div class="processing" id="processing">
+        <div class="proc-meta">
+          <div id="procAssetLabel">Актив<b id="procAsset">—</b></div>
+          <div id="procDurationLabel">Длительность<b id="procDuration">—</b></div>
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 132 132"><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
+          <div class="ring-pct" id="ringPct">0%</div>
+        </div>
+        <div class="proc-stage" id="procStage">—</div>
+      </div>
+
+      <div class="result" id="visionResult">
+        <div class="r-asset" id="visionAssetTop">—</div>
+        <div class="r-dir none" id="visionDir">—</div>
+        <div id="visionConfWrap"><span class="r-conf" id="visionConf">—</span></div>
+        <div class="facts">
+          <div class="fact"><small id="vL1">АКТИВ</small><b id="visionAsset">—</b></div>
+          <div class="fact"><small id="vL2">ДЛИТЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
+          <div class="fact"><small id="vL3">ВХОД</small><b id="visionEntry">—</b></div>
+          <div class="fact"><small id="vL4">ДО РЕЗУЛЬТАТА</small><b id="visionOutcome">—</b></div>
+        </div>
+        <div class="countdown" id="visionCountdown">—</div>
+        <ul class="reasons" id="visionReasons"></ul>
+        <div class="disclaimer" id="visionRisk">Это анализ изображения, а не гарантия результата.</div>
+        <div class="r-actions">
+          <button class="btn primary" id="visionAgain">Новый анализ</button>
+          <button class="btn secondary" id="visionHistory">Открыть историю</button>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" id="brandMark"></div>
-        <div>
-          <h1>Signal Pulse</h1>
-          <p id="brandText">Личный помощник для работы с графиком</p>
-        </div>
+  <!-- PROFILE -->
+  <section class="view" id="profileView">
+    <div class="hero">
+      <p class="eyebrow" id="profileEyebrow">ПРОФИЛЬ</p>
+      <h2 id="profileTitle">Настройки</h2>
+      <p id="profileText">Настройки сохраняются на этом устройстве.</p>
+    </div>
+    <div class="card">
+      <div class="p-row">
+        <div><b id="langTitle">Язык интерфейса</b><span id="langHint">Сохраняется после перезапуска</span></div>
+        <select id="langSelect"><option value="ru">Русский</option><option value="en">English</option></select>
       </div>
-      <div class="clock">
-        <span id="clock">--:--:--</span>
-        <small>Asia/Oral · UTC+5</small>
+      <div class="p-row">
+        <div><b id="soundTitle">Звук интерфейса</b><span id="soundHint">Тихий отклик при нажатии</span></div>
+        <button class="toggle" id="soundToggle">Выкл</button>
       </div>
-    </header>
-
-    <!-- History -->
-    <section class="view active" id="historyView">
-      <div class="hero">
-        <p class="eyebrow" id="historyEyebrow">ИСТОРИЯ</p>
-        <h2 id="historyTitle">История результатов</h2>
-        <p id="historyText">Здесь появятся результаты Pulse Vision и Pulse Quick.</p>
+      <div class="p-row">
+        <div><b id="hapticTitle">Тактильный отклик</b><span id="hapticHint">Вибрация Telegram при нажатии</span></div>
+        <button class="toggle" id="hapticToggle">Вкл</button>
       </div>
-      <div id="historyList"></div>
-      <div class="card empty" id="emptyHistory">
-        <div class="empty-icon">◍</div>
-        <h3 id="emptyTitle">История пока пуста</h3>
-        <p id="emptyText">Загрузи график в Pulse Vision или создай быстрый результат.</p>
-        <button class="primary" id="historyVision">Перейти к Pulse Vision</button>
+      <div class="p-row">
+        <div><b id="selAssetTitle">Выбранный актив</b><span id="selAssetHint">Используется при создании результата</span></div>
+        <strong id="profileAsset">EUR/GBP OTC</strong>
       </div>
-    </section>
+    </div>
+
+    <h3 class="section-title" id="statsTitle">Личная статистика</h3>
+    <div class="stats">
+      <div class="stat"><b id="statAll">0</b><small id="statAllLabel">Всего</small></div>
+      <div class="stat"><b id="statWin">0</b><small>Win</small></div>
+      <div class="stat"><b id="statLoss">0</b><small>Loss</small></div>
+    </div>
+
+    <div class="disclaimer" id="profileNotice">Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.</div>
+
+    <div id="ownerArea"></div>
+  </section>
+</main>
+
+<nav class="nav">
+  <button class="nav-item active" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg><span id="navHistory">История</span></button>
+  <button class="nav-item" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="navCreate">Создать</span></button>
+  <button class="nav-item" data-tab="vision"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><span id="navVision">Vision</span></button>
+  <button class="nav-item" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span id="navProfile">Профиль</span></button>
+</nav>
 
-    <!-- Create -->
-    <section class="view" id="createView">
-      <div class="hero">
-        <p class="eyebrow" id="createEyebrow">СОЗДАТЬ</p>
-        <h2 id="createTitle">Параметры результата</h2>
-        <p id="createText">Выбери OTC-актив, длительность и режим.</p>
-      </div>
-      <div class="card">
-        <label class="field-label" id="assetLabel">OTC-актив</label>
-        <input class="search" id="assetSearch" type="text" autocomplete="off" placeholder="Поиск актива" />
-        <div class="asset-list" id="assetList"></div>
-
-        <label class="field-label" id="durationLabel">Длительность</label>
-        <div class="choice-grid" id="durationGrid"></div>
-
-        <label class="field-label" id="entryLabel">Тип входа</label>
-        <div class="choice-grid two">
-          <button class="choice active" data-entry="nearest" id="nearestButton">Ближайшая точка</button>
-          <button class="choice" data-entry="later" id="laterButton">После длительности</button>
-        </div>
-
-        <label class="field-label" id="modeLabel">Режим</label>
-        <div class="mode-stack">
-          <button class="mode-card selected" data-mode="vision">
-            <span class="mode-icon">▧</span>
-            <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
-          </button>
-          <button class="mode-card" data-mode="quick">
-            <span class="mode-icon">↗</span>
-            <span><b>Pulse Quick</b><small id="quickModeText">Быстрый режим без анализа графика</small></span>
-          </button>
-        </div>
-
-        <button class="primary" id="createAction">Перейти к Pulse Vision</button>
-      </div>
-
-      <!-- Quick result -->
-      <div class="result-card" id="quickResult">
-        <div class="result-top">
-          <span class="result-label">PULSE QUICK</span>
-          <span class="direction NONE" id="quickBadge">—</span>
-        </div>
-        <div class="direction-big NONE" id="quickBig">—</div>
-        <div class="result-asset" id="quickAssetTop">—</div>
-        <div class="facts">
-          <div class="fact"><small id="quickDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="quickDuration">—</b></div>
-          <div class="fact"><small id="quickEntryLabel">ВХОД</small><b id="quickEntry">—</b></div>
-          <div class="fact"><small id="quickOutcomeLabel">РЕЗУЛЬТАТ В</small><b id="quickOutcome">—</b></div>
-          <div class="fact"><small id="quickCountdownLabel">ДО ВХОДА</small><b id="quickCountdown" class="count">—</b></div>
-        </div>
-        <div class="disclaimer" id="quickNotice">Быстрый режим. Не анализирует график и не является рыночным прогнозом.</div>
-        <div class="result-actions">
-          <button class="primary" id="quickAgain">Новый Pulse Quick</button>
-          <button class="secondary" id="quickHistory">Открыть историю</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Vision -->
-    <section class="view" id="visionView">
-      <div class="hero">
-        <p class="eyebrow">PULSE VISION</p>
-        <h2 id="visionTitle">Анализ графика</h2>
-        <p id="visionText">Загрузи полный скриншот. Приложение сохранит пропорции без обрезки.</p>
-      </div>
-      <div class="card">
-        <label class="upload-zone" for="imageInput">
-          <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
-          <div class="upload-icon">▧</div>
-          <strong id="uploadTitle">Выбрать скриншот</strong>
-          <span id="uploadText">PNG, JPG или WEBP · до 8 МБ</span>
-        </label>
-        <div class="preview-wrap" id="previewWrap">
-          <img id="previewImage" alt="График" />
-          <button class="remove-image" id="removeImage" aria-label="Удалить">×</button>
-        </div>
-        <button class="primary" id="analyzeButton" disabled>Анализировать график</button>
-
-        <!-- Processing -->
-        <div class="processing" id="visionProcessing">
-          <div class="ring-wrap">
-            <svg width="128" height="128" viewBox="0 0 128 128">
-              <circle class="ring-bg" cx="64" cy="64" r="56"></circle>
-              <circle class="ring-fg" id="ringFg" cx="64" cy="64" r="56"></circle>
-            </svg>
-            <div class="ring-pct" id="ringPct">0%</div>
-          </div>
-          <div class="processing-meta">
-            <div><small id="procAssetLabel">АКТИВ</small><b id="procAsset">—</b></div>
-            <div><small id="procDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="procDuration">—</b></div>
-          </div>
-          <div class="stage" id="stageText">Подготавливаем изображение</div>
-        </div>
-
-        <div class="status" id="visionStatus"><span id="visionStatusText"></span></div>
-
-        <!-- Vision result -->
-        <div class="result-card" id="visionResult">
-          <div class="result-top">
-            <span class="result-label" id="analysisLabel">РЕЗУЛЬТАТ АНАЛИЗА</span>
-            <span class="direction NONE" id="visionBadge">НЕТ СИГНАЛА</span>
-          </div>
-          <div class="direction-big NONE" id="visionBig">—</div>
-          <div class="result-asset" id="visionAssetTop">—</div>
-          <div class="confidence-line" id="visionConfidence"></div>
-          <div class="facts">
-            <div class="fact"><small id="factDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
-            <div class="fact"><small id="factEntryLabel">ВХОД</small><b id="visionEntry">—</b></div>
-            <div class="fact"><small id="factOutcomeLabel">РЕЗУЛЬТАТ В</small><b id="visionOutcome">—</b></div>
-            <div class="fact"><small id="factCountdownLabel">ДО ВХОДА</small><b id="visionCountdown" class="count">—</b></div>
-          </div>
-          <p class="result-summary" id="visionSummary"></p>
-          <button class="reasons-toggle" id="reasonsToggle">
-            <span id="reasonsToggleText">Причины анализа</span><span>▾</span>
-          </button>
-          <ul class="reasons collapsed" id="visionReasons"></ul>
-          <div class="disclaimer" id="visionRisk"></div>
-          <div class="result-actions">
-            <button class="secondary" id="visionHistory">Открыть историю</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Profile -->
-    <section class="view" id="profileView">
-      <div class="hero">
-        <p class="eyebrow" id="profileEyebrow">ПРОФИЛЬ</p>
-        <h2 id="profileTitle">Настройки</h2>
-        <p id="profileText">Настройки сохраняются на этом устройстве.</p>
-      </div>
-
-      <div class="card">
-        <div class="profile-row">
-          <div><b id="languageTitle">Язык интерфейса</b><span id="languageText">Сохраняется после перезапуска</span></div>
-          <select id="languageSelect">
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-        <div class="profile-row">
-          <div><b id="soundTitle">Звук интерфейса</b><span id="soundText">Тихий отклик при нажатии</span></div>
-          <button class="toggle" id="soundToggle">Выкл</button>
-        </div>
-        <div class="profile-row">
-          <div><b id="hapticTitle">Тактильный отклик</b><span id="hapticText">Вибрация Telegram при нажатии</span></div>
-          <button class="toggle" id="hapticToggle">Вкл</button>
-        </div>
-        <div class="profile-row">
-          <div><b id="selectedAssetTitle">Выбранный актив</b><span id="selectedAssetText">Используется при создании результата</span></div>
-          <strong id="profileAsset">EUR/GBP OTC</strong>
-        </div>
-      </div>
-
-      <h3 class="section-title" id="statsTitle">Личная статистика</h3>
-      <div class="stats">
-        <div class="stat"><b id="statAll">0</b><small id="statAllLabel">Всего</small></div>
-        <div class="stat"><b id="statWin">0</b><small id="statWinLabel">Win</small></div>
-        <div class="stat"><b id="statLoss">0</b><small id="statLossLabel">Loss</small></div>
-      </div>
-
-      <div class="disclaimer" id="profileNotice">
-        Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.
-      </div>
-
-      <!-- Owner: Pulse Control -->
-      <section class="card owner-block" id="pulseControl">
-        <p class="eyebrow">PULSE CONTROL</p>
-        <h3 class="section-title" style="margin-top:2px" id="pcTitle">Панель владельца</h3>
-        <p class="section-text" id="pcSubtitle">Серверная статистика. Доступ подтверждён через Telegram.</p>
-        <div class="stats">
-          <div class="stat"><b id="pcUsers">—</b><small id="pcUsersLabel">Пользователи</small></div>
-          <div class="stat"><b id="pcResults">—</b><small id="pcResultsLabel">Результаты</small></div>
-          <div class="stat"><b id="pcEvents">—</b><small id="pcEventsLabel">События</small></div>
-        </div>
-        <div class="stats">
-          <div class="stat"><b id="pcVision">—</b><small>Pulse Vision</small></div>
-          <div class="stat"><b id="pcQuick">—</b><small>Pulse Quick</small></div>
-          <div class="stat"><b id="pcToday">—</b><small id="pcTodayLabel">Сегодня</small></div>
-        </div>
-        <div class="stats">
-          <div class="stat"><b id="pcWins">—</b><small>Win</small></div>
-          <div class="stat"><b id="pcLosses">—</b><small>Loss</small></div>
-          <div class="stat"><b>✓</b><small id="pcVerifiedLabel">Владелец</small></div>
-        </div>
-        <button class="secondary" id="pcRefresh">Обновить показатели</button>
-      </section>
-
-      <!-- Owner: Pulse Design Control -->
-      <section class="card owner-block" id="designControl">
-        <p class="eyebrow">PULSE DESIGN CONTROL</p>
-        <h3 class="section-title" style="margin-top:2px" id="dcTitle">Тема оформления</h3>
-        <p class="section-text" id="dcSubtitle">Локальные темы. Меняют фон, карточки, контуры, акцент и логотип.</p>
-        <div class="theme-chips" id="themeChips"></div>
-
-        <label class="field-label" id="dcModeLabel">Режим показа</label>
-        <div class="seg" id="themeModes"></div>
-
-        <div class="schedule-row" id="scheduleRow" style="display:none">
-          <span id="dcFromLabel">С</span>
-          <input type="number" min="0" max="23" id="scheduleFrom" />
-          <span id="dcToLabel">до</span>
-          <input type="number" min="0" max="23" id="scheduleTo" />
-          <span>UTC+5</span>
-        </div>
-
-        <button class="secondary" id="themePreview">Предпросмотр темы</button>
-        <button class="primary" id="themeApply">Сохранить оформление</button>
-      </section>
-    </section>
-  </main>
-
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="history"><i>◍</i><span id="navHistory">История</span></button>
-    <button class="nav-item" data-tab="create"><i>＋</i><span id="navCreate">Создать</span></button>
-    <button class="nav-item" data-tab="vision"><i>▧</i><span>Vision</span></button>
-    <button class="nav-item" data-tab="profile"><i>◎</i><span id="navProfile">Профиль</span></button>
-  </nav>
-
-  <script>
-    "use strict";
-
-    /* ---------- Data ---------- */
-    const OTC_ASSETS = [
-      "EUR/GBP OTC", "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "USD/CHF OTC",
-      "AUD/CAD OTC", "AUD/JPY OTC", "CAD/JPY OTC", "EUR/JPY OTC", "GBP/JPY OTC"
-    ];
-    const DURATIONS = [15, 30, 60, 180, 300, 900];
-    const TZ = "Asia/Oral";
-
-    const THEMES = {
-      obsidian: { label: "Obsidian Silver", dot: "#3b82f6",
-        vars: { "--bg":"#0a0a0a","--bg2":"#121212","--card":"#171717","--card2":"#1e1e1e","--line":"#2c2c2c","--accent":"#3b82f6","--accent-soft":"rgba(59,130,246,.16)","--silver":"#d7d9dd","--logo":"#eaebed","--glow1":"rgba(120,140,175,.16)","--glow2":"rgba(59,130,246,.14)" } },
-      midnight: { label: "Midnight Blue", dot: "#4f8cff",
-        vars: { "--bg":"#060c1c","--bg2":"#0a1428","--card":"#0e1b38","--card2":"#132347","--line":"#22345c","--accent":"#4f8cff","--accent-soft":"rgba(79,140,255,.18)","--silver":"#cfdcff","--logo":"#dce9ff","--glow1":"rgba(40,90,205,.34)","--glow2":"rgba(90,150,255,.20)" } },
-      carbon: { label: "Carbon Green", dot: "#2fd47f",
-        vars: { "--bg":"#05100b","--bg2":"#0a1a12","--card":"#0e2318","--card2":"#132e1f","--line":"#1f3d2c","--accent":"#2fd47f","--accent-soft":"rgba(47,212,127,.18)","--silver":"#bfeed4","--logo":"#d7f5e4","--glow1":"rgba(20,160,90,.30)","--glow2":"rgba(60,220,150,.18)" } },
-      pureblack: { label: "Pure Black", dot: "#e6e6e6",
-        vars: { "--bg":"#000000","--bg2":"#070707","--card":"#0d0d0d","--card2":"#141414","--line":"#232323","--accent":"#e6e6e6","--accent-soft":"rgba(230,230,230,.12)","--silver":"#ffffff","--logo":"#ffffff","--glow1":"rgba(255,255,255,.08)","--glow2":"rgba(150,150,160,.05)" } },
-      launch: { label: "Pulse Launch", dot: "#7c5cff",
-        vars: { "--bg":"#070512","--bg2":"#0e0a20","--card":"#14102c","--card2":"#1b1638","--line":"#2c2450","--accent":"#7c5cff","--accent-soft":"rgba(124,92,255,.20)","--silver":"#d9d2ff","--logo":"#eae5ff","--glow1":"rgba(120,60,255,.34)","--glow2":"rgba(40,90,220,.24)" } }
-    };
-
-    const translations = {
-      ru: {
-        loader: "Готовим Signal Pulse…", welcomeText: "Signal Pulse готов к работе.",
-        brand: "Личный помощник для работы с графиком",
-        historyEyebrow: "ИСТОРИЯ", historyTitle: "История результатов",
-        historyText: "Здесь появятся результаты Pulse Vision и Pulse Quick.",
-        emptyTitle: "История пока пуста", emptyText: "Загрузи график в Pulse Vision или создай быстрый результат.",
-        historyVision: "Перейти к Pulse Vision",
-        createEyebrow: "СОЗДАТЬ", createTitle: "Параметры результата", createText: "Выбери OTC-актив, длительность и режим.",
-        assetLabel: "OTC-актив", search: "Поиск актива", durationLabel: "Длительность", entryLabel: "Тип входа",
-        nearest: "Ближайшая точка", later: "После длительности", modeLabel: "Режим",
-        visionModeText: "Анализ загруженного графика", quickModeText: "Быстрый режим без анализа графика",
-        openVision: "Перейти к Pulse Vision", startQuick: "Запустить Pulse Quick", quickLoading: "Формируем результат…",
-        quickAgain: "Новый Pulse Quick", quickHistory: "Открыть историю",
-        quickNotice: "Быстрый режим. Не анализирует график и не является рыночным прогнозом.",
-        visionTitle: "Анализ графика", visionText: "Загрузи полный скриншот. Приложение сохранит пропорции без обрезки.",
-        uploadTitle: "Выбрать скриншот", uploadText: "PNG, JPG или WEBP · до 8 МБ", analyze: "Анализировать график",
-        stage0: "Подготавливаем изображение", stage1: "Изучаем структуру графика", stage2: "Проверяем видимые уровни", stage3: "Формируем результат",
-        retrying: "Pulse Vision занят. Повторяем попытку…", result: "РЕЗУЛЬТАТ АНАЛИЗА",
-        confidence: "Уверенность", asset: "АКТИВ", duration: "ДЛИТЕЛЬНОСТЬ", entry: "ВХОД", outcome: "РЕЗУЛЬТАТ В",
-        countdown: "ДО ВХОДА", reasonsToggle: "Причины анализа", visionHistory: "Открыть историю",
-        noSignal: "НЕТ СИГНАЛА", up: "ВВЕРХ", down: "ВНИЗ", wait: "ПОДОЖДАТЬ",
-        profileEyebrow: "ПРОФИЛЬ", profileTitle: "Настройки", profileText: "Настройки сохраняются на этом устройстве.",
-        languageTitle: "Язык интерфейса", languageText: "Сохраняется после перезапуска",
-        soundTitle: "Звук интерфейса", soundText: "Тихий отклик при нажатии",
-        hapticTitle: "Тактильный отклик", hapticText: "Вибрация Telegram при нажатии",
-        selectedAssetTitle: "Выбранный актив", selectedAssetText: "Используется при создании результата",
-        statsTitle: "Личная статистика", all: "Всего", win: "Win", loss: "Loss", skip: "Пропустить",
-        profileNotice: "Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
-        navHistory: "История", navCreate: "Создать", navProfile: "Профиль",
-        pcTitle: "Панель владельца", pcSubtitle: "Серверная статистика. Доступ подтверждён через Telegram.",
-        pcUsers: "Пользователи", pcResults: "Результаты", pcEvents: "События", pcToday: "Сегодня", pcVerified: "Владелец", pcRefresh: "Обновить показатели",
-        dcTitle: "Тема оформления", dcSubtitle: "Локальные темы. Меняют фон, карточки, контуры, акцент и логотип.",
-        dcModeLabel: "Режим показа", dcFrom: "С", dcTo: "до", themePreview: "Предпросмотр темы", themeApply: "Сохранить оформление",
-        modeAlways: "Постоянно", modeNow: "Сейчас", modeSchedule: "Расписание", modeLaunch: "Запуск", modeVision: "Vision", modeQuick: "Quick",
-        on: "Вкл", off: "Выкл",
-        noImage: "Сначала выбери скриншот.", imageTooLarge: "Изображение больше 8 МБ. Выбери файл поменьше.",
-        badImage: "Поддерживаются только PNG, JPG и WEBP.", failed: "Pulse Vision временно недоступен. Попробуйте позже.",
-        cooldown: "Подождите несколько секунд перед следующим анализом.",
-        quickSummary: "Быстрый результат Pulse Quick.", riskDefault: "Это разбор изображения, а не гарантия результата.",
-        entryNow: "Вход открыт", themeSaved: "Оформление сохранено"
-      },
-      en: {
-        loader: "Preparing Signal Pulse…", welcomeText: "Signal Pulse is ready.",
-        brand: "Personal chart assistant",
-        historyEyebrow: "HISTORY", historyTitle: "Result history",
-        historyText: "Pulse Vision and Pulse Quick results will appear here.",
-        emptyTitle: "No history yet", emptyText: "Upload a chart in Pulse Vision or create a quick result.",
-        historyVision: "Open Pulse Vision",
-        createEyebrow: "CREATE", createTitle: "Result settings", createText: "Select an OTC asset, duration, and mode.",
-        assetLabel: "OTC asset", search: "Search asset", durationLabel: "Duration", entryLabel: "Entry type",
-        nearest: "Nearest point", later: "After duration", modeLabel: "Mode",
-        visionModeText: "Uploaded chart analysis", quickModeText: "Quick mode without chart analysis",
-        openVision: "Open Pulse Vision", startQuick: "Start Pulse Quick", quickLoading: "Preparing result…",
-        quickAgain: "New Pulse Quick", quickHistory: "Open history",
-        quickNotice: "Quick mode. It does not analyze a chart and is not a market forecast.",
-        visionTitle: "Chart analysis", visionText: "Upload a full screenshot. The app keeps full proportions.",
-        uploadTitle: "Choose screenshot", uploadText: "PNG, JPG, or WEBP · up to 8 MB", analyze: "Analyze chart",
-        stage0: "Preparing the image", stage1: "Studying the chart structure", stage2: "Checking visible levels", stage3: "Building the result",
-        retrying: "Pulse Vision is busy. Retrying…", result: "ANALYSIS RESULT",
-        confidence: "Confidence", asset: "ASSET", duration: "DURATION", entry: "ENTRY", outcome: "OUTCOME AT",
-        countdown: "UNTIL ENTRY", reasonsToggle: "Analysis reasons", visionHistory: "Open history",
-        noSignal: "NO SIGNAL", up: "UP", down: "DOWN", wait: "WAIT",
-        profileEyebrow: "PROFILE", profileTitle: "Settings", profileText: "Settings are stored on this device.",
-        languageTitle: "Interface language", languageText: "Saved after restart",
-        soundTitle: "Interface sound", soundText: "Soft feedback on tap",
-        hapticTitle: "Haptic feedback", hapticText: "Telegram vibration on tap",
-        selectedAssetTitle: "Selected asset", selectedAssetText: "Used while creating a result",
-        statsTitle: "Personal statistics", all: "All", win: "Win", loss: "Loss", skip: "Skip",
-        profileNotice: "Pulse Vision analyzes only visible elements of the uploaded chart and does not guarantee a direction or outcome.",
-        navHistory: "History", navCreate: "Create", navProfile: "Profile",
-        pcTitle: "Owner panel", pcSubtitle: "Server statistics. Access verified via Telegram.",
-        pcUsers: "Users", pcResults: "Results", pcEvents: "Events", pcToday: "Today", pcVerified: "Owner", pcRefresh: "Refresh metrics",
-        dcTitle: "Appearance theme", dcSubtitle: "Local themes. Change background, cards, borders, accent, and logo.",
-        dcModeLabel: "Display mode", dcFrom: "From", dcTo: "to", themePreview: "Preview theme", themeApply: "Save appearance",
-        modeAlways: "Always", modeNow: "Now", modeSchedule: "Schedule", modeLaunch: "Launch", modeVision: "Vision", modeQuick: "Quick",
-        on: "On", off: "Off",
-        noImage: "Choose a screenshot first.", imageTooLarge: "Image is larger than 8 MB. Choose a smaller file.",
-        badImage: "Only PNG, JPG, and WEBP are supported.", failed: "Pulse Vision is unavailable right now. Try again later.",
-        cooldown: "Wait a few seconds before the next analysis.",
-        quickSummary: "Pulse Quick result.", riskDefault: "This is image review, not a guarantee of any result.",
-        entryNow: "Entry open", themeSaved: "Appearance saved"
-      }
-    };
-
-    /* ---------- Language detection ---------- */
-    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-    const tgUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
-
-    function detectLanguage() {
-      const stored = localStorage.getItem("pulse_language");
-      if (stored === "ru" || stored === "en") return stored;
-      const tgCode = tgUser && tgUser.language_code ? tgUser.language_code : "";
-      if (tgCode) return tgCode.toLowerCase().startsWith("ru") ? "ru" : "en";
-      const nav = (navigator.language || "ru").toLowerCase();
-      if (nav.startsWith("ru")) return "ru";
-      if (nav.startsWith("en")) return "en";
-      return "ru";
-    }
-
-    const state = {
-      language: detectLanguage(),
-      asset: localStorage.getItem("pulse_asset") || "EUR/GBP OTC",
-      duration: Number(localStorage.getItem("pulse_duration") || 30),
-      entryMode: localStorage.getItem("pulse_entry_mode") || "nearest",
-      mode: "vision",
-      image: null,
-      analyzing: false,
-      cooldownUntil: 0,
-      history: [],
-      isOwner: false,
-      countdown: { entryMs: 0, outcomeMs: 0, target: null }
-    };
-    try { state.history = JSON.parse(localStorage.getItem("pulse_history") || "[]"); } catch (e) { state.history = []; }
-
-    const design = {
-      theme: localStorage.getItem("pulse_theme") || "obsidian",
-      mode: localStorage.getItem("pulse_theme_mode") || "always",
-      from: Number(localStorage.getItem("pulse_theme_from") || 20),
-      to: Number(localStorage.getItem("pulse_theme_to") || 7)
-    };
-
-    const $ = (id) => document.getElementById(id);
-    const t = (key) => (translations[state.language] && translations[state.language][key]) || (translations.ru[key]) || key;
-
-    function esc(v) {
-      return String(v == null ? "" : v)
-        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
-    }
-
-    function saveState() {
-      localStorage.setItem("pulse_language", state.language);
-      localStorage.setItem("pulse_asset", state.asset);
-      localStorage.setItem("pulse_duration", String(state.duration));
-      localStorage.setItem("pulse_entry_mode", state.entryMode);
-      localStorage.setItem("pulse_history", JSON.stringify(state.history));
-    }
-
-    function fmtTime(ms) {
-      return new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB", {
-        timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-      }).format(new Date(ms));
-    }
-    function durationText(seconds) {
-      const unitSec = state.language === "ru" ? "сек" : "sec";
-      const unitMin = state.language === "ru" ? "мин" : "min";
-      return seconds < 60 ? `${seconds} ${unitSec}` : `${seconds / 60} ${unitMin}`;
-    }
-
-    function getTiming() {
-      const safety = state.entryMode === "nearest" ? 12 : state.duration;
-      const target = Date.now() + safety * 1000;
-      const durationMs = state.duration * 1000;
-      const entryMs = Math.ceil(target / durationMs) * durationMs;
-      const outcomeMs = entryMs + durationMs;
-      return {
-        entryMs, outcomeMs,
-        entry: fmtTime(entryMs), outcome: fmtTime(outcomeMs),
-        entryISO: new Date(entryMs).toISOString(), outcomeISO: new Date(outcomeMs).toISOString(),
-        duration: durationText(state.duration)
-      };
-    }
-
-    /* ---------- Logo (silver pulse line into arrow) ---------- */
-    function logoSVG(animated) {
-      const cls = animated ? ' class="draw"' : "";
-      const head = animated ? ' class="arrowhead"' : "";
-      return `<svg viewBox="0 0 100 100" aria-hidden="true">
-        <path${cls} d="M12 58 H30 L41 40 L54 72 L66 50 L84 30" fill="none" stroke="var(--logo)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path${head} d="M74 30 H84 V40" fill="none" stroke="var(--logo)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>`;
-    }
-
-    /* ---------- Theme engine ---------- */
-    function setVars(themeId) {
-      const th = THEMES[themeId] || THEMES.obsidian;
-      Object.entries(th.vars).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
-      if (tg) { try { tg.setHeaderColor(th.vars["--bg"]); tg.setBackgroundColor(th.vars["--bg"]); } catch (e) {} }
-    }
-    function resetVars() { setVars("obsidian"); }
-
-    function inSchedule() {
-      const h = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }));
-      const { from, to } = design;
-      if (from === to) return false;
-      return from < to ? (h >= from && h < to) : (h >= from || h < to);
-    }
-
-    function applyDesign(context) {
-      // context: "load" | "launch" | "vision" | "quick" | "tick"
-      const mode = design.mode;
-      if (mode === "always" || mode === "now") { setVars(design.theme); return; }
-      if (mode === "schedule") { inSchedule() ? setVars(design.theme) : resetVars(); return; }
-      if (mode === "launch") { context === "launch" ? setVars(design.theme) : resetVars(); return; }
-      if (mode === "vision") { context === "vision" ? setVars(design.theme) : resetVars(); return; }
-      if (mode === "quick") { context === "quick" ? setVars(design.theme) : resetVars(); return; }
-      resetVars();
-    }
-
-    /* ---------- Clock & greeting ---------- */
-    function updateClock() {
-      $("clock").textContent = fmtTime(Date.now());
-      if (design.mode === "schedule") applyDesign("tick");
-    }
-    function greeting() {
-      const h = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }));
-      const name = tgUser && tgUser.first_name ? tgUser.first_name : "";
-      const suffix = name ? `, ${name}` : "";
-      if (state.language === "ru") {
-        if (h < 12) return `Доброе утро${suffix}`;
-        if (h < 18) return `Добрый день${suffix}`;
-        return `Добрый вечер${suffix}`;
-      }
-      if (h < 12) return `Good morning${suffix}`;
-      if (h < 18) return `Good afternoon${suffix}`;
-      return `Good evening${suffix}`;
-    }
-
-    /* ---------- Tabs ---------- */
-    function setTab(tab) {
-      document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-      document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
-      $(tab + "View").classList.add("active");
-      const nav = document.querySelector(`.nav-item[data-tab="${tab}"]`);
-      if (nav) nav.classList.add("active");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      if (tab === "vision") applyDesign("vision"); else applyDesign("tick");
-    }
-
-    /* ---------- Direction helper ---------- */
-    function directionInfo(direction) {
-      if (direction === "BUY" || direction === "UP") return { cls: "UP", text: t("up") };
-      if (direction === "SELL" || direction === "DOWN") return { cls: "DOWN", text: t("down") };
-      return { cls: "NONE", text: t("noSignal") };
-    }
-
-    /* ---------- Create screen renderers ---------- */
-    function renderDurations() {
-      $("durationGrid").innerHTML = DURATIONS.map((v) =>
-        `<button class="choice ${v === state.duration ? "active" : ""}" data-duration="${v}">${durationText(v)}</button>`
-      ).join("");
-      document.querySelectorAll("[data-duration]").forEach((b) => {
-        b.addEventListener("click", () => { state.duration = Number(b.dataset.duration); saveState(); renderDurations(); });
-      });
-    }
-    function renderAssets(query) {
-      const s = String(query || "").trim().toLowerCase();
-      const list = OTC_ASSETS.filter((a) => a.toLowerCase().includes(s));
-      $("assetList").innerHTML = list.map((a) =>
-        `<button class="asset-option ${a === state.asset ? "selected" : ""}" data-asset="${esc(a)}"><b>${esc(a)}</b><span>OTC</span></button>`
-      ).join("") || `<p class="section-text">—</p>`;
-      document.querySelectorAll("[data-asset]").forEach((b) => {
-        b.addEventListener("click", () => {
-          state.asset = b.dataset.asset; saveState();
-          $("profileAsset").textContent = state.asset;
-          renderAssets($("assetSearch").value);
-        });
-      });
-    }
-    function setMode(mode) {
-      state.mode = mode;
-      document.querySelectorAll("[data-mode]").forEach((b) => b.classList.toggle("selected", b.dataset.mode === mode));
-      $("quickResult").classList.remove("show");
-      $("createAction").textContent = mode === "vision" ? t("openVision") : t("startQuick");
-    }
-
-    /* ---------- History & stats ---------- */
-    function addHistory(item) {
-      const record = {
-        id: Date.now().toString() + Math.random().toString(16).slice(2, 6),
-        type: item.type, direction: item.direction, asset: item.asset,
-        duration: item.duration, entry: item.entry, outcomeTime: item.outcomeTime,
-        entryISO: item.entryISO, outcomeISO: item.outcomeISO,
-        summary: item.summary || "", confidence: item.confidence || "",
-        createdAt: new Date().toISOString(), outcome: "skip"
-      };
-      state.history.unshift(record);
-      state.history = state.history.slice(0, 60);
-      saveState();
-      renderHistory();
-      renderStats();
-      syncResultToServer(record);
-    }
-    function renderHistory() {
-      const listEl = $("historyList");
-      if (!state.history.length) { listEl.innerHTML = ""; $("emptyHistory").style.display = "block"; return; }
-      $("emptyHistory").style.display = "none";
-      listEl.innerHTML = state.history.map((item) => {
-        const dir = directionInfo(item.direction);
-        const typeLabel = item.type === "vision" ? "Pulse Vision" : "Pulse Quick";
-        const created = new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB",
-          { dateStyle: "medium", timeStyle: "short" }).format(new Date(isNaN(Date.parse(item.createdAt)) ? Date.now() : item.createdAt));
-        return `<article class="history-item">
-          <span class="tag">${esc(typeLabel)}</span>
-          <div class="history-head">
-            <b>${esc(item.asset)}</b>
-            <span class="direction ${dir.cls}">${dir.text}</span>
-          </div>
-          <div class="history-meta">
-            <span>${t("entry")}: ${esc(item.entry)}</span>
-            <span>${t("outcome")}: ${esc(item.outcomeTime)}</span>
-            <span>${t("duration")}: ${esc(item.duration)}</span>
-            <span>${esc(created)}</span>
-          </div>
-          ${item.summary ? `<p class="history-summary">${esc(item.summary)}</p>` : ""}
-          <div class="outcome-grid">
-            <button class="outcome win ${item.outcome === "win" ? "active" : ""}" data-outcome="win" data-id="${item.id}">${t("win")}</button>
-            <button class="outcome loss ${item.outcome === "loss" ? "active" : ""}" data-outcome="loss" data-id="${item.id}">${t("loss")}</button>
-            <button class="outcome skip ${item.outcome === "skip" ? "active" : ""}" data-outcome="skip" data-id="${item.id}">${t("skip")}</button>
-          </div>
-        </article>`;
-      }).join("");
-      document.querySelectorAll("[data-outcome]").forEach((b) => {
-        b.addEventListener("click", () => {
-          const item = state.history.find((e) => e.id === b.dataset.id);
-          if (!item) return;
-          item.outcome = b.dataset.outcome;
-          saveState(); renderHistory(); renderStats();
-          syncResultToServer(item);
-        });
-      });
-    }
-    function renderStats() {
-      $("statAll").textContent = state.history.length;
-      $("statWin").textContent = state.history.filter((i) => i.outcome === "win").length;
-      $("statLoss").textContent = state.history.filter((i) => i.outcome === "loss").length;
-    }
-
-    /* ---------- Countdown ---------- */
-    function tickCountdown() {
-      const c = state.countdown;
-      if (!c.target) return;
-      const now = Date.now();
-      const remain = Math.max(0, Math.ceil((c.entryMs - now) / 1000));
-      const label = remain > 0 ? `${remain} ${state.language === "ru" ? "сек" : "sec"}` : t("entryNow");
-      if (c.target === "vision") $("visionCountdown").textContent = label;
-      if (c.target === "quick") $("quickCountdown").textContent = label;
-    }
-
-    /* ---------- Vision ---------- */
-    const RING_CIRC = 2 * Math.PI * 56;
-    function setRing(pct) {
-      $("ringFg").style.strokeDasharray = String(RING_CIRC);
-      $("ringFg").style.strokeDashoffset = String(RING_CIRC * (1 - pct / 100));
-      $("ringPct").textContent = Math.round(pct) + "%";
-    }
-    let procTimer = null, stageTimer = null;
-    function startProcessing() {
-      $("visionResult").classList.remove("show");
-      $("visionStatus").classList.remove("show", "error");
-      $("procAsset").textContent = state.asset;
-      $("procDuration").textContent = durationText(state.duration);
-      $("visionProcessing").classList.add("show");
-      const stages = [t("stage0"), t("stage1"), t("stage2"), t("stage3")];
-      let stageIdx = 0; $("stageText").textContent = stages[0];
-      setRing(4);
-      let pct = 4;
-      procTimer = setInterval(() => { pct = Math.min(pct + Math.random() * 6 + 2, 92); setRing(pct); }, 260);
-      stageTimer = setInterval(() => { stageIdx = Math.min(stageIdx + 1, stages.length - 1); $("stageText").textContent = stages[stageIdx]; }, 1400);
-    }
-    function stopProcessing(complete) {
-      clearInterval(procTimer); clearInterval(stageTimer);
-      if (complete) { setRing(100); setTimeout(() => $("visionProcessing").classList.remove("show"), 350); }
-      else { $("visionProcessing").classList.remove("show"); }
-    }
-    function setStatus(text, isError) {
-      $("visionStatusText").textContent = text;
-      $("visionStatus").classList.toggle("show", !!text);
-      $("visionStatus").classList.toggle("error", !!isError);
-    }
-
-    function compressImage(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.onload = () => {
-            const maxSide = 2000; let w = img.width, h = img.height;
-            if (w > maxSide || h > maxSide) { const s = Math.min(maxSide / w, maxSide / h); w = Math.round(w * s); h = Math.round(h * s); }
-            const canvas = document.createElement("canvas");
-            canvas.width = w; canvas.height = h;
-            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL("image/jpeg", 0.82));
-          };
-          img.onerror = reject; img.src = reader.result;
-        };
-        reader.onerror = reject; reader.readAsDataURL(file);
-      });
-    }
-    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-    function showVisionResult(result) {
-      const dir = directionInfo(result.direction);
-      const timing = getTiming();
-      $("visionBadge").className = `direction ${dir.cls}`;
-      $("visionBadge").textContent = dir.text;
-      $("visionBig").className = `direction-big ${dir.cls}`;
-      $("visionBig").textContent = dir.text;
-      const asset = result.asset && result.asset !== "Не распознан" && result.asset !== "Not recognized" ? result.asset : state.asset;
-      $("visionAssetTop").textContent = asset + " · OTC";
-      $("visionConfidence").textContent = result.confidence ? `${t("confidence")}: ${result.confidence}` : "";
-      $("visionDuration").textContent = timing.duration;
-      $("visionEntry").textContent = timing.entry;
-      $("visionOutcome").textContent = timing.outcome;
-      $("visionSummary").textContent = result.summary || "";
-      const reasons = Array.isArray(result.reasons) ? result.reasons : [];
-      $("visionReasons").innerHTML = reasons.map((r) => `<li>${esc(r)}</li>`).join("");
-      $("reasonsToggle").style.display = reasons.length ? "flex" : "none";
-      $("visionRisk").textContent = result.risk || t("riskDefault");
-      $("visionResult").classList.add("show");
-      state.countdown = { entryMs: timing.entryMs, outcomeMs: timing.outcomeMs, target: "vision" };
-      tickCountdown();
-      addHistory({
-        type: "vision", direction: result.direction, asset: asset, duration: timing.duration,
-        entry: timing.entry, outcomeTime: timing.outcome, entryISO: timing.entryISO, outcomeISO: timing.outcomeISO,
-        summary: result.summary || "", confidence: result.confidence || ""
-      });
-    }
-
-    async function analyzeChart() {
-      if (!state.image || state.analyzing) return;
-      if (Date.now() < state.cooldownUntil) { setStatus(t("cooldown")); return; }
-      state.analyzing = true;
-      $("analyzeButton").disabled = true;
-      startProcessing();
-      try {
-        let data = null, lastError = null;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          try {
-            const response = await fetch("/api/analyze", {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ image: state.image, mimeType: "image/jpeg", language: state.language })
-            });
-            data = await response.json();
-            if (response.ok) break;
-            const message = (data && data.error) || "";
-            const temporary = /high demand|temporarily|quota|rate|busy|429|503/i.test(message);
-            if (!temporary || attempt === 2) throw new Error(message || "analysis_failed");
-            $("stageText").textContent = t("retrying");
-            await wait(attempt === 0 ? 3000 : 8000);
-          } catch (err) {
-            lastError = err;
-            if (attempt === 2) throw err;
-            $("stageText").textContent = t("retrying");
-            await wait(attempt === 0 ? 3000 : 8000);
-          }
-        }
-        if (!data) throw lastError || new Error("analysis_failed");
-        stopProcessing(true);
-        showVisionResult(data);
-        state.cooldownUntil = Date.now() + 20000;
-      } catch (err) {
-        stopProcessing(false);
-        setStatus(t("failed"), true);
-      } finally {
-        state.analyzing = false;
-        $("analyzeButton").disabled = false;
-      }
-    }
-
-    /* ---------- Pulse Quick (honest: not analysis, not a forecast) ---------- */
-    async function runQuick() {
-      $("quickResult").classList.remove("show");
-      $("createAction").disabled = true;
-      $("createAction").textContent = t("quickLoading");
-      applyDesign("quick");
-      await wait(1500);
-      const direction = Math.random() >= 0.5 ? "UP" : "DOWN";
-      const dir = directionInfo(direction);
-      const timing = getTiming();
-      $("quickBadge").className = `direction ${dir.cls}`;
-      $("quickBadge").textContent = dir.text;
-      $("quickBig").className = `direction-big ${dir.cls}`;
-      $("quickBig").textContent = dir.text;
-      $("quickAssetTop").textContent = state.asset + " · OTC";
-      $("quickDuration").textContent = timing.duration;
-      $("quickEntry").textContent = timing.entry;
-      $("quickOutcome").textContent = timing.outcome;
-      $("quickResult").classList.add("show");
-      state.countdown = { entryMs: timing.entryMs, outcomeMs: timing.outcomeMs, target: "quick" };
-      tickCountdown();
-      addHistory({
-        type: "quick", direction: direction, asset: state.asset, duration: timing.duration,
-        entry: timing.entry, outcomeTime: timing.outcome, entryISO: timing.entryISO, outcomeISO: timing.outcomeISO,
-        summary: t("quickSummary")
-      });
-      $("createAction").disabled = false;
-      $("createAction").textContent = t("startQuick");
-    }
-
-    /* ---------- Server sync ---------- */
-    function normalizeDirection(d) {
-      if (d === "BUY" || d === "UP") return "UP";
-      if (d === "SELL" || d === "DOWN") return "DOWN";
-      return "NONE";
-    }
-    async function syncResultToServer(item) {
-      const initData = tg && tg.initData ? tg.initData : "";
-      if (!initData) return;
-      try {
-        await fetch("/api/pulse", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            initData, action: "save_result",
-            payload: {
-              mode: item.type, direction: normalizeDirection(item.direction),
-              asset: item.asset, durationSeconds: state.duration,
-              entryTime: item.entryISO || null, outcomeTime: item.outcomeISO || null,
-              confidence: item.confidence || "", summary: item.summary || "", outcome: item.outcome || "skip"
-            }
-          })
-        });
-      } catch (e) { /* silent */ }
-    }
-
-    /* ---------- Owner Pulse Control ---------- */
-    async function checkOwner() {
-      const initData = tg && tg.initData ? tg.initData : "";
-      if (!initData) return;
-      try {
-        const response = await fetch("/api/owner", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData })
-        });
-        const access = await response.json();
-        if (!response.ok || !access.verified || !access.isOwner) return;
-        state.isOwner = true;
-        $("pulseControl").classList.add("show");
-        $("designControl").classList.add("show");
-        loadDashboard();
-      } catch (e) { /* silent */ }
-    }
-    async function loadDashboard() {
-      const initData = tg && tg.initData ? tg.initData : "";
-      if (!initData || !state.isOwner) return;
-      try {
-        const response = await fetch("/api/pulse", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData, action: "dashboard" })
-        });
-        const data = await response.json();
-        if (!response.ok || !data.isOwner || !data.metrics) return;
-        const m = data.metrics;
-        $("pcUsers").textContent = m.usersTotal;
-        $("pcResults").textContent = m.resultsTotal;
-        $("pcEvents").textContent = m.eventsTotal;
-        $("pcVision").textContent = m.visionTotal;
-        $("pcQuick").textContent = m.quickTotal;
-        $("pcToday").textContent = m.usersToday != null ? m.usersToday : "—";
-        $("pcWins").textContent = m.wins;
-        $("pcLosses").textContent = m.losses;
-      } catch (e) { /* silent */ }
-    }
-
-    /* ---------- Design Control UI ---------- */
-    function renderDesignControl() {
-      $("themeChips").innerHTML = Object.entries(THEMES).map(([id, th]) =>
-        `<button class="theme-chip ${id === design.theme ? "selected" : ""}" data-theme="${id}">
-          <span class="theme-dot" style="background:${th.vars["--bg"]};box-shadow:inset 0 0 0 2px ${th.dot}"></span>
-          <b>${esc(th.label)}</b>
-        </button>`
-      ).join("");
-      const modes = [["always", "modeAlways"], ["now", "modeNow"], ["schedule", "modeSchedule"], ["launch", "modeLaunch"], ["vision", "modeVision"], ["quick", "modeQuick"]];
-      $("themeModes").innerHTML = modes.map(([id, key]) =>
-        `<button class="seg-btn ${id === design.mode ? "active" : ""}" data-tmode="${id}">${t(key)}</button>`
-      ).join("");
-      $("scheduleFrom").value = design.from;
-      $("scheduleTo").value = design.to;
-      $("scheduleRow").style.display = design.mode === "schedule" ? "flex" : "none";
-
-      document.querySelectorAll("[data-theme]").forEach((b) => b.addEventListener("click", () => {
-        design.theme = b.dataset.theme; renderDesignControl(); setVars(design.theme);
-      }));
-      document.querySelectorAll("[data-tmode]").forEach((b) => b.addEventListener("click", () => {
-        design.mode = b.dataset.tmode; renderDesignControl();
-      }));
-    }
-    function saveDesign() {
-      design.from = Math.min(23, Math.max(0, Number($("scheduleFrom").value) || 0));
-      design.to = Math.min(23, Math.max(0, Number($("scheduleTo").value) || 0));
-      localStorage.setItem("pulse_theme", design.theme);
-      localStorage.setItem("pulse_theme_mode", design.mode);
-      localStorage.setItem("pulse_theme_from", String(design.from));
-      localStorage.setItem("pulse_theme_to", String(design.to));
-      applyDesign("tick");
-    }
-
-    /* ---------- Language application ---------- */
-    function applyLanguage() {
-      const map = {
-        loaderText: "loader", welcomeText: "welcomeText", brandText: "brand",
-        historyEyebrow: "historyEyebrow", historyTitle: "historyTitle", historyText: "historyText",
-        emptyTitle: "emptyTitle", emptyText: "emptyText", historyVision: "historyVision",
-        createEyebrow: "createEyebrow", createTitle: "createTitle", createText: "createText",
-        assetLabel: "assetLabel", durationLabel: "durationLabel", entryLabel: "entryLabel",
-        nearestButton: "nearest", laterButton: "later", modeLabel: "modeLabel",
-        visionModeText: "visionModeText", quickModeText: "quickModeText",
-        quickDurationLabel: "duration", quickEntryLabel: "entry", quickOutcomeLabel: "outcome", quickCountdownLabel: "countdown",
-        quickNotice: "quickNotice", quickAgain: "quickAgain", quickHistory: "quickHistory",
-        visionTitle: "visionTitle", visionText: "visionText", uploadTitle: "uploadTitle", uploadText: "uploadText",
-        analyzeButton: "analyze", procAssetLabel: "asset", procDurationLabel: "duration", analysisLabel: "result",
-        factDurationLabel: "duration", factEntryLabel: "entry", factOutcomeLabel: "outcome", factCountdownLabel: "countdown",
-        reasonsToggleText: "reasonsToggle", visionHistory: "visionHistory",
-        profileEyebrow: "profileEyebrow", profileTitle: "profileTitle", profileText: "profileText",
-        languageTitle: "languageTitle", languageText: "languageText",
-        soundTitle: "soundTitle", soundText: "soundText", hapticTitle: "hapticTitle", hapticText: "hapticText",
-        selectedAssetTitle: "selectedAssetTitle", selectedAssetText: "selectedAssetText",
-        statsTitle: "statsTitle", statAllLabel: "all", statWinLabel: "win", statLossLabel: "loss",
-        profileNotice: "profileNotice", navHistory: "navHistory", navCreate: "navCreate", navProfile: "navProfile",
-        pcTitle: "pcTitle", pcSubtitle: "pcSubtitle", pcUsersLabel: "pcUsers", pcResultsLabel: "pcResults",
-        pcEventsLabel: "pcEvents", pcTodayLabel: "pcToday", pcVerifiedLabel: "pcVerified", pcRefresh: "pcRefresh",
-        dcTitle: "dcTitle", dcSubtitle: "dcSubtitle", dcModeLabel: "dcModeLabel", dcFromLabel: "dcFrom", dcToLabel: "dcTo",
-        themePreview: "themePreview", themeApply: "themeApply"
-      };
-      Object.entries(map).forEach(([id, key]) => { if ($(id)) $(id).textContent = t(key); });
-      $("assetSearch").placeholder = t("search");
-      $("welcomeTitle").textContent = greeting();
-      $("languageSelect").value = state.language;
-      $("profileAsset").textContent = state.asset;
-      $("soundToggle").textContent = soundEnabled ? t("on") : t("off");
-      $("hapticToggle").textContent = hapticEnabled ? t("on") : t("off");
-      renderAssets($("assetSearch").value);
-      renderDurations();
-      renderHistory();
-      renderStats();
-      renderDesignControl();
-      setMode(state.mode);
-      updateClock();
-    }
-
-    /* ---------- Feedback (sound + haptic) ---------- */
-    let soundEnabled = localStorage.getItem("pulse_sound") === "true";
-    let hapticEnabled = localStorage.getItem("pulse_haptic") !== "false";
-    function feedback() {
-      if (hapticEnabled && tg && tg.HapticFeedback) { try { tg.HapticFeedback.impactOccurred("light"); } catch (e) {} }
-      if (!soundEnabled) return;
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator(); const gain = ctx.createGain();
-        osc.frequency.value = 430;
-        gain.gain.setValueAtTime(0.035, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.06);
-      } catch (e) {}
-    }
-
-    /* ---------- Event bindings ---------- */
-    document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
-    document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
-    document.querySelectorAll("[data-entry]").forEach((b) => b.addEventListener("click", () => {
-      state.entryMode = b.dataset.entry; saveState();
-      document.querySelectorAll("[data-entry]").forEach((i) => i.classList.toggle("active", i.dataset.entry === state.entryMode));
-    }));
-    $("assetSearch").addEventListener("input", (e) => renderAssets(e.target.value));
-    $("createAction").addEventListener("click", () => { state.mode === "vision" ? setTab("vision") : runQuick(); });
-    $("quickAgain").addEventListener("click", runQuick);
-    $("quickHistory").addEventListener("click", () => setTab("history"));
-    $("historyVision").addEventListener("click", () => setTab("vision"));
-    $("visionHistory").addEventListener("click", () => setTab("history"));
-    $("reasonsToggle").addEventListener("click", () => $("visionReasons").classList.toggle("collapsed"));
-
-    $("imageInput").addEventListener("change", async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) { setStatus(t("badImage"), true); return; }
-      if (file.size > 8 * 1024 * 1024) { setStatus(t("imageTooLarge"), true); return; }
-      try {
-        state.image = await compressImage(file);
-        $("previewImage").src = state.image;
-        $("previewWrap").classList.add("show");
-        $("analyzeButton").disabled = false;
-        setStatus("", false);
-      } catch (err) { setStatus(t("badImage"), true); }
-    });
-    $("removeImage").addEventListener("click", () => {
-      state.image = null; $("imageInput").value = ""; $("previewImage").src = "";
-      $("previewWrap").classList.remove("show"); $("visionResult").classList.remove("show");
-      $("analyzeButton").disabled = true; setStatus("", false);
-    });
-    $("analyzeButton").addEventListener("click", analyzeChart);
-
-    $("languageSelect").addEventListener("change", (e) => { state.language = e.target.value; saveState(); applyLanguage(); });
-    $("soundToggle").addEventListener("click", function () {
-      soundEnabled = !soundEnabled; localStorage.setItem("pulse_sound", String(soundEnabled));
-      this.textContent = soundEnabled ? t("on") : t("off"); this.classList.toggle("on", soundEnabled);
-    });
-    $("hapticToggle").addEventListener("click", function () {
-      hapticEnabled = !hapticEnabled; localStorage.setItem("pulse_haptic", String(hapticEnabled));
-      this.textContent = hapticEnabled ? t("on") : t("off"); this.classList.toggle("on", hapticEnabled);
-    });
-    $("pcRefresh").addEventListener("click", loadDashboard);
-    $("themePreview").addEventListener("click", () => setVars(design.theme));
-    $("themeApply").addEventListener("click", saveDesign);
-    $("scheduleFrom").addEventListener("input", () => { design.from = Number($("scheduleFrom").value) || 0; });
-    $("scheduleTo").addEventListener("input", () => { design.to = Number($("scheduleTo").value) || 0; });
-
-    $("welcomeVision").addEventListener("click", () => { $("launch").classList.add("hide"); applyDesign("load"); setTab("vision"); });
-    $("welcomeQuick").addEventListener("click", () => { $("launch").classList.add("hide"); applyDesign("load"); setTab("create"); setMode("quick"); });
-
-    document.addEventListener("click", (e) => { if (e.target.closest("button")) feedback(); });
-
-    /* ---------- Init ---------- */
-    if (soundEnabled) $("soundToggle").classList.add("on");
-    if (hapticEnabled) $("hapticToggle").classList.add("on");
-    document.querySelectorAll("[data-entry]").forEach((b) => b.classList.toggle("active", b.dataset.entry === state.entryMode));
-
-    $("brandMark").innerHTML = logoSVG(false);
-    $("launchLogo").innerHTML = logoSVG(true);
-
-    if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
-
-    applyDesign("launch");
-    applyLanguage();
-    updateClock();
-    setInterval(updateClock, 1000);
-    setInterval(tickCountdown, 1000);
-    checkOwner();
-
-    // Launch sequence: 0–0.7s line draws, 0.7–1.2s arrow, then welcome
-    setTimeout(() => {
-      $("welcomeTitle").textContent = greeting();
-      $("loaderContent").classList.add("hide");
-      $("welcomeContent").classList.add("show");
-    }, 1400);
-</script>
-
-</script><style id="vibeCss">
-  .hero,.card,.result-card{
-    background:var(--card2)!important;border-color:var(--line)!important;
-    backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);
-    box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)!important;}
-  .asset-option,.choice,.mode-card,.fact,.stat,.history-item,.theme-chip,.seg-btn,.outcome{
-    background:var(--card)!important;border-color:var(--line)!important;}
-  .search,.toggle,select,.schedule-row input,.secondary,.upload-zone,.preview-wrap{
-    background:var(--bg2)!important;border-color:var(--line)!important;}
-  .asset-option.selected,.choice.active,.mode-card.selected,.theme-chip.selected{
-    border-color:var(--accent)!important;box-shadow:inset 3px 0 0 var(--accent),0 0 22px -6px var(--accent)!important;}
-  .seg-btn.active{background:var(--accent-soft)!important;border-color:var(--accent)!important;color:var(--silver)!important;}
-  .primary{box-shadow:0 12px 30px -6px var(--accent),inset 0 1px 0 rgba(255,255,255,.3)!important;}
-  .bottom-nav{border-top-color:var(--line)!important;
-    backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
-  .nav-item i,.mode-icon,.empty-icon{
-    background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.14)!important;
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
-  .nav-item.active i{background:var(--accent-soft)!important;box-shadow:0 0 16px -4px var(--accent);}
-
-  .view.active{animation:viewIn .5s cubic-bezier(.16,.84,.34,1);}
-  @keyframes viewIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
-  .primary,.secondary,.choice,.asset-option,.mode-card,.outcome,.nav-item,.theme-chip,.seg-btn,.toggle{position:relative;overflow:hidden;}
-  .ripple{position:absolute;border-radius:50%;transform:translate(-50%,-50%) scale(0);
-    background:radial-gradient(circle,rgba(255,255,255,.5),transparent 70%);
-    pointer-events:none;animation:rip .6s ease-out forwards;mix-blend-mode:screen;}
-  @keyframes rip{to{transform:translate(-50%,-50%) scale(1);opacity:0;}}
-</style>
 <script>
-document.addEventListener("pointerdown",function(e){
-  var b=e.target.closest("button,.mode-card,.asset-option,.theme-chip,.seg-btn,.outcome,.nav-item,.toggle,.upload-zone");
-  if(!b)return;b.style.transform="scale(.97)";
-  var r=b.getBoundingClientRect(),s=document.createElement("span"),d=Math.max(r.width,r.height)*1.2;
-  s.className="ripple";s.style.width=s.style.height=d+"px";
-  s.style.left=(e.clientX-r.left)+"px";s.style.top=(e.clientY-r.top)+"px";
-  b.appendChild(s);setTimeout(function(){s.remove();},600);
-});
-document.addEventListener("pointerup",function(){
-  document.querySelectorAll("[style*='scale(.97)']").forEach(function(b){b.style.transform="";});
-});
-</script><style id="vibeB">
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-  body{font-family:'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,system-ui,sans-serif!important;
-    -webkit-font-smoothing:antialiased;
-    background:
-      radial-gradient(95% 55% at 50% -8%, var(--glow2), transparent 62%),
-      radial-gradient(85% 50% at 108% 106%, var(--glow1), transparent 58%),
-      var(--bg)!important;
-    background-attachment:fixed;
-    animation:bgDrift 34s ease-in-out infinite alternate;}
-  @keyframes bgDrift{from{background-position:0% 0%,100% 100%;}to{background-position:14% 8%,86% 92%;}}
-  h1,h2,h3{letter-spacing:-.02em!important;font-weight:800!important;}
-
-  .view.active{animation:viewIn .55s cubic-bezier(.22,1,.36,1);}
-  @keyframes viewIn{from{opacity:0;transform:translateY(18px) scale(.98);}to{opacity:1;transform:none;}}
-  .view.active>*{animation:rise .6s both cubic-bezier(.22,1,.36,1);}
-  .view.active>*:nth-child(1){animation-delay:.04s;}
-  .view.active>*:nth-child(2){animation-delay:.11s;}
-  .view.active>*:nth-child(3){animation-delay:.18s;}
-  .view.active>*:nth-child(4){animation-delay:.25s;}
-  .view.active>*:nth-child(5){animation-delay:.32s;}
-  @keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
-
-  .primary,.secondary,.outcome,.choice,.mode-card,.seg-btn,.theme-chip{
-    border-radius:16px!important;
-    transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease,background .2s ease!important;}
-  .primary:active,.secondary:active,.outcome:active,.choice:active,.mode-card:active,.seg-btn:active{transform:scale(.94)!important;}
-  .primary{background-color:var(--accent)!important;
-    background-image:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 46%)!important;
-    box-shadow:0 14px 34px -8px var(--accent),inset 0 1px 0 rgba(255,255,255,.4)!important;}
-  .primary:active{box-shadow:0 6px 16px -6px var(--accent)!important;}
-
-  .bottom-nav{background:rgba(16,16,20,.62)!important;
-    border-top:1px solid rgba(255,255,255,.09)!important;
-    backdrop-filter:blur(28px) saturate(1.8);-webkit-backdrop-filter:blur(28px) saturate(1.8);
-    box-shadow:0 -8px 30px rgba(0,0,0,.4);
-    padding-top:9px!important;padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))!important;}
-  .nav-item{border-radius:14px!important;margin:0 3px!important;padding:6px 2px 5px!important;font-weight:600!important;
-    transition:background .28s ease,color .25s ease,transform .18s ease;}
-  .nav-item span,.nav-item div{font-size:11px!important;letter-spacing:.01em!important;}
-  .nav-item.active{background:var(--accent-soft)!important;color:var(--accent)!important;}
-  .nav-item:active{transform:scale(.92)!important;}
-</style><video id="bgVid" autoplay muted loop playsinline preload="auto">
-  <source src="bg.mp4" type="video/mp4">
-</video>
-<style id="vibeC"> ... </style><script id="vibeBg">
 (function(){
-  function apply(){
-    var b=document.body; if(!b) return;
-    var v=document.getElementById("bgVid");
-    if(!v){
-      v=document.createElement("video");
-      v.id="bgVid"; v.src="bg.mp4";
-      v.muted=true; v.loop=true; v.autoplay=true;
-      v.setAttribute("playsinline",""); v.setAttribute("muted","");
-    }
-    v.style.cssText="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;filter:blur(3px) brightness(.4) saturate(1.15);pointer-events:none;";
-    if(b.firstChild!==v) b.insertBefore(v,b.firstChild);
-    if(v.play) v.play().catch(function(){});
-    if(!document.getElementById("vibeGlass")){
-      var s=document.createElement("style"); s.id="vibeGlass";
-      s.textContent=
-        "body{background:transparent!important;}"+
-        ".hero,.card,.result-card,.mode-card,.fact,.stat,.history-item,.upload-zone,.preview-wrap{background:rgba(20,20,26,.38)!important;border:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14)!important;}"+
-        ".asset-option,.choice,.theme-chip,.seg-btn,.search,.toggle,select,.outcome,.secondary{background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}"+
-        ".bottom-nav{background:rgba(8,8,12,.5)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);}";
-      document.head.appendChild(s);
-    }
-  }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",apply);
-  else apply();
-})();
-</script>
-<style id="vibeNav">
-.bottom-nav{
-  background:linear-gradient(180deg,rgba(16,18,26,.5),rgba(8,9,14,.72))!important;
-  backdrop-filter:blur(34px) saturate(1.9)!important;
-  -webkit-backdrop-filter:blur(34px) saturate(1.9)!important;
-  border-top:1px solid rgba(255,255,255,.08)!important;
-  box-shadow:0 -14px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07)!important;
-  padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
-  gap:4px!important;
-}
-.nav-item{
-  position:relative!important;
-  display:flex!important;flex-direction:column!important;
-  align-items:center!important;justify-content:center!important;
-  gap:5px!important;padding:9px 6px!important;
-  border-radius:16px!important;
-  font-size:11px!important;font-weight:600!important;letter-spacing:.01em!important;
-  color:rgba(255,255,255,.5)!important;
-  background:transparent!important;border:0!important;
-  transition:color .28s ease,background .28s ease,transform .18s cubic-bezier(.34,1.56,.64,1)!important;
-  -webkit-tap-highlight-color:transparent;
-}
-.nav-item svg,.nav-item img{
-  width:22px!important;height:22px!important;
-  transition:transform .3s cubic-bezier(.34,1.56,.64,1),filter .3s ease!important;
-}
-.nav-item:active{transform:scale(.9)!important;}
-.nav-item.active{
-  color:var(--accent)!important;
-  background:linear-gradient(180deg,var(--accent-soft),transparent)!important;
-}
-.nav-item.active svg,.nav-item.active img{
-  transform:translateY(-2px) scale(1.14)!important;
-  filter:drop-shadow(0 4px 12px var(--glow1));
-}
-.nav-item.active::before{
-  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:26px;height:3px;border-radius:0 0 4px 4px;
-  background:var(--accent);box-shadow:0 0 12px var(--accent);
-  animation:navGlow .45s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes navGlow{from{width:0;opacity:0}to{width:26px;opacity:1}}
-  </style>
-<script id="vibePolish">
-(function(){
-  function injectStyle(){
-    if(document.getElementById("polishStyle")) return;
-    var s=document.createElement("style"); s.id="polishStyle";
-    s.textContent=`
-.card,.result-card,.history-item,.mode-card,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.primary,.toggle,select,.hero,.upload-zone,.nav-item{
-  transition:transform .24s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease,border-color .25s ease,background-color .25s ease!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-.mode-card:active,.asset-option:active,.choice:active,.seg-btn:active,.theme-chip:active,.outcome:active,.secondary:active,.primary:active,.history-item:active{
-  transform:scale(.97)!important;filter:brightness(1.12)!important;
-}
-.mode-card,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.primary,.card,.result-card,.history-item,.toggle{
-  overflow:hidden!important;position:relative!important;isolation:isolate;
-}
-.history-item,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.toggle,select{
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  background:rgba(28,30,40,.55)!important;
-  border:1px solid rgba(255,255,255,.10)!important;
-  transform:translateZ(0);backface-visibility:hidden;
-}
-.card,.result-card,.mode-card,.hero,.upload-zone,.bottom-nav{
-  transform:translateZ(0);backface-visibility:hidden;
-}
-.history-item{animation:fadeUp .4s ease both!important;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-`;
-    document.head.appendChild(s);
-  }
-  var icons={
-    "История":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>',
-    "Создать":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>',
-    "Vision":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
-    "Профиль":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'
+  "use strict";
+  var TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+  var tgUser = (TG && TG.initDataUnsafe && TG.initDataUnsafe.user) ? TG.initDataUnsafe.user : null;
+  var initData = (TG && TG.initData) ? TG.initData : "";
+
+  var OTC = ["EUR/GBP OTC","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","AUD/CAD OTC","AUD/JPY OTC","CAD/JPY OTC","EUR/JPY OTC","GBP/JPY OTC"];
+  var DURATIONS = [15,30,60,180,300,900];
+
+  var THEMES = {
+    obsidian:{label:"Obsidian Silver",dot:"#2F80ED",vars:{"--bg":"#0A0A0A","--bg2":"#111111","--card":"#151515","--card2":"#1B1B1B","--line":"#2A2A2A","--text":"#F4F4F4","--muted":"#969696","--silver":"#D7D9DD","--accent":"#2F80ED","--accent-soft":"rgba(47,128,237,.14)"}},
+    midnight:{label:"Midnight Blue",dot:"#4F8CFF",vars:{"--bg":"#070C16","--bg2":"#0B1320","--card":"#101A2C","--card2":"#152238","--line":"#233350","--text":"#EAF1FF","--muted":"#8FA3C4","--silver":"#CBD9F2","--accent":"#4F8CFF","--accent-soft":"rgba(79,140,255,.16)"}},
+    carbon:{label:"Carbon Green",dot:"#2FD47F",vars:{"--bg":"#06100B","--bg2":"#0A1811","--card":"#0E2118","--card2":"#132C1F","--line":"#1E3A2B","--text":"#E9F7EF","--muted":"#8FB6A0","--silver":"#C7ECD7","--accent":"#2FD47F","--accent-soft":"rgba(47,212,127,.15)"}},
+    pureblack:{label:"Pure Black",dot:"#E6E6E6",vars:{"--bg":"#000000","--bg2":"#060606","--card":"#0C0C0C","--card2":"#131313","--line":"#232323","--text":"#FFFFFF","--muted":"#8A8A8A","--silver":"#FFFFFF","--accent":"#E6E6E6","--accent-soft":"rgba(230,230,230,.12)"}},
+    launch:{label:"Pulse Launch",dot:"#6E7BFF",vars:{"--bg":"#08080F","--bg2":"#0D0D1A","--card":"#131327","--card2":"#191933","--line":"#282847","--text":"#EEEFFF","--muted":"#9A9AC0","--silver":"#D5D6F2","--accent":"#6E7BFF","--accent-soft":"rgba(110,123,255,.16)"}}
   };
-  function fixIcons(){
+  var THEME_ORDER = ["obsidian","midnight","carbon","pureblack","launch"];
+
+  var T = {
+    ru:{
+      brand:"Личный помощник для работы с графиком", welcomeSub:"Signal Pulse готов к работе.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick",
+      navHistory:"История", navCreate:"Создать", navVision:"Vision", navProfile:"Профиль",
+      historyEyebrow:"ИСТОРИЯ", historyTitle:"История результатов", historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",
+      emptyTitle:"История пока пуста", emptyText:"Загрузи график в Pulse Vision или создай быстрый результат.", goVision:"Перейти к Pulse Vision",
+      createEyebrow:"СОЗДАТЬ", createTitle:"Параметры результата", createText:"Выбери OTC-актив, длительность, тип входа и режим.",
+      assetLabel:"OTC-актив", searchPlaceholder:"Поиск актива", durationLabel:"Длительность", entryLabel:"Тип входа",
+      entryNearest:"Ближайшая точка", entryLater:"После длительности", modeLabel:"Режим",
+      visionModeText:"Анализ загруже��ного графика", quickModeText:"Работает без анализа загруженного графика",
+      actionVision:"Перейти к Pulse Vision", actionQuick:"Запустить Pulse Quick", quickPreparing:"Формируем результат…",
+      visionEyebrow:"PULSE VISION", visionTitle:"Анализ графика", visionText:"Загрузи полный скриншот — приложение сохранит пропорции без обрезки.",
+      uploadTitle:"Выбрать скриншот", uploadHint:"PNG, JPG или WEBP · до 8 МБ", analyze:"Анализировать график",
+      stage1:"Подготавливаем изображение", stage2:"Изучаем структуру графика", stage3:"Проверяем видимые уровни", stage4:"Формируем результат",
+      confidence:"Уверенность", asset:"АКТИВ", duration:"ДЛИТЕЛЬНОСТЬ", entry:"ВХОД", outcomeBy:"ДО РЕЗУЛЬТАТА",
+      cdEntry:"Вход через", cdResult:"Результат через", cdDone:"Время результата наступило",
+      dirUp:"ВВЕРХ", dirDown:"ВНИЗ", dirNone:"НЕТ СИГНАЛА", confLow:"низкая", confMid:"средняя", confHigh:"высокая",
+      newAnalysis:"Новый анализ", newQuick:"Новый Pulse Quick", openHistory:"Открыть историю",
+      profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настройки сохраняются на этом устройстве.",
+      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуска", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
+      hapticTitle:"Тактильный отклик", hapticHint:"Вибрация Telegram при нажатии", on:"Вкл", off:"Выкл",
+      selAssetTitle:"Выбранный актив", selAssetHint:"Используется при создании результата",
+      statsTitle:"Личная статистика", statAll:"Всего",
+      profileNotice:"Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
+      quickNotice:"Режим работает без анализа загруженного графика.", visionRisk:"Это анализ изображения, а не гарантия результата.",
+      win:"Win", loss:"Loss", skip:"Пропустить",
+      errFailed:"Pulse Vision временно недоступен. Попробуйте позже.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"Панель владельца", ownerSub:"Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.",
+      mUsers:"Пользователи", mResults:"Результаты", mEvents:"События", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Сегодня", refresh:"Обновить показатели",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Оформление", designSub:"Тема и режим показа сохраняются на этом устройстве.",
+      modeAlways:"Постоянно", modeNow:"Сейчас", modeSchedule:"Расписание", modeLaunch:"Запуск", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"С (Asia/Oral)", schedTo:"До (Asia/Oral)", saveDesign:"Сохранить оформление", savedDesign:"Сохранено",
+      greetMorning:"Доброе утро", greetDay:"Добрый день", greetEvening:"Добрый вечер"
+    },
+    en:{
+      brand:"Personal chart assistant", welcomeSub:"Signal Pulse is ready.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick",
+      navHistory:"History", navCreate:"Create", navVision:"Vision", navProfile:"Profile",
+      historyEyebrow:"HISTORY", historyTitle:"Result history", historyText:"Pulse Vision and Pulse Quick results appear here.",
+      emptyTitle:"No history yet", emptyText:"Upload a chart in Pulse Vision or create a quick result.", goVision:"Open Pulse Vision",
+      createEyebrow:"CREATE", createTitle:"Result settings", createText:"Select an OTC asset, duration, entry type and mode.",
+      assetLabel:"OTC asset", searchPlaceholder:"Search asset", durationLabel:"Duration", entryLabel:"Entry type",
+      entryNearest:"Nearest point", entryLater:"After duration", modeLabel:"Mode",
+      visionModeText:"Uploaded chart analysis", quickModeText:"Works without uploaded-chart analysis",
+      actionVision:"Open Pulse Vision", actionQuick:"Start Pulse Quick", quickPreparing:"Preparing result…",
+      visionEyebrow:"PULSE VISION", visionTitle:"Chart analysis", visionText:"Upload a full screenshot — the app keeps its proportions.",
+      uploadTitle:"Choose screenshot", uploadHint:"PNG, JPG or WEBP · up to 8 MB", analyze:"Analyze chart",
+      stage1:"Preparing the image", stage2:"Studying chart structure", stage3:"Checking visible levels", stage4:"Forming the result",
+      confidence:"Confidence", asset:"ASSET", duration:"DURATION", entry:"ENTRY", outcomeBy:"OUTCOME BY",
+      cdEntry:"Entry in", cdResult:"Result in", cdDone:"Outcome time reached",
+      dirUp:"UP", dirDown:"DOWN", dirNone:"NO SIGNAL", confLow:"low", confMid:"medium", confHigh:"high",
+      newAnalysis:"New analysis", newQuick:"New Pulse Quick", openHistory:"Open history",
+      profileEyebrow:"PROFILE", profileTitle:"Settings", profileText:"Settings are stored on this device.",
+      langTitle:"Interface language", langHint:"Saved after restart", soundTitle:"Interface sound", soundHint:"Soft feedback on tap",
+      hapticTitle:"Haptic feedback", hapticHint:"Telegram vibration on tap", on:"On", off:"Off",
+      selAssetTitle:"Selected asset", selAssetHint:"Used while creating a result",
+      statsTitle:"Personal statistics", statAll:"All",
+      profileNotice:"Pulse Vision analyzes only visible elements of the uploaded chart and does not guarantee a direction or outcome.",
+      quickNotice:"This mode works without uploaded-chart analysis.", visionRisk:"This is image analysis, not a guarantee of any result.",
+      win:"Win", loss:"Loss", skip:"Skip",
+      errFailed:"Pulse Vision is unavailable right now. Try again later.", errTooLarge:"The image is too large. Choose a file up to 8 MB.", errBadType:"Only PNG, JPG and WEBP are supported.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"Owner panel", ownerSub:"Signal Pulse server statistics. Access verified via Telegram.",
+      mUsers:"Users", mResults:"Results", mEvents:"Events", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Today", refresh:"Refresh metrics",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Appearance", designSub:"Theme and display mode are stored on this device.",
+      modeAlways:"Always", modeNow:"Now", modeSchedule:"Schedule", modeLaunch:"Launch", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"From (Asia/Oral)", schedTo:"To (Asia/Oral)", saveDesign:"Save appearance", savedDesign:"Saved",
+      greetMorning:"Good morning", greetDay:"Good afternoon", greetEvening:"Good evening"
+    }
+  };
+
+  function detectLang(){
+    var saved = localStorage.getItem("pulse_language");
+    if(saved === "ru" || saved === "en") return saved;
+    if(tgUser && tgUser.language_code) return tgUser.language_code.indexOf("ru")===0 ? "ru" : "en";
+    var nav = (navigator.language || "ru").toLowerCase();
+    return nav.indexOf("ru")===0 ? "ru" : "ru";
+  }
+
+  var state = {
+    language: detectLang(),
+    asset: localStorage.getItem("pulse_asset") || "EUR/GBP OTC",
+    duration: Number(localStorage.getItem("pulse_duration") || 30),
+    entryMode: localStorage.getItem("pulse_entry_mode") || "nearest",
+    sound: localStorage.getItem("pulse_sound") === "true",
+    haptic: localStorage.getItem("pulse_haptic") !== "false",
+    mode: "vision",
+    image: null,
+    analyzing: false,
+    tab: "history",
+    history: [],
+    isOwner: false,
+    theme: localStorage.getItem("pulse_theme") || "obsidian",
+    themeMode: localStorage.getItem("pulse_theme_mode") || "always",
+    schedFrom: localStorage.getItem("pulse_sched_from") || "20:00",
+    schedTo: localStorage.getItem("pulse_sched_to") || "06:00"
+  };
+  try{ state.history = JSON.parse(localStorage.getItem("pulse_history") || "[]"); }catch(e){ state.history = []; }
+  if(DURATIONS.indexOf(state.duration) === -1) state.duration = 30;
+  if(!THEMES[state.theme]) state.theme = "obsidian";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var t = function(k){ return (T[state.language] && T[state.language][k]) || k; };
+
+  function esc(v){ return String(v==null?"":v).replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#039;"}[c];}); }
+
+  function save(){
+    localStorage.setItem("pulse_language", state.language);
+    localStorage.setItem("pulse_asset", state.asset);
+    localStorage.setItem("pulse_duration", String(state.duration));
+    localStorage.setItem("pulse_entry_mode", state.entryMode);
+    localStorage.setItem("pulse_sound", String(state.sound));
+    localStorage.setItem("pulse_haptic", String(state.haptic));
+    localStorage.setItem("pulse_history", JSON.stringify(state.history));
+  }
+  function saveDesign(){
+    localStorage.setItem("pulse_theme", state.theme);
+    localStorage.setItem("pulse_theme_mode", state.themeMode);
+    localStorage.setItem("pulse_sched_from", state.schedFrom);
+    localStorage.setItem("pulse_sched_to", state.schedTo);
+  }
+
+  /* ---------- Theme ---------- */
+  function applyTheme(key){
+    var th = THEMES[key] || THEMES.obsidian;
+    var root = document.documentElement;
+    for(var v in th.vars){ root.style.setProperty(v, th.vars[v]); }
+    if(TG){ try{ TG.setHeaderColor(th.vars["--bg"]); TG.setBackgroundColor(th.vars["--bg"]); }catch(e){} }
+  }
+  function oralHM(){
+    var s = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date());
+    var p = s.split(":"); return Number(p[0])*60 + Number(p[1]);
+  }
+  function inSchedule(){
+    function toMin(x){ var p=String(x||"0:0").split(":"); return Number(p[0])*60+Number(p[1]); }
+    var now = oralHM(), a = toMin(state.schedFrom), b = toMin(state.schedTo);
+    if(a === b) return true;
+    if(a < b) return now >= a && now < b;
+    return now >= a || now < b; // overnight
+  }
+  // resolve which theme should be active for the given context: "launch","vision","quick","normal"
+  function resolveTheme(context){
+    var m = state.themeMode, def = "obsidian";
+    if(m === "always" || m === "now") return state.theme;
+    if(m === "schedule") return inSchedule() ? state.theme : def;
+    if(m === "launch") return context === "launch" ? state.theme : def;
+    if(m === "vision") return context === "vision" ? state.theme : def;
+    if(m === "quick") return context === "quick" ? state.theme : def;
+    return state.theme;
+  }
+  function refreshTheme(){
+    var ctx = "normal";
+    if(state.tab === "vision") ctx = "vision";
+    else if(state.tab === "create" && state.mode === "quick") ctx = "quick";
+    applyTheme(resolveTheme(ctx));
+  }
+
+  /* ---------- Time ---------- */
+  function fmtTime(ms){
+    return new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ms));
+  }
+  function durationText(sec){
+    if(sec < 60) return sec + " " + (state.language==="ru"?"сек":"sec");
+    return (sec/60) + " " + (state.language==="ru"?"мин":"min");
+  }
+  function timing(){
+    var dur = state.duration, durMs = dur*1000;
+    var safety = state.entryMode === "nearest" ? 12 : dur;
+    var target = Date.now() + safety*1000;
+    var entryMs = Math.ceil(target/durMs)*durMs;
+    var outcomeMs = entryMs + durMs;
+    return {
+      entryMs: entryMs, outcomeMs: outcomeMs,
+      entryISO: new Date(entryMs).toISOString(), outcomeISO: new Date(outcomeMs).toISOString(),
+      entryText: fmtTime(entryMs), outcomeText: fmtTime(outcomeMs), durationText: durationText(dur)
+    };
+  }
+
+  /* ---------- Feedback ---------- */
+  function feedback(){
+    if(state.haptic && TG && TG.HapticFeedback){ try{ TG.HapticFeedback.impactOccurred("light"); }catch(e){} }
+    if(!state.sound) return;
     try{
-      document.querySelectorAll(".nav-item").forEach(function(el){
-        if(el.getAttribute("data-iconed")) return;
-        var t=(el.textContent||"").trim();
-        for(var k in icons){ if(t.indexOf(k)>-1){
-          var svg=el.querySelector("svg");
-          if(svg){ svg.outerHTML=icons[k]; el.setAttribute("data-iconed","1"); }
-          break;
-        }}
-      });
+      var actx = new (window.AudioContext||window.webkitAudioContext)();
+      var osc = actx.createOscillator(), g = actx.createGain();
+      osc.frequency.value = 430; g.gain.setValueAtTime(0.03, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+0.06);
+      osc.connect(g); g.connect(actx.destination); osc.start(); osc.stop(actx.currentTime+0.06);
     }catch(e){}
   }
-  function run(){ injectStyle(); fixIcons(); }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",run);
-  else run();
-  setTimeout(run,800); setTimeout(run,2500);
-})();
-  </script>
-<script id="vibeMusic">
-(function(){
-  var initData=(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData)||"";
-  if(!initData) return;
-  fetch("/api/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData})})
-    .then(function(r){return r.json();})
-    .then(function(d){ if(d&&d.isOwner) build(); })
-    .catch(function(){});
-  function build(){
-    if(document.getElementById("adminMusicBtn")) return;
-    var audio=document.createElement("audio");
-    audio.id="adminAudio"; audio.loop=true;
-    audio.src=localStorage.getItem("pulse_music_url")||"music.mp3";
-    audio.volume=parseFloat(localStorage.getItem("pulse_music_vol")||"0.5");
-    document.body.appendChild(audio);
-    var btn=document.createElement("button");
-    btn.id="adminMusicBtn"; btn.textContent="🎵";
-    btn.style.cssText="position:fixed;right:16px;bottom:92px;z-index:9999;width:52px;height:52px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(20,20,26,.6);backdrop-filter:blur(18px);color:#fff;font-size:22px;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .2s ease;";
-    var panel=document.createElement("div");
-    panel.style.cssText="display:none;position:fixed;right:16px;bottom:154px;z-index:9999;width:260px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:rgba(18,18,24,.85);backdrop-filter:blur(24px);box-shadow:0 20px 50px rgba(0,0,0,.6);color:#fff;font-family:inherit;";
-    panel.innerHTML='<div style="font-weight:700;margin-bottom:10px">🎧 Музыка (админ)</div>'+
-      '<input id="amUrl" placeholder="Ссылка .mp3 или music.mp3" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;margin-bottom:10px;font-size:13px">'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px">'+
-      '<button id="amPlay" style="flex:1;padding:10px;border-radius:10px;border:0;background:var(--accent,#4f8cff);color:#fff;font-weight:700">▶ Играть</button>'+
-      '<button id="amStop" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#fff">⏸ Пауза</button></div>'+
-      '<div style="font-size:12px;opacity:.8;margin-bottom:6px">Громкость</div>'+
-      '<input id="amVol" type="range" min="0" max="1" step="0.01" style="width:100%">';
-    document.body.appendChild(btn); document.body.appendChild(panel);
-    var url=panel.querySelector("#amUrl"), vol=panel.querySelector("#amVol");
-    url.value=localStorage.getItem("pulse_music_url")||""; vol.value=audio.volume;
-    btn.onclick=function(){ panel.style.display=(panel.style.display==="none"?"block":"none"); };
-    panel.querySelector("#amPlay").onclick=function(){
-      if(url.value.trim()){ audio.src=url.value.trim(); localStorage.setItem("pulse_music_url",url.value.trim()); }
-      audio.play().catch(function(){});
-    };
-    panel.querySelector("#amStop").onclick=function(){ audio.pause(); };
-    vol.oninput=function(){ audio.volume=parseFloat(vol.value); localStorage.setItem("pulse_music_vol",vol.value); };
+
+  /* ---------- Clock ---------- */
+  function tickClock(){ $("clock").textContent = fmtTime(Date.now()); }
+
+  /* ---------- Countdown ---------- */
+  function tickCountdowns(){
+    document.querySelectorAll("[data-outcome]").forEach(function(el){
+      var entryMs = Number(el.getAttribute("data-entry"));
+      var outMs = Number(el.getAttribute("data-outcome"));
+      var now = Date.now(), diff, label;
+      if(now < entryMs){ diff = entryMs - now; label = t("cdEntry"); }
+      else if(now < outMs){ diff = outMs - now; label = t("cdResult"); }
+      else { el.textContent = t("cdDone"); return; }
+      var s = Math.max(0, Math.round(diff/1000));
+      var mm = String(Math.floor(s/60)).padStart(2,"0"), ss = String(s%60).padStart(2,"0");
+      el.textContent = label + " " + mm + ":" + ss;
+    });
   }
+
+  /* ---------- Tabs ---------- */
+  function setTab(tab){
+    state.tab = tab;
+    document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("active"); });
+    document.querySelectorAll(".nav-item").forEach(function(n){ n.classList.remove("active"); });
+    $(tab+"View").classList.add("active");
+    var nav = document.querySelector('.nav-item[data-tab="'+tab+'"]');
+    if(nav) nav.classList.add("active");
+    refreshTheme();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  /* ---------- Direction ---------- */
+  function dirInfo(d){
+    if(d==="BUY"||d==="UP") return {cls:"up",norm:"UP",text:t("dirUp")};
+    if(d==="SELL"||d==="DOWN") return {cls:"down",norm:"DOWN",text:t("dirDown")};
+    return {cls:"none",norm:"NONE",text:t("dirNone")};
+  }
+  function confText(c){
+    var v = String(c||"").toLowerCase();
+    if(v.indexOf("high")>-1||v.indexOf("выс")>-1) return t("confHigh");
+    if(v.indexOf("med")>-1||v.indexOf("сред")>-1) return t("confMid");
+    if(v.indexOf("low")>-1||v.indexOf("низ")>-1) return t("confLow");
+    return c ? String(c) : "";
+  }
+
+  /* ---------- Assets ---------- */
+  function renderAssets(q){
+    q = (q||"").trim().toLowerCase();
+    var list = OTC.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; });
+    var html = list.map(function(a){
+      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'"><b>'+esc(a)+'</b><span>OTC</span></button>';
+    }).join("");
+    $("assetList").innerHTML = html || '<p class="section-text">—</p>';
+    document.querySelectorAll("[data-asset]").forEach(function(b){
+      b.addEventListener("click", function(){
+        state.asset = b.getAttribute("data-asset"); save();
+        $("profileAsset").textContent = state.asset;
+        renderAssets($("assetSearch").value);
+      });
+    });
+  }
+  function renderDurations(){
+    $("durationGrid").innerHTML = DURATIONS.map(function(v){
+      return '<button class="btn choice '+(v===state.duration?"active":"")+'" data-duration="'+v+'">'+durationText(v)+'</button>';
+    }).join("");
+    document.querySelectorAll("[data-duration]").forEach(function(b){
+      b.addEventListener("click", function(){ state.duration = Number(b.getAttribute("data-duration")); save(); renderDurations(); });
+    });
+  }
+
+  /* ---------- Mode ---------- */
+  function setMode(m){
+    state.mode = m;
+    document.querySelectorAll("[data-mode]").forEach(function(b){ b.classList.toggle("selected", b.getAttribute("data-mode")===m); });
+    $("createAction").textContent = m==="vision" ? t("actionVision") : t("actionQuick");
+    $("quickResult").classList.remove("show");
+    refreshTheme();
+  }
+
+  /* ---------- History ---------- */
+  function addHistory(item){
+    var rec = {
+      id: Date.now().toString()+Math.floor(Math.random()*1000),
+      type: item.type, direction: item.direction, asset: item.asset, duration: item.duration,
+      entry: item.entry, outcomeTime: item.outcomeTime, summary: item.summary||"", confidence: item.confidence||"",
+      createdAt: new Date().toISOString(), outcome: "skip"
+    };
+    state.history.unshift(rec);
+    state.history = state.history.slice(0,60);
+    save(); renderHistory(); renderStats();
+    syncResult(item, rec);
+  }
+  function renderHistory(){
+    var list = $("historyList");
+    if(!state.history.length){ list.innerHTML=""; $("emptyHistory").style.display="block"; return; }
+    $("emptyHistory").style.display="none";
+    list.innerHTML = state.history.map(function(it){
+      var d = dirInfo(it.direction);
+      var typeLabel = it.type==="vision" ? "Pulse Vision" : "Pulse Quick";
+      var created;
+      try{ created = new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(it.createdAt)); }catch(e){ created=""; }
+      return '<article class="h-item">'
+        +'<div class="h-head"><b>'+esc(typeLabel)+' · '+esc(it.asset)+'</b><span class="badge '+d.cls+'">'+d.text+'</span></div>'
+        +'<div class="h-meta"><span>'+t("entry")+': '+esc(it.entry)+'</span><span>'+t("outcomeBy")+': '+esc(it.outcomeTime)+'</span><span>'+t("duration")+': '+esc(it.duration)+'</span><span>'+esc(created)+'</span></div>'
+        +(it.summary?'<p class="h-sum">'+esc(it.summary)+'</p>':'')
+        +'<div class="oc-grid">'
+        +'<button class="btn oc win '+(it.outcome==="win"?"active":"")+'" data-oc="win" data-id="'+it.id+'">'+t("win")+'</button>'
+        +'<button class="btn oc loss '+(it.outcome==="loss"?"active":"")+'" data-oc="loss" data-id="'+it.id+'">'+t("loss")+'</button>'
+        +'<button class="btn oc skip '+(it.outcome==="skip"?"active":"")+'" data-oc="skip" data-id="'+it.id+'">'+t("skip")+'</button>'
+        +'</div></article>';
+    }).join("");
+    document.querySelectorAll("[data-oc]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var it = state.history.filter(function(x){ return x.id===b.getAttribute("data-id"); })[0];
+        if(!it) return;
+        it.outcome = b.getAttribute("data-oc"); save(); renderHistory(); renderStats(); pushOutcome(it);
+      });
+    });
+  }
+  function renderStats(){
+    var win=0,loss=0;
+    state.history.forEach(function(x){ if(x.outcome==="win")win++; else if(x.outcome==="loss")loss++; });
+    $("statAll").textContent = state.history.length; $("statWin").textContent = win; $("statLoss").textContent = loss;
+  }
+
+  /* ---------- Server sync (save_result with ISO times) ---------- */
+  function syncResult(item, rec){
+    if(!initData) return;
+    var d = dirInfo(item.direction).norm;
+    fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      initData: initData, action:"save_result",
+      payload:{ mode:item.type, direction:d, asset:item.asset, durationSeconds:state.duration,
+        entryTime:item.entryISO||null, outcomeTime:item.outcomeISO||null,
+        confidence:item.confidence||"", summary:item.summary||"", outcome:"skip" }
+    })}).then(function(r){ return r.json().catch(function(){ return null; }); })
+      .then(function(res){ if(res && res.resultId && rec){ rec.resultId = res.resultId; save(); }
+        if(state.isOwner) loadDashboard(); }).catch(function(){});
+  }
+  function pushOutcome(it){
+    if(!initData || !it.resultId) return;
+    fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      initData: initData, action:"update_result", payload:{ resultId: it.resultId, outcome: it.outcome }
+    })}).then(function(){ if(state.isOwner) loadDashboard(); }).catch(function(){});
+  }
+
+  /* ---------- Image ---------- */
+  function compressImage(file){
+    return new Promise(function(resolve,reject){
+      var reader = new FileReader();
+      reader.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var max=2000, w=img.width, h=img.height;
+          if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
+          var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+          cv.getContext("2d").drawImage(img,0,0,w,h);
+          resolve(cv.toDataURL("image/jpeg",0.82));
+        };
+        img.onerror = reject; img.src = reader.result;
+      };
+      reader.onerror = reject; reader.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- Vision analyze ---------- */
+  var RING_C = 2*Math.PI*58;
+  function setRing(pct){
+    $("ringFg").style.strokeDasharray = RING_C;
+    $("ringFg").style.strokeDashoffset = RING_C*(1-pct/100);
+    $("ringPct").textContent = Math.round(pct)+"%";
+  }
+  var procTimer=null, procRingTimer=null;
+  function startProcessing(){
+    var tm = timing();
+    $("procAssetLabel").childNodes[0].nodeValue = t("asset")+" ";
+    $("procDurationLabel").childNodes[0].nodeValue = t("duration")+" ";
+    $("procAsset").textContent = state.asset;
+    $("procDuration").textContent = tm.durationText;
+    $("processing").classList.add("show");
+    $("visionResult").classList.remove("show");
+    var stages = [t("stage1"),t("stage2"),t("stage3"),t("stage4")];
+    var si=0; $("procStage").textContent = stages[0]; setRing(6);
+    var pct=6;
+    clearInterval(procRingTimer); clearInterval(procTimer);
+    procRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*4 + 1, 92); setRing(pct); }, 300);
+    procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-1); $("procStage").textContent = stages[si]; }, 1400);
+  }
+  function stopProcessing(done){
+    clearInterval(procRingTimer); clearInterval(procTimer);
+    if(done){ setRing(100); }
+    setTimeout(function(){ $("processing").classList.remove("show"); }, done?350:0);
+  }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
+  function showVisionResult(data){
+    var d = dirInfo(data.direction), tm = timing();
+    var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
+    $("visionAssetTop").textContent = esc(assetOut)+" · OTC";
+    var dir=$("visionDir"); dir.className="r-dir "+d.cls; dir.textContent=d.text;
+    var ct = confText(data.confidence);
+    if(ct){ $("visionConfWrap").style.display="block"; $("visionConf").textContent = t("confidence")+": "+ct; }
+    else { $("visionConfWrap").style.display="none"; }
+    $("visionAsset").textContent = assetOut;
+    $("visionDuration").textContent = tm.durationText;
+    $("visionEntry").textContent = tm.entryText;
+    $("visionOutcome").textContent = tm.outcomeText;
+    var cd = $("visionCountdown"); cd.setAttribute("data-entry",tm.entryMs); cd.setAttribute("data-outcome",tm.outcomeMs);
+    var reasons = Array.isArray(data.reasons)?data.reasons:[];
+    $("visionReasons").innerHTML = reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
+    $("visionRisk").textContent = data.risk || t("visionRisk");
+    $("visionResult").classList.add("show");
+    tickCountdowns();
+    addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
+      entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
+      summary:data.summary||"", confidence:data.confidence||"" });
+  }
+
+  function analyze(){
+    if(!state.image || state.analyzing) return;
+    state.analyzing = true; $("analyzeBtn").disabled = true;
+    startProcessing();
+    (function(){
+      var attempt=0, done=false;
+      function attemptFetch(){
+        return fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language })})
+          .then(function(res){ return res.json().then(function(j){ return {ok:res.ok, data:j}; }); });
+      }
+      function run(){
+        attemptFetch().then(function(r){
+          if(r.ok && r.data && r.data.direction){
+            done=true; stopProcessing(true);
+            setTimeout(function(){ showVisionResult(r.data); state.analyzing=false; $("analyzeBtn").disabled=false; }, 380);
+            return;
+          }
+          if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); return; }
+          fail();
+        }).catch(function(){ if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); } else { fail(); } });
+      }
+      function fail(){
+        stopProcessing(false);
+        state.analyzing=false; $("analyzeBtn").disabled=false;
+        $("visionRisk").textContent = t("errFailed");
+      }
+      run();
+    })();
+  }
+
+  /* ---------- Quick ---------- */
+  function runQuick(){
+    $("quickResult").classList.remove("show");
+    $("createAction").disabled = true; $("createAction").textContent = t("quickPreparing");
+    wait(1400).then(function(){
+      var pool=["UP","DOWN"]; var dirRaw = pool[Math.floor(Math.random()*pool.length)];
+      var d = dirInfo(dirRaw), tm = timing();
+      $("quickAssetTop").textContent = esc(state.asset)+" · OTC";
+      var dir=$("quickDir"); dir.className="r-dir "+d.cls; dir.textContent=d.text;
+      $("quickAsset").textContent = state.asset;
+      $("quickDuration").textContent = tm.durationText;
+      $("quickEntry").textContent = tm.entryText;
+      $("quickOutcome").textContent = tm.outcomeText;
+      var cd=$("quickCountdown"); cd.setAttribute("data-entry",tm.entryMs); cd.setAttribute("data-outcome",tm.outcomeMs);
+      $("quickResult").classList.add("show"); tickCountdowns();
+      addHistory({ type:"quick", direction:dirRaw, asset:state.asset, duration:tm.durationText,
+        entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
+        summary:t("quickNotice"), confidence:"" });
+      $("createAction").disabled=false; $("createAction").textContent = t("actionQuick");
+      $("quickResult").scrollIntoView({behavior:"smooth",block:"nearest"});
+    });
+  }
+
+  /* ---------- Owner: Pulse Control + Design Control ---------- */
+  function buildOwnerArea(){
+    var host = $("ownerArea");
+    host.innerHTML =
+      '<h3 class="section-title">'+t("ownerEyebrow")+'</h3>'
+      +'<div class="card" id="pulseControl">'
+        +'<p class="eyebrow">'+t("ownerEyebrow")+'</p>'
+        +'<h3 style="margin:0;font-size:19px;">'+t("ownerTitle")+'</h3>'
+        +'<p class="section-text" style="margin-top:8px;">'+t("ownerSub")+'</p>'
+        +'<div class="stats" id="ownerStats1"></div>'
+        +'<div class="stats" id="ownerStats2"></div>'
+        +'<button class="btn secondary" id="ownerRefresh">'+t("refresh")+'</button>'
+      +'</div>'
+      +'<h3 class="section-title">'+t("designEyebrow")+'</h3>'
+      +'<div class="card">'
+        +'<p class="section-text">'+t("designSub")+'</p>'
+        +'<div class="theme-grid" id="themeGrid"></div>'
+        +'<label class="field-label">'+t("designTitle")+'</label>'
+        +'<div class="seg" id="modeSeg"></div>'
+        +'<div class="sched" id="schedRow">'
+          +'<div><label>'+t("schedFrom")+'</label><input type="time" id="schedFrom" value="'+esc(state.schedFrom)+'"></div>'
+          +'<div><label>'+t("schedTo")+'</label><input type="time" id="schedTo" value="'+esc(state.schedTo)+'"></div>'
+        +'</div>'
+        +'<button class="btn primary" id="designSave">'+t("saveDesign")+'</button>'
+      +'</div>';
+    // themes
+    $("themeGrid").innerHTML = THEME_ORDER.map(function(k){
+      var th=THEMES[k];
+      return '<button class="btn theme-chip '+(k===state.theme?"selected":"")+'" data-theme="'+k+'"><span class="theme-dot" style="background:'+th.dot+'"></span><b>'+th.label+'</b></button>';
+    }).join("");
+    document.querySelectorAll("[data-theme]").forEach(function(b){
+      b.addEventListener("click",function(){
+        state.theme=b.getAttribute("data-theme");
+        document.querySelectorAll("[data-theme]").forEach(function(x){ x.classList.toggle("selected", x.getAttribute("data-theme")===state.theme); });
+        applyTheme(state.theme);
+      });
+    });
+    var modes=[["always",t("modeAlways")],["now",t("modeNow")],["schedule",t("modeSchedule")],["launch",t("modeLaunch")],["vision",t("modeVision")],["quick",t("modeQuick")]];
+    $("modeSeg").innerHTML = modes.map(function(m){ return '<button class="btn seg-btn '+(m[0]===state.themeMode?"active":"")+'" data-tmode="'+m[0]+'">'+m[1]+'</button>'; }).join("");
+    function refreshSched(){ $("schedRow").classList.toggle("show", state.themeMode==="schedule"); }
+    refreshSched();
+    document.querySelectorAll("[data-tmode]").forEach(function(b){
+      b.addEventListener("click",function(){
+        state.themeMode=b.getAttribute("data-tmode");
+        document.querySelectorAll("[data-tmode]").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-tmode")===state.themeMode); });
+        refreshSched();
+      });
+    });
+    var sf=$("schedFrom"), st=$("schedTo");
+    if(sf) sf.addEventListener("change",function(){ state.schedFrom=this.value||"20:00"; });
+    if(st) st.addEventListener("change",function(){ state.schedTo=this.value||"06:00"; });
+    $("designSave").addEventListener("click",function(){
+      if(sf) state.schedFrom=sf.value||state.schedFrom;
+      if(st) state.schedTo=st.value||state.schedTo;
+      saveDesign(); refreshTheme();
+      var btn=$("designSave"), old=t("saveDesign"); btn.textContent=t("savedDesign");
+      setTimeout(function(){ btn.textContent=old; },1500);
+    });
+    $("ownerRefresh").addEventListener("click", loadDashboard);
+    loadDashboard();
+  }
+
+  function loadDashboard(){
+    if(!initData) return;
+    fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData,action:"dashboard"})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d||!d.isOwner||!d.metrics) return;
+        var m=d.metrics, s1=$("ownerStats1"), s2=$("ownerStats2");
+        if(!s1||!s2) return;
+        s1.innerHTML='<div class="stat"><b>'+(m.usersTotal||0)+'</b><small>'+t("mUsers")+'</small></div>'
+          +'<div class="stat"><b>'+(m.resultsTotal||0)+'</b><small>'+t("mResults")+'</small></div>'
+          +'<div class="stat"><b>'+(m.eventsTotal||0)+'</b><small>'+t("mEvents")+'</small></div>';
+        s2.innerHTML='<div class="stat"><b>'+(m.visionTotal||0)+'</b><small>'+t("mVision")+'</small></div>'
+          +'<div class="stat"><b>'+(m.quickTotal||0)+'</b><small>'+t("mQuick")+'</small></div>'
+          +'<div class="stat"><b>'+(m.wins||0)+'</b><small>'+t("mWin")+'</small></div>';
+      }).catch(function(){});
+  }
+
+  function checkOwner(){
+    if(!initData) return;
+    fetch("/api/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d&&d.isOwner){ state.isOwner=true; buildOwnerArea(); } })
+      .catch(function(){});
+  }
+
+  function drawLogo(el){
+    if(!el) return;
+    el.innerHTML='<svg viewBox="0 0 100 100" width="30" height="30" aria-hidden="true">'
+      +'<path d="M12 60 H34 L45 40 L57 74 L70 44" fill="none" stroke="var(--silver)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
+      +'<path d="M64 44 H82 V60" fill="none" stroke="var(--silver)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
+      +'</svg>';
+  }
+
+  function applyLanguage(){
+    var map={
+      brandText:"brand", welcomeSub:"welcomeSub", wVision:"btnVision", wQuick:"btnQuick",
+      navHistory:"navHistory", navCreate:"navCreate", navVision:"navVision", navProfile:"navProfile",
+      historyEyebrow:"historyEyebrow", historyTitle:"historyTitle", historyText:"historyText",
+      emptyTitle:"emptyTitle", emptyText:"emptyText", emptyGoVision:"goVision",
+      createEyebrow:"createEyebrow", createTitle:"createTitle", createText:"createText",
+      assetLabel:"assetLabel", durationLabel:"durationLabel", entryLabel:"entryLabel",
+      entryNearest:"entryNearest", entryLater:"entryLater", modeLabel:"modeLabel",
+      visionModeText:"visionModeText", quickModeText:"quickModeText",
+      visionEyebrow:"visionEyebrow", visionTitle:"visionTitle", visionText:"visionText",
+      uploadTitle:"uploadTitle", uploadHint:"uploadHint", analyzeBtn:"analyze",
+      profileEyebrow:"profileEyebrow", profileTitle:"profileTitle", profileText:"profileText",
+      langTitle:"langTitle", langHint:"langHint", soundTitle:"soundTitle", soundHint:"soundHint",
+      hapticTitle:"hapticTitle", hapticHint:"hapticHint", selAssetTitle:"selAssetTitle", selAssetHint:"selAssetHint",
+      statsTitle:"statsTitle", statAllLabel:"statAll", profileNotice:"profileNotice",
+      quickNotice:"quickNotice", qL1:"asset", qL2:"duration", qL3:"entry", qL4:"outcomeBy",
+      vL1:"asset", vL2:"duration", vL3:"entry", vL4:"outcomeBy"
+    };
+    for(var id in map){ if($(id)) $(id).textContent=t(map[id]); }
+    $("assetSearch").placeholder=t("searchPlaceholder");
+    $("langSelect").value=state.language;
+    $("profileAsset").textContent=state.asset;
+    $("soundToggle").textContent = state.sound?t("on"):t("off"); $("soundToggle").classList.toggle("on", state.sound);
+    $("hapticToggle").textContent = state.haptic?t("on"):t("off"); $("hapticToggle").classList.toggle("on", state.haptic);
+    $("createAction").textContent = state.mode==="vision"?t("actionVision"):t("actionQuick");
+    $("quickAgain").textContent=t("newQuick"); $("quickHistory").textContent=t("openHistory");
+    $("visionAgain").textContent=t("newAnalysis"); $("visionHistory").textContent=t("openHistory");
+    $("welcomeSub").textContent=t("welcomeSub"); $("wVision").textContent=t("btnVision"); $("wQuick").textContent=t("btnQuick");
+    renderAssets($("assetSearch").value); renderDurations(); renderHistory(); renderStats();
+    if(state.isOwner) buildOwnerArea();
+  }
+
+  function greeting(){
+    var h = Math.floor(oralHM()/60);
+    var name = (tgUser && tgUser.first_name) ? ", "+tgUser.first_name : "";
+    var g = h<12?t("greetMorning"):(h<18?t("greetDay"):t("greetEvening"));
+    return g+name;
+  }
+  function initLaunch(){
+    $("welcomeTitle").textContent = greeting();
+    applyTheme(resolveTheme("launch"));
+  }
+  function closeLaunch(target){
+    $("launch").classList.add("hide");
+    if(target) setTab(target); else refreshTheme();
+  }
+
+  /* ---------- Wiring ---------- */
+  document.querySelectorAll(".nav-item").forEach(function(b){ b.addEventListener("click",function(){ setTab(b.getAttribute("data-tab")); }); });
+  document.querySelectorAll("[data-mode]").forEach(function(b){ b.addEventListener("click",function(){ setMode(b.getAttribute("data-mode")); }); });
+  document.querySelectorAll("[data-entry]").forEach(function(b){ b.addEventListener("click",function(){ state.entryMode=b.getAttribute("data-entry"); save(); document.querySelectorAll("[data-entry]").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-entry")===state.entryMode); }); }); });
+  $("assetSearch").addEventListener("input",function(e){ renderAssets(e.target.value); });
+  $("createAction").addEventListener("click",function(){ if(state.mode==="vision") setTab("vision"); else runQuick(); });
+  $("emptyGoVision").addEventListener("click",function(){ setTab("vision"); });
+  $("quickAgain").addEventListener("click", runQuick);
+  $("quickHistory").addEventListener("click",function(){ setTab("history"); });
+  $("visionAgain").addEventListener("click",function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; window.scrollTo({top:0,behavior:"smooth"}); });
+  $("visionHistory").addEventListener("click",function(){ setTab("history"); });
+  $("imageInput").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0]; if(!file) return;
+    if(["image/png","image/jpeg","image/webp"].indexOf(file.type)===-1){ alert(t("errBadType")); return; }
+    if(file.size > 8*1024*1024){ alert(t("errTooLarge")); return; }
+    compressImage(file).then(function(data){ state.image=data; $("previewImg").src=data; $("preview").classList.add("show"); $("analyzeBtn").disabled=false; }).catch(function(){ alert(t("errBadType")); });
+  });
+  $("removeImg").addEventListener("click", function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; });
+  $("analyzeBtn").addEventListener("click", analyze);
+  $("langSelect").addEventListener("change",function(e){ state.language=e.target.value; save(); applyLanguage(); $("welcomeTitle").textContent=greeting(); });
+  $("soundToggle").addEventListener("click",function(){ state.sound=!state.sound; save(); this.textContent=state.sound?t("on"):t("off"); this.classList.toggle("on", state.sound); });
+  $("hapticToggle").addEventListener("click",function(){ state.haptic=!state.haptic; save(); this.textContent=state.haptic?t("on"):t("off"); this.classList.toggle("on", state.haptic); });
+  $("wVision").addEventListener("click",function(){ setMode("vision"); closeLaunch("vision"); });
+  $("wQuick").addEventListener("click",function(){ setMode("quick"); closeLaunch("create"); });
+  document.addEventListener("click",function(e){ if(e.target.closest("button")) feedback(); });
+
+  /* ---------- Init ---------- */
+  if(TG){ try{ TG.ready(); TG.expand(); }catch(e){} }
+  drawLogo($("brandMark"));
+  setMode("vision");
+  document.querySelectorAll("[data-entry]").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-entry")===state.entryMode); });
+  applyLanguage();
+  setTab("history");
+  tickClock(); setInterval(tickClock,1000); setInterval(tickCountdowns,1000);
+  checkOwner();
+  initLaunch();
 })();
-</script></body>
+</script>
+<script>
+(function(){
+  function haptic(){
+    try{ var v=localStorage.getItem("pulse_haptic"); if(v==="off"||v==="false") return;
+      var h=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.HapticFeedback; if(h) h.impactOccurred("light"); }catch(e){}
+  }
+  document.addEventListener("pointerdown",function(e){
+    var btn=e.target&&e.target.closest?e.target.closest(".btn"):null; if(!btn) return;
+    var r=btn.getBoundingClientRect(); var s=Math.max(r.width,r.height);
+    var cx=(typeof e.clientX==="number"?e.clientX:r.left+r.width/2);
+    var cy=(typeof e.clientY==="number"?e.clientY:r.top+r.height/2);
+    var sp=document.createElement("span"); sp.className="ripple";
+    sp.style.width=sp.style.height=s+"px";
+    sp.style.left=(cx-r.left-s/2)+"px"; sp.style.top=(cy-r.top-s/2)+"px";
+    btn.appendChild(sp);
+    setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },600);
+    haptic();
+  },{passive:true});
+})();
+</script>
+</body>
 </html>
