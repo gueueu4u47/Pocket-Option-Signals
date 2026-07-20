@@ -1,5 +1,56 @@
+const crypto = require("crypto");
+
+function validateTelegramInitData(initData, botToken) {
+  if (!initData || !botToken) return null;
+  const params = new URLSearchParams(initData);
+  const receivedHash = params.get("hash");
+  if (!receivedHash) return null;
+  params.delete("hash");
+  const dataCheckString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
+  const secretKey = crypto.createHmac("sha256", "WebAppData").update(botToken).digest();
+  const calculatedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+  const receivedBuffer = Buffer.from(receivedHash, "hex");
+  const calculatedBuffer = Buffer.from(calculatedHash, "hex");
+  if (
+    receivedBuffer.length !== calculatedBuffer.length ||
+    !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)
+  ) {
+    return null;
+  }
+  const authDate = Number(params.get("auth_date") || 0);
+  const now = Math.floor(Date.now() / 1000);
+  if (!authDate || now - authDate > 86400) return null;
+  try {
+    return JSON.parse(params.get("user") || "{}");
+  } catch {
+    return null;
+  }
+}
+
+const RATE = new Map();
+function rateLimit(key, limit, windowMs) {
+  const now = Date.now();
+  const hits = (RATE.get(key) || []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) {
+    RATE.set(key, hits);
+    return false;
+  }
+  hits.push(now);
+  RATE.set(key, hits);
+  if (RATE.size > 5000) {
+    for (const [k, v] of RATE) {
+      if (!v.length || now - v[v.length - 1] > windowMs) RATE.delete(k);
+    }
+  }
+  return true;
+}
+
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -20,12 +71,32 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { image, mimeType = "image/jpeg", language = "ru" } = req.body || {};
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const body =
+      typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+    const { image, mimeType = "image/jpeg", language = "ru", initData } = body;
+
+    const user = validateTelegramInitData(initData, botToken);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: "Telegram verification failed" });
+    }
+
+    if (!rateLimit("analyze:" + user.id, 8, 60000)) {
+      return res.status(429).json({ error: "Too many requests. Please slow down." });
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(String(mimeType))) {
+      return res.status(400).json({ error: "Unsupported image type" });
+    }
 
     if (!image || typeof image !== "string") {
       return res.status(400).json({
         error: "Image is required"
       });
+    }
+
+    if (image.length > 12000000) {
+      return res.status(413).json({ error: "Image is too large" });
     }
 
     const base64Image = image.includes(",")
