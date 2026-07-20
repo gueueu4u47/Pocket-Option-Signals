@@ -1155,6 +1155,14 @@
   </nav>
 
   <script>
+  window.addEventListener("error", function (event) {
+    const loaderText = document.getElementById("loaderText");
+    if (loaderText) {
+      loaderText.textContent = "Ошибка запуска: " + event.message + " · строка " + event.lineno;
+    }
+  });
+  </script>
+  <script>
     const OTC_ASSETS = [
       "EUR/GBP OTC",
       "EUR/USD OTC",
