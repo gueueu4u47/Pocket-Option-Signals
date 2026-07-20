@@ -1486,7 +1486,7 @@
         const created = new Intl.DateTimeFormat(
           state.language === "ru" ? "ru-RU" : "en-GB",
           { dateStyle: "medium", timeStyle: "short" }
-        ).format(new Date(item.createdAt));
+        ).format(new Date(Number.isNaN(Date.parse(item.createdAt)) ? Date.now() : item.createdAt));
 
         return `
           <article class="history-item">
