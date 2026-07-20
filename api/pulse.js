@@ -1,21 +1,17 @@
 import crypto from "crypto";
 
 function validateTelegramInitData(initData, botToken) {
-  if (!initData || !botToken) {
-    return null;
-  }
+  if (!initData || !botToken) return null;
 
   const params = new URLSearchParams(initData);
   const receivedHash = params.get("hash");
 
-  if (!receivedHash) {
-    return null;
-  }
+  if (!receivedHash) return null;
 
   params.delete("hash");
 
   const dataCheckString = [...params.entries()]
-    .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
 
@@ -42,9 +38,7 @@ function validateTelegramInitData(initData, botToken) {
   const authDate = Number(params.get("auth_date") || 0);
   const now = Math.floor(Date.now() / 1000);
 
-  if (!authDate || now - authDate > 86400) {
-    return null;
-  }
+  if (!authDate || now - authDate > 86400) return null;
 
   try {
     return JSON.parse(params.get("user") || "{}");
@@ -58,13 +52,30 @@ function text(value, maxLength = 500) {
 }
 
 function validIsoDate(value) {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const date = new Date(value);
-
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function validOutcome(value) {
+  return ["win", "loss", "skip"].includes(value) ? value : "skip";
+}
+
+function validDirection(value) {
+  return ["UP", "DOWN", "NONE"].includes(value) ? value : "NONE";
+}
+
+function validMode(value) {
+  return value === "quick" ? "quick" : "vision";
+}
+
+function validResultId(value) {
+  const id = text(value, 100);
+
+  if (!id) return null;
+
+  return id;
 }
 
 async function supabaseRequest(path, options = {}) {
@@ -90,6 +101,12 @@ async function supabaseRequest(path, options = {}) {
   }
 
   if (response.status === 204) {
+    return null;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
     return null;
   }
 
@@ -125,6 +142,150 @@ async function addEvent(telegramId, eventType, details = {}) {
   });
 }
 
+async function saveResult(user, payload) {
+  const entryTime = validIsoDate(payload.entryTime);
+  const outcomeTime = validIsoDate(payload.outcomeTime);
+
+  if (!entryTime || !outcomeTime) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "Result timing is required" }
+    };
+  }
+
+  if (new Date(outcomeTime).getTime() <= new Date(entryTime).getTime()) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "Result timing is invalid" }
+    };
+  }
+
+  const result = {
+    telegram_id: user.id,
+    mode: validMode(payload.mode),
+    direction: validDirection(payload.direction),
+    asset: text(payload.asset, 80) || "OTC",
+    duration_seconds: Math.max(1, Math.min(86400, Number(payload.durationSeconds) || 30)),
+    entry_time: entryTime,
+    outcome_time: outcomeTime,
+    confidence: text(payload.confidence, 60) || null,
+    summary: text(payload.summary, 1500) || null,
+    outcome: validOutcome(payload.outcome)
+  };
+
+  const inserted = await supabaseRequest("/pulse_results", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(result)
+  });
+
+  const savedResult = Array.isArray(inserted) ? inserted[0] : inserted;
+
+  await addEvent(user.id, "result_saved", {
+    result_id: savedResult?.id || null,
+    mode: result.mode,
+    direction: result.direction,
+    asset: result.asset
+  });
+
+  return {
+    ok: true,
+    status: 200,
+    body: {
+      saved: true,
+      resultId: savedResult?.id || null,
+      result: savedResult || null
+    }
+  };
+}
+
+async function updateResultOutcome(user, payload) {
+  const resultId = validResultId(payload.resultId);
+  const outcome = validOutcome(payload.outcome);
+
+  if (!resultId) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "Result ID is required" }
+    };
+  }
+
+  const encodedResultId = encodeURIComponent(resultId);
+  const encodedTelegramId = encodeURIComponent(String(user.id));
+
+  const updated = await supabaseRequest(
+    `/pulse_results?id=eq.${encodedResultId}&telegram_id=eq.${encodedTelegramId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        outcome
+      })
+    }
+  );
+
+  const result = Array.isArray(updated) ? updated[0] : updated;
+
+  if (!result) {
+    return {
+      ok: false,
+      status: 404,
+      body: { error: "Result was not found" }
+    };
+  }
+
+  await addEvent(user.id, "result_outcome_updated", {
+    result_id: result.id,
+    outcome
+  });
+
+  return {
+    ok: true,
+    status: 200,
+    body: {
+      updated: true,
+      resultId: result.id,
+      outcome: result.outcome
+    }
+  };
+}
+
+async function getDashboard() {
+  const [users, results, events] = await Promise.all([
+    supabaseRequest("/pulse_users?select=telegram_id"),
+    supabaseRequest("/pulse_results?select=telegram_id,mode,outcome,created_at"),
+    supabaseRequest("/pulse_events?select=event_type,created_at")
+  ]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const todayUsers = new Set(
+    (results || [])
+      .filter((item) => String(item.created_at || "").startsWith(today))
+      .map((item) => item.telegram_id)
+      .filter(Boolean)
+  );
+
+  return {
+    usersTotal: (users || []).length,
+    usersToday: todayUsers.size,
+    resultsTotal: (results || []).length,
+    visionTotal: (results || []).filter((item) => item.mode === "vision").length,
+    quickTotal: (results || []).filter((item) => item.mode === "quick").length,
+    wins: (results || []).filter((item) => item.outcome === "win").length,
+    losses: (results || []).filter((item) => item.outcome === "loss").length,
+    skipped: (results || []).filter((item) => item.outcome === "skip").length,
+    eventsTotal: (events || []).length
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -140,6 +301,7 @@ export default async function handler(req, res) {
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const ownerId = String(process.env.OWNER_TELEGRAM_ID || "");
+
     const user = validateTelegramInitData(body.initData, botToken);
 
     if (!user || !user.id) {
@@ -153,41 +315,13 @@ export default async function handler(req, res) {
     const isOwner = String(user.id) === ownerId;
 
     if (action === "save_result") {
-      const mode = payload.mode === "quick" ? "quick" : "vision";
-      const direction = ["UP", "DOWN", "NONE"].includes(payload.direction)
-        ? payload.direction
-        : "NONE";
+      const saved = await saveResult(user, payload);
+      return res.status(saved.status).json(saved.body);
+    }
 
-      const result = {
-        telegram_id: user.id,
-        mode,
-        direction,
-        asset: text(payload.asset, 80) || "OTC",
-        duration_seconds: Number(payload.durationSeconds) || 30,
-        entry_time: validIsoDate(payload.entryTime),
-        outcome_time: validIsoDate(payload.outcomeTime),
-        confidence: text(payload.confidence, 60) || null,
-        summary: text(payload.summary, 1500) || null,
-        outcome: ["win", "loss", "skip"].includes(payload.outcome)
-          ? payload.outcome
-          : "skip"
-      };
-
-      await supabaseRequest("/pulse_results", {
-        method: "POST",
-        headers: {
-          Prefer: "return=minimal"
-        },
-        body: JSON.stringify(result)
-      });
-
-      await addEvent(user.id, "result_saved", {
-        mode,
-        direction,
-        asset: result.asset
-      });
-
-      return res.status(200).json({ saved: true });
+    if (action === "update_result") {
+      const updated = await updateResultOutcome(user, payload);
+      return res.status(updated.status).json(updated.body);
     }
 
     if (action === "track_event") {
@@ -210,37 +344,20 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: "Owner access required" });
       }
 
-      const [users, results, events] = await Promise.all([
-        supabaseRequest("/pulse_users?select=telegram_id"),
-        supabaseRequest("/pulse_results?select=mode,outcome,created_at"),
-        supabaseRequest("/pulse_events?select=event_type,created_at")
-      ]);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const todayUsers = new Set(
-        results
-          .filter((item) => String(item.created_at || "").startsWith(today))
-          .map((item) => item.telegram_id)
-      );
+      const metrics = await getDashboard();
 
       return res.status(200).json({
         isOwner: true,
-        metrics: {
-          usersTotal: users.length,
-          usersToday: todayUsers.size,
-          resultsTotal: results.length,
-          visionTotal: results.filter((item) => item.mode === "vision").length,
-          quickTotal: results.filter((item) => item.mode === "quick").length,
-          wins: results.filter((item) => item.outcome === "win").length,
-          losses: results.filter((item) => item.outcome === "loss").length,
-          eventsTotal: events.length
-        }
+        metrics
       });
     }
 
     return res.status(400).json({ error: "Unknown action" });
   } catch (error) {
     console.error("Pulse API error:", error);
-    return res.status(500).json({ error: "Pulse service is temporarily unavailable" });
+
+    return res.status(500).json({
+      error: "Pulse service is temporarily unavailable"
+    });
   }
-                   }
+      }
