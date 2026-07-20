@@ -1394,7 +1394,7 @@
     }, 1400);
 </script>
 
-</script><style id="vibeCss">
+<style id="vibeCss">
   .hero,.card,.result-card{
     background:var(--card2)!important;border-color:var(--line)!important;
     backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);
@@ -1479,7 +1479,7 @@ document.addEventListener("pointerup",function(){
 </style><video id="bgVid" autoplay muted loop playsinline preload="auto">
   <source src="bg.mp4" type="video/mp4">
 </video>
-<style id="vibeC"> ... </style><script id="vibeBg">
+<script id="vibeBg">
 (function(){
   function apply(){
     var b=document.body; if(!b) return;
@@ -1604,5 +1604,11 @@ document.addEventListener("pointerup",function(){
   else run();
   setTimeout(run,800); setTimeout(run,2500);
 })();
-  </script></body>
-</html> 
+  </script>
+<style id="vibeLock">
+  /* Lock the bottom navigation to exactly 4 tabs, full width */
+  .bottom-nav{display:grid!important;grid-template-columns:repeat(4,1fr)!important;width:min(100%,560px)!important;max-width:100%!important;flex-wrap:nowrap!important}
+  .bottom-nav .nav-item{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:0!important}
+</style>
+</body>
+</html>
