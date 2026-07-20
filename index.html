@@ -1479,5 +1479,32 @@ document.addEventListener("pointerup",function(){
 </style><video id="bgVid" autoplay muted loop playsinline preload="auto">
   <source src="bg.mp4" type="video/mp4">
 </video>
-<style id="vibeC"> ... </style></body>
+<style id="vibeC"> ... </style><script id="vibeBg">
+(function(){
+  function apply(){
+    var b=document.body; if(!b) return;
+    var v=document.getElementById("bgVid");
+    if(!v){
+      v=document.createElement("video");
+      v.id="bgVid"; v.src="bg.mp4";
+      v.muted=true; v.loop=true; v.autoplay=true;
+      v.setAttribute("playsinline",""); v.setAttribute("muted","");
+    }
+    v.style.cssText="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;filter:blur(3px) brightness(.4) saturate(1.15);pointer-events:none;";
+    if(b.firstChild!==v) b.insertBefore(v,b.firstChild);
+    if(v.play) v.play().catch(function(){});
+    if(!document.getElementById("vibeGlass")){
+      var s=document.createElement("style"); s.id="vibeGlass";
+      s.textContent=
+        "body{background:transparent!important;}"+
+        ".hero,.card,.result-card,.mode-card,.fact,.stat,.history-item,.upload-zone,.preview-wrap{background:rgba(20,20,26,.38)!important;border:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14)!important;}"+
+        ".asset-option,.choice,.theme-chip,.seg-btn,.search,.toggle,select,.outcome,.secondary{background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}"+
+        ".bottom-nav{background:rgba(8,8,12,.5)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);}";
+      document.head.appendChild(s);
+    }
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",apply);
+  else apply();
+})();
+</script></body>
 </html>
