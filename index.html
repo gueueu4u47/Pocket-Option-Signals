@@ -21,11 +21,14 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;}
   body{
-    min-height:100vh; color:var(--text); background:var(--bg);
+    min-height:100vh; color:var(--text); background:transparent;
     font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     -webkit-font-smoothing:antialiased; overflow-x:hidden;
     transition:background .5s ease,color .5s ease;
   }
+  html{background:#0A0A0A;}
+  #bgVid{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-3;
+    filter:blur(2px) brightness(.36) saturate(1.1);background:#0A0A0A;pointer-events:none;}
   body::before{content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;
     background:
       radial-gradient(42% 34% at 16% 10%, color-mix(in srgb,var(--accent) 22%,transparent), transparent 70%),
@@ -295,6 +298,7 @@
 </style>
 </head>
 <body>
+<video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
 <div class="launch" id="launch">
   <div class="launch-inner">
     <svg class="launch-logo" viewBox="0 0 120 120" aria-hidden="true">
@@ -519,7 +523,7 @@
       createEyebrow:"СОЗДАТЬ", createTitle:"Параметры результата", createText:"Выбери OTC-актив, длительность, тип входа и режим.",
       assetLabel:"OTC-актив", searchPlaceholder:"Поиск актива", durationLabel:"Длительность", entryLabel:"Тип входа",
       entryNearest:"Ближайшая точка", entryLater:"После длительности", modeLabel:"Режим",
-      visionModeText:"Анализ загруже��ного графика", quickModeText:"Работает без анализа загруженного графика",
+      visionModeText:"Анализ загруженного графика", quickModeText:"Работает без анализа загруженного графика",
       actionVision:"Перейти к Pulse Vision", actionQuick:"Запустить Pulse Quick", quickPreparing:"Формируем результат…",
       visionEyebrow:"PULSE VISION", visionTitle:"Анализ графика", visionText:"Загрузи полный скриншот — приложение сохранит пропорции без обрезки.",
       uploadTitle:"Выбрать скриншот", uploadHint:"PNG, JPG или WEBP · до 8 МБ", analyze:"Анализировать график",
