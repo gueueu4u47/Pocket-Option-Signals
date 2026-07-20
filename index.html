@@ -10,134 +10,472 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root{--bg:#0A0A0A;--deep:#111;--card:#151515;--surface:#1B1B1B;--line:#2A2A2A;--text:#F4F4F4;--muted:#969696;--silver:#D7D9DD;--blue:#2F80ED;--up:#39C878;--down:#EF5B68;--radius:23px}
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}body{overflow-x:hidden}
-    body:before{content:"";position:fixed;z-index:-1;inset:0;background:radial-gradient(800px circle at 10% -20%,rgba(255,255,255,.045),transparent 55%),radial-gradient(600px circle at 110% 70%,rgba(47,128,237,.08),transparent 55%);animation:ambient 11s ease-in-out infinite alternate}@keyframes ambient{to{transform:scale(1.12) translateY(15px)}}
-    button,input,select{font:inherit}button{border:0;color:inherit;cursor:pointer}.hidden{display:none!important}
-    .app{width:min(100%,680px);min-height:100vh;margin:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(104px + env(safe-area-inset-bottom))}
-    .top{display:flex;align-items:center;justify-content:space-between;padding:5px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:11px}.logo{display:grid;place-items:center;width:45px;height:45px;border:1px solid rgba(215,217,221,.6);border-radius:14px;background:#0D0D0D;box-shadow:inset 0 1px rgba(255,255,255,.08),0 12px 25px rgba(0,0,0,.3)}.logo svg{width:29px}.brand b{display:block;font-size:16px}.brand small,.clock small{display:block;margin-top:3px;color:var(--muted);font-size:10px}.clock{text-align:right;font-variant-numeric:tabular-nums}.clock b{font-size:15px}
-    .view{display:none;animation:in .22s ease}.view.active{display:block}@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-    .hero,.panel{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,var(--card),var(--deep))}.hero{padding:22px;margin-bottom:14px}.panel{padding:17px;margin-bottom:14px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.3px;color:var(--silver)}h1,h2,h3,p{margin:0}h1{margin-top:10px;font-size:30px;line-height:1.08;letter-spacing:-1.5px}h2{font-size:20px}.desc{margin-top:12px;color:var(--muted);font-size:14px;line-height:1.55}
-    .primary,.secondary,.asset,.tile,.nav,.outcome{transition:transform .16s,background .2s,border .2s}.primary:active,.secondary:active,.asset:active,.tile:active,.nav:active,.outcome:active{transform:scale(.98)}.primary{width:100%;min-height:55px;border-radius:16px;background:var(--blue);color:#fff;font-weight:800;box-shadow:0 12px 27px rgba(47,128,237,.22)}.secondary{width:100%;min-height:51px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--silver);font-weight:750}.rows{display:grid;gap:9px;margin-top:15px}
-    .label{display:block;margin:18px 0 9px;color:var(--silver);font-size:13px;font-weight:750}.search{width:100%;height:53px;padding:0 14px;border:1px solid var(--line);border-radius:15px;outline:0;background:#0C0C0C;color:var(--text)}.search:focus{border-color:var(--blue)}.assets{display:grid;gap:8px;max-height:210px;margin-top:9px;overflow:auto}.asset{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:15px;background:var(--deep);font-weight:750;text-align:left}.asset small{color:var(--muted)}.selected{border-color:rgba(215,217,221,.84)!important;background:var(--surface)!important;box-shadow:inset 3px 0 var(--blue)}
+    :root{
+      --bg:#0A0A0A;--deep:#111111;--card:#151515;--surface:#1B1B1B;--line:#2A2A2A;
+      --text:#F4F4F4;--muted:#969696;--silver:#D7D9DD;--accent:#2F80ED;
+      --up:#39C878;--down:#EF5B68;--wait:#A6A6A6;--radius:24px
+    }
+    [data-theme="midnight"]{--bg:#080D17;--deep:#0D1420;--card:#121C2A;--surface:#182438;--line:#263954;--accent:#3887F2}
+    [data-theme="carbon"]{--bg:#09100D;--deep:#101914;--card:#152019;--surface:#1B2A20;--line:#2C4133;--accent:#37A86D}
+    [data-theme="black"]{--bg:#000;--deep:#080808;--card:#101010;--surface:#181818;--line:#292929;--accent:#F4F4F4}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{overflow-x:hidden}
+    body:before{content:"";position:fixed;z-index:-1;inset:0;background:radial-gradient(760px circle at 10% -15%,rgba(255,255,255,.045),transparent 55%),radial-gradient(650px circle at 108% 72%,rgba(47,128,237,.09),transparent 55%);animation:ambient 12s ease-in-out infinite alternate}
+    @keyframes ambient{to{transform:scale(1.13) translateY(18px);opacity:.74}}
+    button,input,select{font:inherit}button{border:0;color:inherit;cursor:pointer}button:disabled{opacity:.42;pointer-events:none}.hidden{display:none!important}
+    .app{width:min(100%,680px);min-height:100vh;margin:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(105px + env(safe-area-inset-bottom))}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0 19px;margin-bottom:19px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:11px}.logo{display:grid;place-items:center;width:45px;height:45px;border:1px solid rgba(215,217,221,.62);border-radius:14px;background:linear-gradient(145deg,#191919,#080808);box-shadow:inset 0 1px rgba(255,255,255,.08),0 12px 25px rgba(0,0,0,.3)}.logo svg{width:29px}.brand b{display:block;font-size:16px;letter-spacing:-.45px}.brand small,.clock small{display:block;margin-top:3px;color:var(--muted);font-size:10px}.clock{text-align:right;font-variant-numeric:tabular-nums}.clock b{font-size:15px}
+    .screen{display:none;animation:screenIn .22s cubic-bezier(.2,.8,.2,1)}.screen.active{display:block}@keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .hero,.panel{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,var(--card),var(--deep))}.hero{padding:22px;margin-bottom:14px}.panel{padding:17px;margin-bottom:14px}
+    .eyebrow{font-size:10px;font-weight:800;letter-spacing:1.3px;color:var(--silver)}h1,h2,h3,p{margin:0}h1{margin-top:10px;font-size:31px;line-height:1.08;letter-spacing:-1.6px}h2{font-size:20px;letter-spacing:-.65px}.desc{margin-top:12px;color:var(--muted);font-size:14px;line-height:1.55}
+    .label{display:block;margin:18px 0 9px;color:var(--silver);font-size:13px;font-weight:750}.search{width:100%;height:53px;padding:0 14px;border:1px solid var(--line);border-radius:15px;outline:0;background:#0C0C0C;color:var(--text)}.search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,128,237,.12)}
+    .primary,.secondary,.asset,.tile,.nav,.mode,.outcome,.theme{transition:transform .16s ease,background .2s,border-color .2s}.primary:active,.secondary:active,.asset:active,.tile:active,.nav:active,.mode:active,.outcome:active,.theme:active{transform:scale(.98)}
+    .primary{position:relative;overflow:hidden;width:100%;min-height:55px;border-radius:16px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;box-shadow:0 12px 27px rgba(47,128,237,.22)}.primary:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);transform:translateX(-130%);transition:.55s}.primary:hover:after{transform:translateX(130%)}[data-theme="black"] .primary{color:#111}
+    .secondary{width:100%;min-height:51px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--silver);font-size:14px;font-weight:750}.rows{display:grid;gap:9px;margin-top:15px}
+    .assets{display:grid;gap:8px;max-height:215px;margin-top:9px;overflow:auto}.asset{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:15px;background:var(--deep);font-weight:750;text-align:left}.asset small{color:var(--muted)}.selected{border-color:rgba(215,217,221,.84)!important;background:var(--surface)!important;box-shadow:inset 3px 0 var(--accent)}
     .grid3,.grid2{display:grid;gap:8px}.grid3{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:repeat(2,1fr)}.tile{min-height:49px;padding:7px;border:1px solid var(--line);border-radius:14px;background:var(--deep);color:var(--silver);font-size:12px;font-weight:750}
-    .mode{display:flex;align-items:center;gap:12px;padding:14px;margin-top:8px;border:1px solid var(--line);border-radius:16px;background:var(--deep);text-align:left}.mode i{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;color:var(--silver);font-style:normal;font-size:18px}.mode b{display:block}.mode small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
-    .upload{position:relative;display:grid;place-items:center;min-height:224px;border:1px dashed rgba(215,217,221,.54);border-radius:20px;background:#101010;text-align:center;cursor:pointer}.upload input{position:absolute;inset:0;opacity:0}.upload svg{width:37px;color:var(--silver)}.upload b{display:block;margin-top:12px;font-size:17px}.upload span{display:block;margin-top:8px;color:var(--muted);font-size:12px}.preview{overflow:hidden;border:1px solid var(--line);border-radius:19px;background:#050505}.preview img{display:block;width:100%;max-height:390px;object-fit:contain}.remove{display:block;margin:10px 0 0 auto;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--down)}
-    .empty{text-align:center;padding:28px 16px}.empty i{display:grid;place-items:center;width:51px;height:51px;margin:auto auto 13px;border:1px solid var(--line);border-radius:16px;color:var(--silver);font-style:normal}.empty p{margin-top:8px;color:var(--muted);font-size:13px}.list{display:grid;gap:12px}.history{padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--card)}.head{display:flex;justify-content:space-between;gap:10px}.sub{display:block;margin-bottom:5px;color:var(--muted);font-size:10px}.title{font-size:16px;font-weight:800}.badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:850}.up{color:var(--up);background:rgba(57,200,120,.13)}.down{color:var(--down);background:rgba(239,91,104,.13)}.wait{color:#B8B8B8;background:rgba(255,255,255,.08)}.meta{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px;color:var(--muted);font-size:11px;line-height:1.55}.meta b{display:block;font-size:9px;letter-spacing:.8px}.outcomes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}.outcome{min-height:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--silver);font-size:12px;font-weight:800}.outcome.win.active{border-color:var(--up);color:var(--up)}.outcome.loss.active{border-color:var(--down);color:var(--down)}
-    .profile-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:61px;border-bottom:1px solid var(--line)}.profile-row:last-child{border:0}.profile-row b{display:block;font-size:14px}.profile-row span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.select{padding:9px 28px 9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}.switch{width:48px;height:29px;padding:3px;border-radius:99px;background:#303030}.switch i{display:block;width:23px;height:23px;border-radius:50%;background:#aaa;transition:.2s}.switch.on{background:var(--blue)}.switch.on i{transform:translateX(19px);background:#fff}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px 7px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:center}.stat b{display:block;font-size:18px}.stat small{display:block;margin-top:5px;color:var(--muted);font-size:9px}
-    .bottom{position:fixed;z-index:20;bottom:0;left:50%;display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,680px);min-height:calc(84px + env(safe-area-inset-bottom));padding:8px 9px calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);border-top:1px solid var(--line);background:rgba(10,10,10,.95);backdrop-filter:blur(18px)}.nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;background:transparent;color:#777;font-size:10px;font-weight:750}.nav svg{width:20px;height:20px}.nav.active{background:var(--surface);color:var(--silver);box-shadow:inset 0 -2px var(--blue)}
+    .modes{display:grid;gap:8px}.mode{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--deep);text-align:left}.mode-icon{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;color:var(--silver);font-size:18px}.mode b{display:block;font-size:14px}.mode small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
+    .upload{position:relative;display:grid;place-items:center;min-height:224px;border:1px dashed rgba(215,217,221,.54);border-radius:20px;background:linear-gradient(145deg,#111,#0B0B0B);text-align:center;cursor:pointer}.upload input{position:absolute;inset:0;opacity:0;cursor:pointer}.upload svg{width:37px;color:var(--silver)}.upload b{display:block;margin-top:12px;font-size:17px}.upload span{display:block;margin-top:8px;color:var(--muted);font-size:12px}
+    .preview{overflow:hidden;border:1px solid var(--line);border-radius:19px;background:#050505}.preview img{display:block;width:100%;max-height:390px;object-fit:contain}.remove{display:block;margin:10px 0 0 auto;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--down);font-size:12px;font-weight:750}
+    .empty{text-align:center;padding:28px 16px}.empty i{display:grid;place-items:center;width:51px;height:51px;margin:0 auto 13px;border:1px solid var(--line);border-radius:16px;color:var(--silver);font-style:normal}.empty p{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.5}
+    .list{display:grid;gap:12px}.history{padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--card)}.head{display:flex;justify-content:space-between;gap:10px}.sub{display:block;margin-bottom:5px;color:var(--muted);font-size:10px}.title{font-size:16px;font-weight:800}.badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:850}.up{color:var(--up);background:rgba(57,200,120,.13)}.down{color:var(--down);background:rgba(239,91,104,.13)}.wait{color:#B8B8B8;background:rgba(255,255,255,.08)}
+    .meta,.times{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}.meta{color:var(--muted);font-size:11px;line-height:1.55}.meta b,.times b{display:block;color:var(--muted);font-size:9px;letter-spacing:.8px}.outcomes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}.outcome{min-height:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--silver);font-size:12px;font-weight:800}.outcome.win.active{border-color:var(--up);color:var(--up);background:rgba(57,200,120,.12)}.outcome.loss.active{border-color:var(--down);color:var(--down);background:rgba(239,91,104,.12)}
+    .profile-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:61px;border-bottom:1px solid var(--line)}.profile-row:last-child{border:0}.profile-row b{display:block;font-size:14px}.profile-row span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.select{padding:9px 28px 9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}.switch{width:48px;height:29px;padding:3px;border-radius:99px;background:#303030}.switch i{display:block;width:23px;height:23px;border-radius:50%;background:#aaa;transition:.2s}.switch.on{background:var(--accent)}.switch.on i{transform:translateX(19px);background:#fff}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px 7px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:center}.stat b{display:block;font-size:18px}.stat small{display:block;margin-top:5px;color:var(--muted);font-size:9px}
+    .theme-list{display:grid;gap:8px}.theme{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}.theme.selected{border-color:var(--silver)}.theme-left{display:flex;align-items:center;gap:10px}.dot{width:21px;height:21px;border:1px solid rgba(255,255,255,.25);border-radius:7px;background:#151515}.dot.midnight{background:#15233A}.dot.carbon{background:#193B25}.dot.black{background:#000}.dot.launch{background:linear-gradient(135deg,#151515,#2F80ED)}
+    .bottom{position:fixed;z-index:20;bottom:0;left:50%;display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,680px);min-height:calc(84px + env(safe-area-inset-bottom));padding:8px 9px calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);border-top:1px solid var(--line);background:rgba(10,10,10,.95);backdrop-filter:blur(18px)}.nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;background:transparent;color:#777;font-size:10px;font-weight:750}.nav svg{width:20px;height:20px}.nav.active{background:var(--surface);color:var(--silver);box-shadow:inset 0 -2px var(--accent)}
+    .modal{position:fixed;z-index:60;inset:0;display:grid;place-items:end center;padding:16px;background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}.modal-box{width:min(100%,540px);max-height:88vh;overflow:auto;padding:20px;border:1px solid var(--line);border-radius:25px;background:var(--deep);animation:pop .22s ease}@keyframes pop{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:none}}.modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--silver);font-size:20px}
+    .result{position:relative;overflow:hidden;padding:20px;border:1px solid var(--line);border-radius:22px;background:var(--card)}.result:before{content:"";position:absolute;right:-90px;top:-90px;width:210px;height:210px;border-radius:50%;background:rgba(47,128,237,.11);filter:blur(14px)}.result>*{position:relative}.asset-name{font-size:20px;font-weight:800}.result-mode{margin-top:4px;color:var(--muted);font-size:11px}.signal{margin:25px 0 19px;font-size:38px;font-weight:850;letter-spacing:-1.8px}.confidence{display:flex;align-items:center;gap:13px;margin-bottom:19px}.ring{position:relative;display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0)}.ring:before{content:"";position:absolute;width:51px;height:51px;border-radius:50%;background:var(--card)}.ring span{position:relative;font-size:12px;font-weight:850}.confidence b{display:block;font-size:13px}.confidence small{display:block;margin-top:4px;color:var(--muted);font-size:11px}.times{padding-top:16px;border-top:1px solid var(--line)}.times strong{display:block;margin-top:6px;font-size:15px;font-variant-numeric:tabular-nums}.times span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.count{display:flex;justify-content:space-between;margin-top:15px;padding:12px 13px;border-radius:13px;background:var(--surface)}.count span{color:var(--muted);font-size:12px}.count b{font-variant-numeric:tabular-nums}details{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}summary{font-size:12px;font-weight:750;color:var(--silver)}.reasons{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.65}
     .loader,.welcome{position:fixed;z-index:100;inset:0;display:grid;place-items:center;padding:25px;background:var(--bg)}.loader.done{opacity:0;visibility:hidden;transition:.4s}.center{width:min(100%,430px);text-align:center}.launch-logo{display:grid;place-items:center;width:125px;height:125px;margin:0 auto 26px;border:1px solid rgba(215,217,221,.72);border-radius:36px;background:#0D0D0D}.launch-logo svg{width:82px;overflow:visible}.draw{fill:none;stroke:var(--silver);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:170;stroke-dashoffset:170;animation:draw .7s ease forwards}.arrow{opacity:0;animation:arrow .3s .7s forwards}@keyframes draw{to{stroke-dashoffset:0}}@keyframes arrow{to{opacity:1}}.center h1{margin:0;font-size:31px}.center p{margin-top:11px;color:var(--muted)}.toast{position:fixed;z-index:120;bottom:102px;left:50%;max-width:calc(100% - 32px);padding:12px 14px;transform:translate(-50%,14px);border:1px solid var(--line);border-radius:13px;background:#1D1D1D;color:var(--silver);font-size:12px;opacity:0;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
   </style>
 </head>
 <body>
-  <div class="loader" id="loader"><div class="center"><div class="launch-logo"><svg viewBox="0 0 110 80"><path class="draw" d="M7 49h25l12-24 17 39 17-32 15-12"/><path class="arrow" fill="none" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M80 15h16v16"/></svg></div><h1>Signal Pulse</h1><p id="loaderText">Подготавливаем Signal Pulse…</p></div></div>
+  <div class="loader" id="loader"><div class="center"><div class="launch-logo"><svg viewBox="0 0 110 80"><path class="draw" d="M7 49h25l12-24 17 39 17-32 15-12"/><path class="arrow" fill="none" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M80 15h16v16"/></svg></div><h1>Signal Pulse</h1><p id="loaderText"></p></div></div>
   <div class="welcome hidden" id="welcome"><div class="center"><div class="launch-logo" style="width:88px;height:88px;border-radius:27px"><svg viewBox="0 0 110 80" style="width:57px"><path fill="none" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M7 49h25l12-24 17 39 17-32 15-12M80 15h16v16"/></svg></div><h1 id="hello"></h1><p id="welcomeText"></p><div class="rows" style="margin-top:25px"><button class="primary" id="welcomeVision">Pulse Vision</button><button class="secondary" id="welcomeQuick">Pulse Quick</button></div></div></div>
+
   <main class="app">
-    <header class="top"><div class="brand"><div class="logo"><svg viewBox="0 0 110 80" fill="none"><path d="M7 49h25l12-24 17 39 17-32 15-12M80 15h16v16" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Signal Pulse</b><small id="brandText"></small></div></div><div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div></header>
-    <section class="view active" id="historyView"><div class="hero"><div class="eyebrow">СИГНАЛЫ</div><h1 id="historyTitle"></h1><p class="desc" id="historyText"></p></div><div id="historyList"></div></section>
-    <section class="view" id="createView"><div class="hero"><div class="eyebrow">СОЗДАТЬ</div><h1 id="createTitle"></h1><p class="desc" id="createText"></p></div><div class="panel"><label class="label" id="assetLabel"></label><input class="search" id="assetSearch"><div class="assets" id="assetList"></div><label class="label" id="durationLabel"></label><div class="grid3" id="durationList"></div><label class="label" id="entryLabel"></label><div class="grid2" id="entryList"></div><label class="label" id="modeLabel"></label><button class="mode" data-mode="vision"><i>▧</i><span><b>Pulse Vision</b><small id="visionModeText"></small></span></button><button class="mode" data-mode="quick"><i>↗</i><span><b>Pulse Quick</b><small id="quickModeText"></small></span></button><button class="primary" id="createButton" style="margin-top:18px"></button></div></section>
-    <section class="view" id="visionView"><div class="hero"><div class="eyebrow">PULSE VISION</div><h1 id="visionTitle"></h1><p class="desc" id="visionText"></p></div><div class="panel"><div id="uploadBox"><label class="upload"><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 15 3-3 3 3 2-2 3 3"/></svg><b id="uploadTitle"></b><span id="uploadHint"></span></div></label></div><div id="previewBox" class="hidden"><div class="preview"><img id="previewImage" alt="Chart"></div><button class="remove" id="removeImage"></button></div><button class="primary" id="analyzeButton" disabled style="margin-top:14px"></button></div></section>
-    <section class="view" id="profileView"><div class="hero"><div class="eyebrow">ПРОФИЛЬ</div><h1 id="profileTitle"></h1><p class="desc" id="profileText"></p></div><div class="panel"><div class="profile-row"><div><b id="languageTitle"></b><span id="languageSub"></span></div><select class="select" id="languageSelect"><option value="ru">Русский</option><option value="en">English</option></select></div><div class="profile-row"><div><b id="soundTitle"></b><span id="soundSub"></span></div><button class="switch" id="soundSwitch"><i></i></button></div><div class="profile-row"><div><b id="hapticTitle"></b><span id="hapticSub"></span></div><button class="switch" id="hapticSwitch"><i></i></button></div></div><div class="panel"><h2 id="statsTitle" style="margin-bottom:14px"></h2><div class="stats" id="stats"></div></div></section>
+    <header class="topbar"><div class="brand"><div class="logo"><svg viewBox="0 0 110 80" fill="none"><path d="M7 49h25l12-24 17 39 17-32 15-12M80 15h16v16" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Signal Pulse</b><small id="brandText"></small></div></div><div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div></header>
+    <section class="screen active" id="historyScreen"><div class="hero"><div class="eyebrow" id="historyEyebrow"></div><h1 id="historyTitle"></h1><p class="desc" id="historyText"></p></div><div id="historyList"></div></section>
+    <section class="screen" id="createScreen"><div class="hero"><div class="eyebrow" id="createEyebrow"></div><h1 id="createTitle"></h1><p class="desc" id="createText"></p></div><div class="panel"><label class="label" id="assetLabel"></label><input class="search" id="assetSearch"><div class="assets" id="assetList"></div><label class="label" id="durationLabel"></label><div class="grid3" id="durationList"></div><label class="label" id="entryLabel"></label><div class="grid2" id="entryList"></div><label class="label" id="modeLabel"></label><div class="modes"><button class="mode" data-mode="vision"><i class="mode-icon">▧</i><span><b>Pulse Vision</b><small id="visionModeText"></small></span></button><button class="mode" data-mode="quick"><i class="mode-icon">↗</i><span><b>Pulse Quick</b><small id="quickModeText"></small></span></button></div><button class="primary" id="createButton" style="margin-top:18px"></button></div></section>
+    <section class="screen" id="visionScreen"><div class="hero"><div class="eyebrow">PULSE VISION</div><h1 id="visionTitle"></h1><p class="desc" id="visionText"></p></div><div class="panel"><div id="uploadBox"><label class="upload"><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 15 3-3 3 3 2-2 3 3"/></svg><b id="uploadTitle"></b><span id="uploadHint"></span></div></label></div><div id="previewBox" class="hidden"><div class="preview"><img id="previewImage" alt="Chart"></div><button class="remove" id="removeImage"></button></div><button class="primary" id="analyzeButton" disabled style="margin-top:14px"></button></div></section>
+    <section class="screen" id="profileScreen"><div class="hero"><div class="eyebrow" id="profileEyebrow"></div><h1 id="profileTitle"></h1><p class="desc" id="profileText"></p></div><div class="panel"><div class="profile-row"><div><b id="languageTitle"></b><span id="languageSub"></span></div><select class="select" id="languageSelect"><option value="ru">Русский</option><option value="en">English</option></select></div><div class="profile-row"><div><b id="soundTitle"></b><span id="soundSub"></span></div><button class="switch" id="soundSwitch"><i></i></button></div><div class="profile-row"><div><b id="hapticTitle"></b><span id="hapticSub"></span></div><button class="switch" id="hapticSwitch"><i></i></button></div></div><div class="panel"><h2 id="statsTitle" style="margin-bottom:14px"></h2><div class="stats" id="stats"></div></div><div id="ownerPanel" class="hidden"><div class="panel"><h2>Pulse Control</h2><div class="stats" id="serverStats" style="margin-top:14px"></div><button class="secondary" id="refreshStats" style="margin-top:13px"></button></div><div class="panel"><h2>Pulse Design Control</h2><div class="theme-list" id="themeList" style="margin-top:14px"></div></div></div></section>
   </main>
+
   <nav class="bottom"><button class="nav active" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg><span id="navHistory"></span></button><button class="nav" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span id="navCreate"></span></button><button class="nav" data-tab="vision"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16"/><path d="m7 16 3-3 3 3 2-2 3 3"/></svg><span>Vision</span></button><button class="nav" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c.8-3.5 3.1-5.2 7-5.2s6.2 1.7 7 5.2"/></svg><span id="navProfile"></span></button></nav>
+
+  <div class="modal hidden" id="processingModal"><div class="modal-box" style="text-align:center"><div class="eyebrow" id="processMode"></div><div class="ring" id="progressRing" style="--p:0;width:150px;height:150px;margin:18px auto 22px"><span id="progressText" style="font-size:30px">0%</span></div><b id="processStage"></b></div></div>
+  <div class="modal hidden" id="resultModal"><div class="modal-box"><div class="modal-top"><h2 id="resultHeading"></h2><button class="close" data-close="resultModal">×</button></div><div id="resultContent"></div></div></div>
   <div class="toast" id="toast"></div>
 
   <script>
     const tg=window.Telegram?.WebApp;
     if(tg){tg.ready();tg.expand();tg.setHeaderColor("#0A0A0A");tg.setBackgroundColor("#0A0A0A")}
+
     const $=id=>document.getElementById(id);
-    const ASSETS=["EUR/GBP OTC","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","AUD/CAD OTC","AUD/JPY OTC","CAD/JPY OTC","EUR/JPY OTC","GBP/JPY OTC"];
+    const ASSETS=["EUR/GBP OTC","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","AUD/CAD OTC","AUD/JPY OTC","CAD/JPY OTC","EUR/JPY OTC","GBP/JPY OTC","NZD/USD OTC","USD/CAD OTC"];
     const DURATIONS=[15,30,60,180,300,900];
-    const TEXT={
-      ru:{brand:"Персональный помощник по графику",history:"История",create:"Создать",profile:"Профиль",historyTitle:"История результатов",historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",createTitle:"Параметры результата",createText:"Выберите OTC-актив, длительность и режим.",asset:"OTC-актив",search:"Поиск актива",duration:"Длительность",entry:"Тип входа",nearest:"Ближайшая точка",later:"После длительности",mode:"Режим",visionMode:"Анализ загруженного графика",quickMode:"Результат без анализа загруженного графика",openVision:"Перейти к Pulse Vision",startQuick:"Запустить Pulse Quick",visionTitle:"Анализ графика",visionText:"Загрузите полный скриншот. Изображение сохранит пропорции.",choose:"Выбрать скриншот",hint:"PNG, JPG или WEBP · до 8 МБ",remove:"Удалить изображение",analyze:"Анализировать график",profileTitle:"Настройки",profileText:"Настройки сохраняются на этом устройстве.",language:"Язык",languageSub:"Язык интерфейса",sound:"Звук интерфейса",soundSub:"Тихий отклик кнопок",haptic:"Тактильный отклик",hapticSub:"Telegram Haptic Feedback",stats:"Личная статистика",empty:"История пока пуста",emptyText:"Создайте Pulse Vision или Pulse Quick — результат появится здесь.",up:"ВВЕРХ",down:"ВНИЗ",wait:"ПОДОЖДАТЬ",entryTime:"Вход",outcome:"Результат до",win:"Win",loss:"Loss",skip:"Пропустить",badImage:"Выберите PNG, JPG или WEBP до 8 МБ.",unavailable:"Pulse Vision временно недоступен. Попробуйте позже."},
-      en:{brand:"Personal chart assistant",history:"History",create:"Create",profile:"Profile",historyTitle:"Result history",historyText:"Pulse Vision and Pulse Quick results appear here.",createTitle:"Result settings",createText:"Select an OTC asset, duration, and mode.",asset:"OTC asset",search:"Search asset",duration:"Duration",entry:"Entry type",nearest:"Nearest point",later:"After duration",mode:"Mode",visionMode:"Uploaded chart analysis",quickMode:"Result without chart analysis",openVision:"Open Pulse Vision",startQuick:"Start Pulse Quick",visionTitle:"Chart analysis",visionText:"Upload a full screenshot. The image keeps its proportions.",choose:"Choose screenshot",hint:"PNG, JPG, or WEBP · up to 8 MB",remove:"Remove image",analyze:"Analyze chart",profileTitle:"Settings",profileText:"Settings are stored on this device.",language:"Language",languageSub:"Interface language",sound:"Interface sound",soundSub:"Quiet button response",haptic:"Haptic feedback",hapticSub:"Telegram Haptic Feedback",stats:"Personal statistics",empty:"No results yet",emptyText:"Create Pulse Vision or Pulse Quick to see a result here.",up:"UP",down:"DOWN",wait:"WAIT",entryTime:"Entry",outcome:"Outcome by",win:"Win",loss:"Loss",skip:"Skip",badImage:"Choose a PNG, JPG, or WEBP image up to 8 MB.",unavailable:"Pulse Vision is temporarily unavailable. Try again later."}
+
+    const L={
+      ru:{loader:"Подготавливаем Signal Pulse…",brand:"Персональный помощник по графику",history:"История",create:"Создать",profile:"Профиль",signals:"СИГНАЛЫ",historyTitle:"История результатов",historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",createTitle:"Параметры результата",createText:"Выберите OTC-актив, длительность и режим.",asset:"OTC-актив",search:"Поиск актива",duration:"Длительность",entry:"Тип входа",nearest:"Ближайшая точка",later:"После длительности",mode:"Режим",visionMode:"Анализ загруженного графика",quickMode:"Результат без анализа загруженного графика",openVision:"Перейти к Pulse Vision",startQuick:"Запустить Pulse Quick",visionTitle:"Анализ графика",visionText:"Загрузите полный скриншот. Изображение сохранит пропорции.",choose:"Выбрать скриншот",hint:"PNG, JPG или WEBP · до 8 МБ",remove:"Удалить изображение",analyze:"Анализировать график",profileTitle:"Настройки",profileText:"Настройки сохраняются на этом устройстве.",language:"Язык",languageSub:"Язык интерфейса",sound:"Звук интерфейса",soundSub:"Тихий отклик кнопок",haptic:"Тактильный отклик",hapticSub:"Telegram Haptic Feedback",stats:"Личная статистика",refresh:"Обновить показатели",empty:"История пока пуста",emptyText:"Создайте Pulse Vision или Pulse Quick — результат появится здесь.",up:"ВВЕРХ",down:"ВНИЗ",wait:"ПОДОЖДАТЬ",entryTime:"Вход",outcome:"Результат до",count:"До результата",confidence:"Уверенность",reasons:"Причины анализа",win:"Win",loss:"Loss",skip:"Пропустить",result:"Ваш результат",newAnalysis:"Новый анализ",newQuick:"Новый Pulse Quick",openHistory:"Открыть историю",settings:"Изменить параметры",badImage:"Выберите PNG, JPG или WEBP до 8 МБ.",unavailable:"Pulse Vision временно недоступен. Попробуйте позже.",users:"Пользователи",results:"Результаты",events:"События",wins:"Win",losses:"Loss"},
+      en:{loader:"Preparing Signal Pulse…",brand:"Personal chart assistant",history:"History",create:"Create",profile:"Profile",signals:"SIGNALS",historyTitle:"Result history",historyText:"Pulse Vision and Pulse Quick results appear here.",createTitle:"Result settings",createText:"Select an OTC asset, duration, and mode.",asset:"OTC asset",search:"Search asset",duration:"Duration",entry:"Entry type",nearest:"Nearest point",later:"After duration",mode:"Mode",visionMode:"Uploaded chart analysis",quickMode:"Result without chart analysis",openVision:"Open Pulse Vision",startQuick:"Start Pulse Quick",visionTitle:"Chart analysis",visionText:"Upload a full screenshot. The image keeps its proportions.",choose:"Choose screenshot",hint:"PNG, JPG, or WEBP · up to 8 MB",remove:"Remove image",analyze:"Analyze chart",profileTitle:"Settings",profileText:"Settings are stored on this device.",language:"Language",languageSub:"Interface language",sound:"Interface sound",soundSub:"Quiet button response",haptic:"Haptic feedback",hapticSub:"Telegram Haptic Feedback",stats:"Personal statistics",refresh:"Refresh metrics",empty:"No results yet",emptyText:"Create Pulse Vision or Pulse Quick to see a result here.",up:"UP",down:"DOWN",wait:"WAIT",entryTime:"Entry",outcome:"Outcome by",count:"Until outcome",confidence:"Confidence",reasons:"Analysis reasons",win:"Win",loss:"Loss",skip:"Skip",result:"Your result",newAnalysis:"New analysis",newQuick:"New Pulse Quick",openHistory:"Open history",settings:"Change settings",badImage:"Choose a PNG, JPG, or WEBP image up to 8 MB.",unavailable:"Pulse Vision is temporarily unavailable. Try again later.",users:"Users",results:"Results",events:"Events",wins:"Wins",losses:"Losses"}
     };
-    function getHistory(){
+
+    function loadHistory(){
       try{
         const raw=JSON.parse(localStorage.getItem("pulse_history")||"[]");
         if(!Array.isArray(raw))return [];
         return raw.map((item,index)=>{
           const created=item.createdAt&&!Number.isNaN(new Date(item.createdAt).getTime())?item.createdAt:new Date().toISOString();
-          const seconds=Math.max(1,Number(item.durationSeconds||item.duration||15)||15);
-          const entry=item.entryTime&&!Number.isNaN(new Date(item.entryTime).getTime())?item.entryTime:created;
-          const outcome=item.outcomeTime&&!Number.isNaN(new Date(item.outcomeTime).getTime())?item.outcomeTime:new Date(new Date(entry).getTime()+seconds*1000).toISOString();
-          return {...item,id:item.id||`legacy_${index}_${Date.now()}`,type:item.type==="quick"?"quick":"vision",direction:item.direction||"NONE",asset:item.asset||"OTC",durationSeconds:seconds,entryTime:entry,outcomeTime:outcome,outcome:["win","loss","skip"].includes(item.outcome)?item.outcome:"skip",serverId:item.serverId||null};
+          const durationSeconds=Math.max(1,Number(item.durationSeconds||item.duration||15)||15);
+          const entryTime=item.entryTime&&!Number.isNaN(new Date(item.entryTime).getTime())?item.entryTime:created;
+          const outcomeTime=item.outcomeTime&&!Number.isNaN(new Date(item.outcomeTime).getTime())?item.outcomeTime:new Date(new Date(entryTime).getTime()+durationSeconds*1000).toISOString();
+          return {...item,id:item.id||`legacy_${index}_${Date.now()}`,type:item.type==="quick"?"quick":"vision",direction:item.direction||"NONE",asset:item.asset||"OTC",durationSeconds,entryTime,outcomeTime,outcome:["win","loss","skip"].includes(item.outcome)?item.outcome:"skip",serverId:item.serverId||null,reasons:Array.isArray(item.reasons)?item.reasons:[]};
         });
       }catch{return []}
     }
-    const state={lang:localStorage.getItem("pulse_language")||((tg?.initDataUnsafe?.user?.language_code||navigator.language||"ru").startsWith("ru")?"ru":"en"),asset:localStorage.getItem("pulse_asset")||"EUR/USD OTC",duration:Number(localStorage.getItem("pulse_duration")||15),entry:localStorage.getItem("pulse_entry_mode")||"nearest",mode:"vision",image:null,mimeType:null,history:getHistory(),sound:localStorage.getItem("pulse_sound")!=="false",haptic:localStorage.getItem("pulse_haptic")!=="false"};
-    const t=k=>TEXT[state.lang][k]||k;
-    function save(){localStorage.setItem("pulse_language",state.lang);localStorage.setItem("pulse_asset",state.asset);localStorage.setItem("pulse_duration",state.duration);localStorage.setItem("pulse_entry_mode",state.entry);localStorage.setItem("pulse_history",JSON.stringify(state.history))}
-    function fmt(value){const date=new Date(value);if(Number.isNaN(date.getTime()))return "—";return new Intl.DateTimeFormat(state.lang==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date)}
-    function duration(v){return v<60?`${v} ${state.lang==="ru"?"сек":"sec"}`:`${v/60} ${state.lang==="ru"?"мин":"min"}`}
-    function signal(x){x=String(x||"").toUpperCase();return["UP","BUY","CALL"].includes(x)?["up","🟢",t("up")]:["DOWN","SELL","PUT"].includes(x)?["down","🔴",t("down")]:["wait","⚪",t("wait")]}
-    function toast(text){$("toast").textContent=text;$("toast").classList.add("show");clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2800)}
-    function tab(name){document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));$(`${name}View`).classList.add("active");scrollTo({top:0,behavior:"smooth"})}
+
+    const state={
+      language:localStorage.getItem("pulse_language")||((tg?.initDataUnsafe?.user?.language_code||navigator.language||"ru").startsWith("ru")?"ru":"en"),
+      asset:localStorage.getItem("pulse_asset")||"EUR/USD OTC",
+      duration:Number(localStorage.getItem("pulse_duration")||15),
+      entryMode:localStorage.getItem("pulse_entry_mode")||"nearest",
+      mode:"vision",
+      image:null,
+      mimeType:null,
+      history:loadHistory(),
+      sound:localStorage.getItem("pulse_sound")!=="false",
+      haptic:localStorage.getItem("pulse_haptic")!=="false",
+      theme:localStorage.getItem("pulse_theme")||"obsidian"
+    };
+
+    const t=k=>L[state.language][k]||k;
+    const initData=()=>tg?.initData||"";
+
+    function save(){
+      localStorage.setItem("pulse_language",state.language);
+      localStorage.setItem("pulse_asset",state.asset);
+      localStorage.setItem("pulse_duration",state.duration);
+      localStorage.setItem("pulse_entry_mode",state.entryMode);
+      localStorage.setItem("pulse_history",JSON.stringify(state.history.slice(0,80)));
+    }
+
+    function formatTime(value){
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime()))return "—";
+      return new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date);
+    }
+
+    function durationText(value){
+      return value<60?`${value} ${state.language==="ru"?"сек":"sec"}`:`${value/60} ${state.language==="ru"?"мин":"min"}`;
+    }
+
+    function futureTimes(){
+      const now=Date.now();
+      const duration=state.duration*1000;
+      const entry=state.entryMode==="later"?now+Math.max(30000,duration):Math.ceil((now+11000)/duration)*duration;
+      return {entryTime:new Date(entry).toISOString(),outcomeTime:new Date(entry+duration).toISOString()};
+    }
+
+    function direction(raw){
+      const value=String(raw||"").toUpperCase();
+      if(["UP","BUY","CALL","ВВЕРХ"].includes(value))return "UP";
+      if(["DOWN","SELL","PUT","ВНИЗ"].includes(value))return "DOWN";
+      return "NONE";
+    }
+
+    function directionData(value){
+      if(value==="UP")return {className:"up",icon:"🟢",text:t("up")};
+      if(value==="DOWN")return {className:"down",icon:"🔴",text:t("down")};
+      return {className:"wait",icon:"⚪",text:t("wait")};
+    }
+
+    function feedback(success=false){
+      if(state.haptic&&tg?.HapticFeedback){
+        try{success?tg.HapticFeedback.notificationOccurred("success"):tg.HapticFeedback.impactOccurred("light")}catch{}
+      }
+    }
+
+    function toast(text){
+      $("toast").textContent=text;
+      $("toast").classList.add("show");
+      clearTimeout(window.toastTimer);
+      window.toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2800);
+    }
+
+    function openTab(name){
+      feedback();
+      document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
+      $(`${name}Screen`).classList.add("active");
+      scrollTo({top:0,behavior:"smooth"});
+    }
+
     function renderCreate(){
       const search=$("assetSearch").value.toLowerCase();
       $("assetList").innerHTML=ASSETS.filter(x=>x.toLowerCase().includes(search)).map(x=>`<button class="asset ${x===state.asset?"selected":""}" data-asset="${x}">${x}<small>OTC</small></button>`).join("");
       document.querySelectorAll("[data-asset]").forEach(x=>x.onclick=()=>{state.asset=x.dataset.asset;save();renderCreate()});
-      $("durationList").innerHTML=DURATIONS.map(x=>`<button class="tile ${x===state.duration?"selected":""}" data-duration="${x}">${duration(x)}</button>`).join("");
+
+      $("durationList").innerHTML=DURATIONS.map(x=>`<button class="tile ${x===state.duration?"selected":""}" data-duration="${x}">${durationText(x)}</button>`).join("");
       document.querySelectorAll("[data-duration]").forEach(x=>x.onclick=()=>{state.duration=Number(x.dataset.duration);save();renderCreate()});
-      $("entryList").innerHTML=`<button class="tile ${state.entry==="nearest"?"selected":""}" data-entry="nearest">${t("nearest")}</button><button class="tile ${state.entry==="later"?"selected":""}" data-entry="later">${t("later")}</button>`;
-      document.querySelectorAll("[data-entry]").forEach(x=>x.onclick=()=>{state.entry=x.dataset.entry;save();renderCreate()});
+
+      $("entryList").innerHTML=`<button class="tile ${state.entryMode==="nearest"?"selected":""}" data-entry="nearest">${t("nearest")}</button><button class="tile ${state.entryMode==="later"?"selected":""}" data-entry="later">${t("later")}</button>`;
+      document.querySelectorAll("[data-entry]").forEach(x=>x.onclick=()=>{state.entryMode=x.dataset.entry;save();renderCreate()});
+
       document.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("selected",x.dataset.mode===state.mode));
       $("createButton").textContent=state.mode==="vision"?t("openVision"):t("startQuick");
     }
+
     function renderHistory(){
-      if(!state.history.length){$("historyList").innerHTML=`<div class="panel empty"><i>◌</i><h2>${t("empty")}</h2><p>${t("emptyText")}</p><button class="primary" id="goVision" style="margin-top:16px">Pulse Vision</button></div>`;$("goVision").onclick=()=>tab("vision");return}
-      $("historyList").innerHTML=`<div class="list">${state.history.map(item=>{const s=signal(item.direction);return`<article class="history"><div class="head"><div><span class="sub">${item.type==="quick"?"Pulse Quick":"Pulse Vision"}</span><div class="title">${item.asset}</div></div><span class="badge ${s[0]}">${s[1]} ${s[2]}</span></div><div class="meta"><div><b>${t("entryTime")}</b>${fmt(item.entryTime)}</div><div><b>${t("outcome")}</b>${fmt(item.outcomeTime)}NLBR${duration(item.durationSeconds)}</div></div><div class="outcomes"><button class="outcome win ${item.outcome==="win"?"active":""}" data-outcome="${item.id}|win">${t("win")}</button><button class="outcome loss ${item.outcome==="loss"?"active":""}" data-outcome="${item.id}|loss">${t("loss")}</button><button class="outcome ${item.outcome==="skip"?"active":""}" data-outcome="${item.id}|skip">${t("skip")}</button></div></article>`}).join("")}</div>`;
-      document.querySelectorAll("[data-outcome]").forEach(x=>x.onclick=()=>updateOutcome(...x.dataset.outcome.split("|")));
+      if(!state.history.length){
+        $("historyList").innerHTML=`<div class="panel empty"><i>◌</i><h2>${t("empty")}</h2><p>${t("emptyText")}</p><button class="primary" id="emptyVision" style="margin-top:16px">Pulse Vision</button></div>`;
+        $("emptyVision").onclick=()=>openTab("vision");
+        return;
+      }
+
+      $("historyList").innerHTML=`<div class="list">${state.history.map(item=>{
+        const d=directionData(item.direction);
+        return `<article class="history"><div class="head"><div><span class="sub">${item.type==="quick"?"Pulse Quick":"Pulse Vision"}</span><div class="title">${item.asset}</div></div><span class="badge ${d.className}">${d.icon} ${d.text}</span></div><div class="meta"><div><b>${t("entryTime")}</b>${formatTime(item.entryTime)}</div><div><b>${t("outcome")}</b>${formatTime(item.outcomeTime)}NLBR${durationText(item.durationSeconds)}</div></div><div class="outcomes"><button class="outcome win ${item.outcome==="win"?"active":""}" data-outcome="${item.id}|win">${t("win")}</button><button class="outcome loss ${item.outcome==="loss"?"active":""}" data-outcome="${item.id}|loss">${t("loss")}</button><button class="outcome ${item.outcome==="skip"?"active":""}" data-outcome="${item.id}|skip">${t("skip")}</button></div></article>`;
+      }).join("")}</div>`;
+
+      document.querySelectorAll("[data-outcome]").forEach(x=>x.onclick=()=>changeOutcome(...x.dataset.outcome.split("|")));
     }
-    async function updateOutcome(id,outcome){
-      const item=state.history.find(x=>x.id===id);if(!item)return;
-      const previous=item.outcome;item.outcome=outcome;save();renderHistory();renderStats();
-      if(!item.serverId)return;
-      try{
-        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:tg?.initData||"",action:"update_result",payload:{resultId:item.serverId,outcome}})});
-        if(!response.ok)throw new Error();
-      }catch{item.outcome=previous;save();renderHistory();renderStats();toast("Не удалось обновить результат.")}
-    }
+
     function renderStats(){
       const wins=state.history.filter(x=>x.outcome==="win").length;
       const losses=state.history.filter(x=>x.outcome==="loss").length;
-      $("stats").innerHTML=`<div class="stat"><b>${state.history.length}</b><small>Results</small></div><div class="stat"><b>${wins}</b><small>Win</small></div><div class="stat"><b>${losses}</b><small>Loss</small></div>`;
+      $("stats").innerHTML=`<div class="stat"><b>${state.history.length}</b><small>${t("results")}</small></div><div class="stat"><b>${wins}</b><small>${t("wins")}</small></div><div class="stat"><b>${losses}</b><small>${t("losses")}</small></div>`;
     }
-    function setLanguage(){
-      const map={brandText:"brand",navHistory:"history",navCreate:"create",navProfile:"profile",historyTitle:"historyTitle",historyText:"historyText",createTitle:"createTitle",createText:"createText",assetLabel:"asset",durationLabel:"duration",entryLabel:"entry",modeLabel:"mode",visionModeText:"visionMode",quickModeText:"quickMode",visionTitle:"visionTitle",visionText:"visionText",uploadTitle:"choose",uploadHint:"hint",removeImage:"remove",analyzeButton:"analyze",profileTitle:"profileTitle",profileText:"profileText",languageTitle:"language",languageSub:"languageSub",soundTitle:"sound",soundSub:"soundSub",hapticTitle:"haptic",hapticSub:"hapticSub",statsTitle:"stats"};
-      Object.entries(map).forEach(([id,key])=>$(id).textContent=t(key));
-      $("assetSearch").placeholder=t("search");$("languageSelect").value=state.lang;renderCreate();renderHistory();renderStats();
-    }
-    $("assetSearch").oninput=renderCreate;
-    document.querySelectorAll(".nav").forEach(x=>x.onclick=()=>tab(x.dataset.tab));
-    document.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>{state.mode=x.dataset.mode;renderCreate()});
-    $("createButton").onclick=()=>state.mode==="vision"?tab("vision"):toast(state.lang==="ru"?"Pulse Quick готов к запуску.":"Pulse Quick is ready.");
-    $("imageInput").onchange=e=>{
-      const file=e.target.files?.[0];if(!file)return;
-      if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){toast(t("badImage"));e.target.value="";return}
-      const reader=new FileReader();reader.onload=()=>{state.image=reader.result;state.mimeType=file.type;$("previewImage").src=reader.result;$("uploadBox").classList.add("hidden");$("previewBox").classList.remove("hidden");$("analyzeButton").disabled=false};reader.readAsDataURL(file);
-    };
-    $("removeImage").onclick=()=>{state.image=null;state.mimeType=null;$("imageInput").value="";$("previewBox").classList.add("hidden");$("uploadBox").classList.remove("hidden");$("analyzeButton").disabled=true};
-    $("analyzeButton").onclick=async()=>{
-      if(!state.image)return;
-      $("analyzeButton").disabled=true;
+
+    async function changeOutcome(id,outcome){
+      const item=state.history.find(x=>x.id===id);
+      if(!item)return;
+
+      const previous=item.outcome;
+      item.outcome=outcome;
+      save();
+      renderHistory();
+      renderStats();
+      feedback(outcome==="win");
+
+      if(!item.serverId)return;
+
       try{
-        const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:state.image,mimeType:state.mimeType,language:state.lang})});
+        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"update_result",payload:{resultId:item.serverId,outcome}})});
         if(!response.ok)throw new Error();
-        toast(state.lang==="ru"?"Анализ завершён.":"Analysis completed.");
-      }catch{toast(t("unavailable"))}
-      finally{$("analyzeButton").disabled=false}
+      }catch{
+        item.outcome=previous;
+        save();
+        renderHistory();
+        renderStats();
+        toast(state.language==="ru"?"Не удалось обновить результат.":"Unable to update the result.");
+      }
+    }
+
+    function startProcessing(type){
+      $("processMode").textContent=type==="vision"?"PULSE VISION":"PULSE QUICK";
+      const stages=type==="vision"
+        ?[state.language==="ru"?"Подготавливаем изображение":"Preparing image",state.language==="ru"?"Изучаем структуру графика":"Studying chart structure",state.language==="ru"?"Проверяем видимые уровни":"Checking visible levels",state.language==="ru"?"Формируем результат":"Forming result"]
+        :[state.language==="ru"?"Формируем результат":"Forming result"];
+      let progress=0;
+
+      $("processingModal").classList.remove("hidden");
+      $("processStage").textContent=stages[0];
+      $("progressRing").style.setProperty("--p",0);
+      $("progressText").textContent="0%";
+      clearInterval(window.progressTimer);
+
+      window.progressTimer=setInterval(()=>{
+        progress=Math.min(94,progress+(type==="vision"?4:8));
+        $("progressRing").style.setProperty("--p",progress);
+        $("progressText").textContent=progress+"%";
+        $("processStage").textContent=stages[Math.min(stages.length-1,Math.floor(progress/25))];
+      },180);
+    }
+
+    function closeModal(id){
+      $(id).classList.add("hidden");
+      if(id==="processingModal")clearInterval(window.progressTimer);
+    }
+
+    function updateCountdowns(){
+      document.querySelectorAll("[data-countdown]").forEach(x=>{
+        const seconds=Math.max(0,Math.floor((new Date(x.dataset.countdown)-Date.now())/1000));
+        x.textContent=`${String(Math.floor(seconds/60)).padStart(2,"0")}:${String(seconds%60).padStart(2,"0")}`;
+      });
+    }
+
+    function showResult(item){
+      const d=directionData(item.direction);
+      const vision=item.type==="vision";
+
+      $("resultHeading").textContent=t("result");
+      $("resultContent").innerHTML=`<article class="result"><div class="head"><div><div class="asset-name">${item.asset}</div><div class="result-mode">${vision?"Pulse Vision":"Pulse Quick"}</div></div><span class="badge ${d.className}">${d.icon} OTC</span></div><div class="signal ${d.className}">${d.text}</div>${vision?`<div class="confidence"><div class="ring" style="--p:${item.confidenceNumber}"><span>${item.confidenceNumber}%</span></div><div><b>${t("confidence")}</b><small>${item.summary||""}</small></div></div>`:`<p class="desc" style="margin:0 0 18px">${state.language==="ru"?"Режим работает без анализа загруженного графика.":"This mode works without uploaded-chart analysis."}</p>`}<div class="times"><div><b>${t("entryTime")}</b><strong>${formatTime(item.entryTime)}</strong></div><div><b>${t("outcome")}</b><strong>${formatTime(item.outcomeTime)}</strong><span>${durationText(item.durationSeconds)}</span></div></div><div class="count"><span>${t("count")}</span><b data-countdown="${item.outcomeTime}">--:--</b></div>${vision&&item.reasons.length?`<toggle>${t("reasons")}<ul class="reasons">${item.reasons.map(x=>`<li>${x}</li>`).join("")}</ul></toggle>`:""}</article><div class="rows"><button class="primary" id="againButton">${vision?t("newAnalysis"):t("newQuick")}</button><button class="secondary" id="historyButton">${t("openHistory")}</button><button class="secondary" id="settingsButton">${t("settings")}</button></div>`;
+
+      $("resultModal").classList.remove("hidden");
+      $("againButton").onclick=()=>{closeModal("resultModal");if(vision)openTab("vision");else{state.mode="quick";openTab("create");runQuick()}};
+      $("historyButton").onclick=()=>{closeModal("resultModal");openTab("history")};
+      $("settingsButton").onclick=()=>{closeModal("resultModal");openTab("create")};
+      updateCountdowns();
+    }
+
+    async function addResult(data){
+      const time=futureTimes();
+      const item={
+        id:`pulse_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+        type:state.mode,
+        direction:direction(data.direction),
+        asset:state.asset,
+        durationSeconds:state.duration,
+        entryTime:time.entryTime,
+        outcomeTime:time.outcomeTime,
+        confidence:data.confidence||"",
+        confidenceNumber:data.confidenceNumber||0,
+        summary:data.summary||"",
+        reasons:Array.isArray(data.reasons)?data.reasons:[],
+        outcome:"skip",
+        serverId:null
+      };
+
+      state.history.unshift(item);
+      save();
+      renderHistory();
+      renderStats();
+      showResult(item);
+      feedback(true);
+
+      try{
+        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"save_result",payload:{mode:item.type,direction:item.direction,asset:item.asset,durationSeconds:item.durationSeconds,entryTime:item.entryTime,outcomeTime:item.outcomeTime,confidence:item.confidence,summary:item.summary,outcome:item.outcome}})});
+        const data=await response.json();
+
+        if(response.ok&&data.resultId){
+          item.serverId=data.resultId;
+          save();
+        }
+      }catch{}
+    }
+
+    async function analyze(){
+      if(!state.image)return;
+
+      feedback();
+      startProcessing("vision");
+
+      try{
+        const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:state.image,mimeType:state.mimeType,language:state.language})});
+        if(!response.ok)throw new Error();
+
+        const data=await response.json();
+        const confidenceRaw=String(data.confidence||"");
+        let confidence=Number(confidenceRaw);
+
+        if(!Number.isFinite(confidence)){
+          confidence=/high|высок/i.test(confidenceRaw)?78:/medium|сред/i.test(confidenceRaw)?58:36;
+        }
+
+        closeModal("processingModal");
+        state.mode="vision";
+
+        addResult({
+          direction:data.direction,
+          confidence:data.confidence||`${confidence}%`,
+          confidenceNumber:Math.max(0,Math.min(100,confidence)),
+          summary:data.summary||"",
+          reasons:Array.isArray(data.reasons)?data.reasons:[]
+        });
+      }catch{
+        closeModal("processingModal");
+        toast(t("unavailable"));
+      }
+    }
+
+    function runQuick(){
+      feedback();
+      startProcessing("quick");
+
+      setTimeout(()=>{
+        closeModal("processingModal");
+        state.mode="quick";
+        const value=Math.floor(Date.now()/1000)%3;
+        addResult({direction:value===0?"UP":value===1?"DOWN":"NONE",summary:"Pulse Quick"});
+      },1700);
+    }
+
+    async function owner(){
+      try{
+        const response=await fetch("/api/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData()})});
+        const data=await response.json();
+
+        if(response.ok&&data.verified&&data.isOwner){
+          $("ownerPanel").classList.remove("hidden");
+          loadDashboard();
+        }
+      }catch{}
+    }
+
+    async function loadDashboard(){
+      try{
+        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"dashboard"})});
+        const data=await response.json();
+        const m=data?.metrics;
+
+        if(!response.ok||!m)return;
+
+        $("serverStats").innerHTML=`<div class="stat"><b>${m.usersTotal??0}</b><small>${t("users")}</small></div><div class="stat"><b>${m.resultsTotal??0}</b><small>${t("results")}</small></div><div class="stat"><b>${m.eventsTotal??0}</b><small>${t("events")}</small></div><div class="stat"><b>${m.visionTotal??0}</b><small>Vision</small></div><div class="stat"><b>${m.quickTotal??0}</b><small>Quick</small></div><div class="stat"><b>${m.wins??0}</b><small>Win</small></div><div class="stat"><b>${m.losses??0}</b><small>Loss</small></div>`;
+      }catch{}
+    }
+
+    function renderThemes(){
+      const themes=[["obsidian","Obsidian Silver",""],["midnight","Midnight Blue","midnight"],["carbon","Carbon Green","carbon"],["black","Pure Black","black"],["launch","Pulse Launch","launch"]];
+
+      $("themeList").innerHTML=themes.map(([value,name,dot])=>`<button class="theme ${state.theme===value?"selected":""}" data-theme="${value}"><span class="theme-left"><i class="dot ${dot}"></i><b>${name}</b></span><span>${state.theme===value?"✓":""}</span></button>`).join("");
+
+      document.querySelectorAll("[data-theme]").forEach(x=>x.onclick=()=>{
+        state.theme=x.dataset.theme;
+        localStorage.setItem("pulse_theme",state.theme);
+        document.documentElement.dataset.theme=state.theme==="obsidian"||state.theme==="launch"?"":state.theme;
+        renderThemes();
+      });
+    }
+
+    function translate(){
+      const map={loaderText:"loader",brandText:"brand",navHistory:"history",navCreate:"create",navProfile:"profile",historyEyebrow:"signals",historyTitle:"historyTitle",historyText:"historyText",createEyebrow:"create",createTitle:"createTitle",createText:"createText",assetLabel:"asset",durationLabel:"duration",entryLabel:"entry",modeLabel:"mode",visionModeText:"visionMode",quickModeText:"quickMode",visionTitle:"visionTitle",visionText:"visionText",uploadTitle:"choose",uploadHint:"hint",removeImage:"remove",analyzeButton:"analyze",profileEyebrow:"profile",profileTitle:"profileTitle",profileText:"profileText",languageTitle:"language",languageSub:"languageSub",soundTitle:"sound",soundSub:"soundSub",hapticTitle:"haptic",hapticSub:"hapticSub",statsTitle:"stats",refreshStats:"refresh"};
+      Object.entries(map).forEach(([id,key])=>$(id).textContent=t(key));
+      $("assetSearch").placeholder=t("search");
+      $("languageSelect").value=state.language;
+      renderCreate();
+      renderHistory();
+      renderStats();
+      renderThemes();
+    }
+
+    $("assetSearch").oninput=renderCreate;
+    document.querySelectorAll(".nav").forEach(x=>x.onclick=()=>openTab(x.dataset.tab));
+    document.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>{state.mode=x.dataset.mode;renderCreate()});
+    $("createButton").onclick=()=>state.mode==="vision"?openTab("vision"):runQuick();
+
+    $("imageInput").onchange=e=>{
+      const file=e.target.files?.[0];
+      if(!file)return;
+
+      if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){
+        toast(t("badImage"));
+        e.target.value="";
+        return;
+      }
+
+      const reader=new FileReader();
+      reader.onload=()=>{
+        state.image=reader.result;
+        state.mimeType=file.type;
+        $("previewImage").src=reader.result;
+        $("uploadBox").classList.add("hidden");
+        $("previewBox").classList.remove("hidden");
+        $("analyzeButton").disabled=false;
+      };
+      reader.readAsDataURL(file);
     };
-    $("languageSelect").onchange=e=>{state.lang=e.target.value;save();setLanguage()};
+
+    $("removeImage").onclick=()=>{
+      state.image=null;
+      state.mimeType=null;
+      $("imageInput").value="";
+      $("previewBox").classList.add("hidden");
+      $("uploadBox").classList.remove("hidden");
+      $("analyzeButton").disabled=true;
+    };
+
+    $("analyzeButton").onclick=analyze;
+    $("languageSelect").onchange=e=>{state.language=e.target.value;save();translate()};
     $("soundSwitch").onclick=()=>{state.sound=!state.sound;localStorage.setItem("pulse_sound",state.sound);$("soundSwitch").classList.toggle("on",state.sound)};
-    $("hapticSwitch").onclick=()=>{state.haptic=!state.haptic;localStorage.setItem("pulse_haptic",state.haptic);$("hapticSwitch").classList.toggle("on",state.haptic)};
-    $("welcomeVision").onclick=()=>{$("welcome").classList.add("hidden");tab("vision")};
-    $("welcomeQuick").onclick=()=>{$("welcome").classList.add("hidden");state.mode="quick";tab("create")};
-    $("soundSwitch").classList.toggle("on",state.sound);$("hapticSwitch").classList.toggle("on",state.haptic);
-    const name=tg?.initDataUnsafe?.user?.first_name||"";$("hello").textContent=state.lang==="ru"?`Добро пожаловать${name?", "+name:""}`:`Welcome${name?", "+name:""}`;$("welcomeText").textContent=state.lang==="ru"?"Signal Pulse готов к работе.":"Signal Pulse is ready.";
-    setLanguage();
-    setInterval(()=>{$("clock").textContent=fmt(new Date())},1000);
-    setTimeout(()=>{$("loader").classList.add("done");setTimeout(()=>$("welcome").classList.remove("hidden"),350)},1400);
+    $("hapticSwitch").onclick=()=>{state.haptic=!state.haptic;localStorage.setItem("pulse_haptic",state.haptic);$("hapticSwitch").classList.toggle("on",state.haptic);feedback()};
+    $("refreshStats").onclick=loadDashboard;
+    document.querySelectorAll("[data-close]").forEach(x=>x.onclick=()=>closeModal(x.dataset.close));
+
+    $("welcomeVision").onclick=()=>{$("welcome").classList.add("hidden");openTab("vision")};
+    $("welcomeQuick").onclick=()=>{$("welcome").classList.add("hidden");state.mode="quick";openTab("create")};
+
+    $("soundSwitch").classList.toggle("on",state.sound);
+    $("hapticSwitch").classList.toggle("on",state.haptic);
+
+    const hour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Oral",hour:"2-digit",hour12:false}).format(new Date()));
+    const name=tg?.initDataUnsafe?.user?.first_name||"";
+    const greeting=state.language==="ru"?(hour<12?"Доброе утро":hour<18?"Добрый день":"Добрый вечер"):(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening");
+
+    $("hello").textContent=name?`${greeting}, ${name}`:greeting;
+    $("welcomeText").textContent=state.language==="ru"?"Signal Pulse готов к работе.":"Signal Pulse is ready.";
+
+    translate();
+    document.documentElement.dataset.theme=state.theme==="obsidian"||state.theme==="launch"?"":state.theme;
+
+    setInterval(()=>{$("clock").textContent=formatTime(new Date())},1000);
+    setInterval(updateCountdowns,1000);
+    owner();
+
+    setTimeout(()=>{
+      $("loader").classList.add("done");
+      setTimeout(()=>$("welcome").classList.remove("hidden"),350);
+    },1400);
   </script>
 </body>
 </html>
