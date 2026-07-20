@@ -1911,8 +1911,9 @@
   const initData = window.Telegram?.WebApp?.initData || "";
 
   if (!initData) {
-    return;
-  }
+  alert("Pulse Control: Telegram не передал данные входа.");
+  return;
+    }
 
   try {
     const response = await fetch("/api/owner", {
