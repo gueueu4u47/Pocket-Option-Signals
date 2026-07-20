@@ -1993,6 +1993,7 @@
     `;
 
     $("profileView").append(panel);
+    renderServerPulseControl();
 
     $("refreshPulseControl").addEventListener("click", loadPulseControl);
   } catch (error) {
