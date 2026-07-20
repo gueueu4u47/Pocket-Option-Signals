@@ -2196,5 +2196,440 @@ async function renderServerPulseControl() {
 
 setTimeout(renderServerPulseControl, 5000);
   </script>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111111;
+    --card: #151515;
+    --card2: #1b1b1b;
+    --line: #2a2a2a;
+    --text: #f4f4f4;
+    --muted: #8d8d8d;
+    --silver: #d7d9dd;
+    --blue: #2f80ed;
+    --green: #39c879;
+    --red: #ef5b68;
+    --shadow: 0 16px 38px rgba(0, 0, 0, .34);
+  }
+
+  body {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(255,255,255,.045), transparent 30%),
+      linear-gradient(180deg, #0a0a0a 0%, #090909 100%);
+  }
+
+  .app {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .topbar {
+    padding: 14px 0 20px !important;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand-mark {
+    width: 43px !important;
+    height: 43px !important;
+    border-radius: 13px !important;
+    border: 1px solid rgba(255,255,255,.55) !important;
+    background: #090909 !important;
+    box-shadow: inset 0 0 18px rgba(255,255,255,.05), 0 8px 22px rgba(0,0,0,.38) !important;
+  }
+
+  .brand-mark::before,
+  .brand-mark::after {
+    display: none !important;
+  }
+
+  .brand h1 {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  .brand p,
+  .clock small {
+    color: var(--muted) !important;
+  }
+
+  .clock {
+    font-size: 14px !important;
+    color: var(--silver) !important;
+  }
+
+  .hero {
+    padding: 20px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 18px !important;
+    background: #111111 !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  .hero::after {
+    display: none !important;
+  }
+
+  .eyebrow {
+    color: var(--silver) !important;
+    font-size: 10px !important;
+    letter-spacing: .1em !important;
+  }
+
+  .hero h2 {
+    font-size: 23px !important;
+    letter-spacing: -.04em !important;
+  }
+
+  .hero p:last-child,
+  .section-text {
+    color: var(--muted) !important;
+  }
+
+  .card {
+    border: 1px solid var(--line) !important;
+    border-radius: 18px !important;
+    background: var(--card) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .primary {
+    min-height: 54px !important;
+    border-radius: 14px !important;
+    background: var(--blue) !important;
+    box-shadow: 0 10px 24px rgba(47,128,237,.18) !important;
+    font-weight: 800 !important;
+  }
+
+  .secondary {
+    border: 1px solid rgba(215,217,221,.45) !important;
+    border-radius: 14px !important;
+    background: #101010 !important;
+    color: var(--silver) !important;
+    font-weight: 700 !important;
+  }
+
+  .primary:active,
+  .secondary:active,
+  .choice:active,
+  .asset-option:active,
+  .mode-card:active,
+  .nav-item:active {
+    transform: scale(.975) !important;
+  }
+
+  .field-label {
+    color: var(--silver) !important;
+  }
+
+  .search {
+    border-color: var(--line) !important;
+    border-radius: 13px !important;
+    background: #0d0d0d !important;
+  }
+
+  .search:focus {
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 0 3px rgba(47,128,237,.12) !important;
+  }
+
+  .asset-option,
+  .choice,
+  .mode-card,
+  .fact,
+  .stat,
+  .history-item {
+    border-color: var(--line) !important;
+    background: #111111 !important;
+  }
+
+  .asset-option.selected,
+  .choice.active,
+  .mode-card.selected {
+    border-color: rgba(215,217,221,.75) !important;
+    background: #1d1d1d !important;
+    box-shadow: inset 3px 0 0 var(--blue) !important;
+  }
+
+  .asset-option span {
+    color: var(--muted) !important;
+  }
+
+  .mode-icon,
+  .empty-icon {
+    border: 1px solid var(--line) !important;
+    background: #0d0d0d !important;
+    color: var(--silver) !important;
+  }
+
+  .upload-zone {
+    border-color: rgba(215,217,221,.46) !important;
+    border-radius: 18px !important;
+    background: #101010 !important;
+  }
+
+  .preview-wrap {
+    border-color: var(--line) !important;
+    background: #050505 !important;
+  }
+
+  .status {
+    border: 1px solid rgba(47,128,237,.3) !important;
+    background: rgba(47,128,237,.08) !important;
+    color: #b9d6ff !important;
+  }
+
+  .result-card {
+    border-color: var(--line) !important;
+    border-radius: 18px !important;
+    background: var(--card2) !important;
+  }
+
+  .direction.UP {
+    background: rgba(57,200,121,.13) !important;
+    color: #7ce5a8 !important;
+  }
+
+  .direction.DOWN {
+    background: rgba(239,91,104,.13) !important;
+    color: #ff9da5 !important;
+  }
+
+  .direction.NONE {
+    background: rgba(255,255,255,.08) !important;
+    color: var(--silver) !important;
+  }
+
+  .risk {
+    display: none !important;
+  }
+
+  .bottom-nav {
+    border-top-color: var(--line) !important;
+    background: rgba(10,10,10,.96) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+
+  .nav-item {
+    color: #777 !important;
+    border-radius: 12px !important;
+  }
+
+  .nav-item.active {
+    background: transparent !important;
+    color: var(--silver) !important;
+    box-shadow: inset 0 -2px 0 var(--blue) !important;
+  }
+
+  .launch {
+    background: #0a0a0a !important;
+  }
+
+  .orb {
+    width: 104px !important;
+    height: 104px !important;
+    border: 1px solid rgba(255,255,255,.62) !important;
+    border-radius: 22px !important;
+    background: #0c0c0c !important;
+    box-shadow: inset 0 0 22px rgba(255,255,255,.04), 0 16px 38px rgba(0,0,0,.45) !important;
+    animation: none !important;
+  }
+
+  .orb::before,
+  .orb::after {
+    display: none !important;
+  }
+
+  .orb b {
+    display: none !important;
+  }
+
+  .sound-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sound-row:last-child {
+    border-bottom: 0;
+  }
+
+  .sound-toggle {
+    min-width: 66px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #101010;
+    color: var(--silver);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .sound-toggle.on {
+    border-color: var(--blue);
+    background: rgba(47,128,237,.14);
+    color: #dceaff;
+  }
+</style>
+
+<script>
+  (function () {
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const storedLanguage = localStorage.getItem("pulse_language");
+
+    if (!storedLanguage && tgUser?.language_code) {
+      const detected = tgUser.language_code.startsWith("ru") ? "ru" : "en";
+      localStorage.setItem("pulse_language", detected);
+    }
+
+    function makeLogo(target) {
+      if (!target) return;
+
+      target.innerHTML = `
+        <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+          <path d="M12 56 H31 L42 38 L55 70 L67 48 L86 29"
+            fill="none"
+            stroke="#e7e8ea"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+          <path d="M76 29 H86 V39"
+            fill="none"
+            stroke="#e7e8ea"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    makeLogo(document.querySelector(".brand-mark"));
+    makeLogo(document.querySelector(".orb"));
+
+    function greeting() {
+      const hour = new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Oral",
+        hour: "2-digit",
+        hour12: false
+      });
+
+      const name = tgUser?.first_name || "";
+      const ru = (localStorage.getItem("pulse_language") || "ru") === "ru";
+      const h = Number(hour);
+
+      if (ru) {
+        if (h < 12) return `Доброе утро${name ? `, ${name}` : ""}`;
+        if (h < 18) return `Добрый день${name ? `, ${name}` : ""}`;
+        return `Добрый вечер${name ? `, ${name}` : ""}`;
+      }
+
+      if (h < 12) return `Good morning${name ? `, ${name}` : ""}`;
+      if (h < 18) return `Good afternoon${name ? `, ${name}` : ""}`;
+      return `Good evening${name ? `, ${name}` : ""}`;
+    }
+
+    const welcomeTitle = document.getElementById("welcomeTitle");
+    const welcomeText = document.getElementById("welcomeText");
+
+    if (welcomeTitle) welcomeTitle.textContent = greeting();
+    if (welcomeText) {
+      welcomeText.textContent =
+        (localStorage.getItem("pulse_language") || "ru") === "ru"
+          ? "Signal Pulse готов к работе."
+          : "Signal Pulse is ready.";
+    }
+
+    let soundEnabled = localStorage.getItem("pulse_sound") === "true";
+    let hapticEnabled = localStorage.getItem("pulse_haptic") !== "false";
+
+    function feedback() {
+      if (hapticEnabled && window.Telegram?.WebApp?.HapticFeedback) {
+        Telegram.WebApp.HapticFeedback.impactOccurred("light");
+      }
+
+      if (!soundEnabled) return;
+
+      try {
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+
+        oscillator.frequency.value = 430;
+        gain.gain.setValueAtTime(0.035, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.06);
+
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        oscillator.start();
+        oscillator.stop(audio.currentTime + 0.06);
+      } catch {}
+    }
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("button")) feedback();
+    });
+
+    const profile = document.getElementById("profileView");
+
+    if (profile && !document.getElementById("feedbackSettings")) {
+      const settings = document.createElement("div");
+      settings.className = "card";
+      settings.id = "feedbackSettings";
+      settings.innerHTML = `
+        <div class="sound-row">
+          <div>
+            <b>Звук интерфейса</b>
+            <span>Тихий отклик при нажатии</span>
+          </div>
+          <button class="sound-toggle ${soundEnabled ? "on" : ""}" id="soundToggle">
+            ${soundEnabled ? "Вкл" : "Выкл"}
+          </button>
+        </div>
+        <div class="sound-row">
+          <div>
+            <b>Тактильный отклик</b>
+            <span>Вибрация Telegram при нажатии</span>
+          </div>
+          <button class="sound-toggle ${hapticEnabled ? "on" : ""}" id="hapticToggle">
+            ${hapticEnabled ? "Вкл" : "Выкл"}
+          </button>
+        </div>
+      `;
+
+      profile.append(settings);
+
+      document.getElementById("soundToggle").addEventListener("click", function () {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem("pulse_sound", String(soundEnabled));
+        this.textContent = soundEnabled ? "Вкл" : "Выкл";
+        this.classList.toggle("on", soundEnabled);
+      });
+
+      document.getElementById("hapticToggle").addEventListener("click", function () {
+        hapticEnabled = !hapticEnabled;
+        localStorage.setItem("pulse_haptic", String(hapticEnabled));
+        this.textContent = hapticEnabled ? "Вкл" : "Выкл";
+        this.classList.toggle("on", hapticEnabled);
+      });
+    }
+  })();
+</script>
 </body>
   </html>
