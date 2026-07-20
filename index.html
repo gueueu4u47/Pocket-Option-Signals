@@ -2046,6 +2046,154 @@ addHistory = function (item) {
   localAddHistory(item);
   syncResultToServer(item);
 };
+  async function savePulseResultToServer(item) {
+  const initData = window.Telegram?.WebApp?.initData || "";
+
+  if (!initData) {
+    return;
+  }
+
+  const direction =
+    item.direction === "BUY" || item.direction === "UP"
+      ? "UP"
+      : item.direction === "SELL" || item.direction === "DOWN"
+        ? "DOWN"
+        : "NONE";
+
+  try {
+    await fetch("/api/pulse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData,
+        action: "save_result",
+        payload: {
+          mode: item.type,
+          direction,
+          asset: item.asset,
+          durationSeconds: state.duration,
+          confidence: item.confidence || "",
+          summary: item.summary || "",
+          outcome: item.outcome || "skip"
+        }
+      })
+    });
+
+    renderServerPulseControl();
+  } catch (error) {
+    console.error("Pulse server save failed");
+  }
+}
+
+const addHistoryWithServerSave = addHistory;
+
+addHistory = function (item) {
+  addHistoryWithServerSave(item);
+  savePulseResultToServer(item);
+};
+
+async function renderServerPulseControl() {
+  const initData = window.Telegram?.WebApp?.initData || "";
+  const panel = document.getElementById("pulseControl");
+
+  if (!initData || !panel) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/pulse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData,
+        action: "dashboard"
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.isOwner || !data.metrics) {
+      return;
+    }
+
+    const metrics = data.metrics;
+
+    panel.innerHTML = `
+      <p class="eyebrow">PULSE CONTROL</p>
+      <h3 style="margin:0;font-size:20px;">Панель владельца</h3>
+      <p class="section-text" style="margin-top:8px;">
+        Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.
+      </p>
+
+      <div class="stats">
+        <div class="stat">
+          <b>${metrics.usersTotal}</b>
+          <small>Пользователи</small>
+        </div>
+        <div class="stat">
+          <b>${metrics.resultsTotal}</b>
+          <small>Результаты в базе</small>
+        </div>
+        <div class="stat">
+          <b>${metrics.eventsTotal}</b>
+          <small>События сервера</small>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <b>${metrics.visionTotal}</b>
+          <small>Pulse Vision</small>
+        </div>
+        <div class="stat">
+          <b>${metrics.quickTotal}</b>
+          <small>Pulse Quick</small>
+        </div>
+        <div class="stat">
+          <b>✓</b>
+          <small>Владелец подтверждён</small>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <b>${metrics.wins}</b>
+          <small>Win</small>
+        </div>
+        <div class="stat">
+          <b>${metrics.losses}</b>
+          <small>Loss</small>
+        </div>
+        <div class="stat">
+          <b>✓</b>
+          <small>База подключена</small>
+        </div>
+      </div>
+
+      <div class="risk">
+        Здесь показываются данные, сохранённые через сервер.
+        После нового Pulse Vision или Pulse Quick нажми обновление,
+        чтобы увидеть свежие показатели.
+      </div>
+
+      <button class="secondary" id="refreshServerPulseControl">
+        Обновить показатели
+      </button>
+    `;
+
+    document
+      .getElementById("refreshServerPulseControl")
+      .addEventListener("click", renderServerPulseControl);
+  } catch (error) {
+    console.error("Pulse Control dashboard failed");
+  }
+}
+
+setTimeout(renderServerPulseControl, 1500);
   </script>
 </body>
   </html>
