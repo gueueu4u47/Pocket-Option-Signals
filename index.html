@@ -2001,6 +2001,51 @@
 }
 
 setTimeout(loadPulseControl, 500);
+  async function syncResultToServer(item) {
+  const initData = window.Telegram?.WebApp?.initData || "";
+
+  if (!initData) {
+    return;
+  }
+
+  const direction =
+    item.direction === "BUY" || item.direction === "UP"
+      ? "UP"
+      : item.direction === "SELL" || item.direction === "DOWN"
+        ? "DOWN"
+        : "NONE";
+
+  try {
+    await fetch("/api/pulse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData,
+        action: "save_result",
+        payload: {
+          mode: item.type,
+          direction,
+          asset: item.asset,
+          durationSeconds: state.duration,
+          confidence: item.confidence || "",
+          summary: item.summary || "",
+          outcome: item.outcome || "skip"
+        }
+      })
+    });
+  } catch (error) {
+    console.error("Pulse history sync failed");
+  }
+}
+
+const localAddHistory = addHistory;
+
+addHistory = function (item) {
+  localAddHistory(item);
+  syncResultToServer(item);
+};
   </script>
 </body>
   </html>
