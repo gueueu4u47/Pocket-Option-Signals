@@ -1,481 +1,1394 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0A0A0A">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Signal Pulse</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root{
-      --bg:#0A0A0A;--deep:#111111;--card:#151515;--surface:#1B1B1B;--line:#2A2A2A;
-      --text:#F4F4F4;--muted:#969696;--silver:#D7D9DD;--accent:#2F80ED;
-      --up:#39C878;--down:#EF5B68;--wait:#A6A6A6;--radius:24px
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --card: #151515;
+      --card2: #1b1b1b;
+      --line: #2a2a2a;
+      --text: #f4f4f4;
+      --muted: #969696;
+      --silver: #d7d9dd;
+      --accent: #2f80ed;
+      --accent-soft: rgba(47, 128, 237, .14);
+      --green: #39c879;
+      --red: #ef5b68;
+      --logo: #e7e8ea;
+      --shadow: 0 18px 44px rgba(0, 0, 0, .5);
+      --radius: 18px;
     }
-    [data-theme="midnight"]{--bg:#080D17;--deep:#0D1420;--card:#121C2A;--surface:#182438;--line:#263954;--accent:#3887F2}
-    [data-theme="carbon"]{--bg:#09100D;--deep:#101914;--card:#152019;--surface:#1B2A20;--line:#2C4133;--accent:#37A86D}
-    [data-theme="black"]{--bg:#000;--deep:#080808;--card:#101010;--surface:#181818;--line:#292929;--accent:#F4F4F4}
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    body{overflow-x:hidden}
-    body:before{content:"";position:fixed;z-index:-1;inset:0;background:radial-gradient(760px circle at 10% -15%,rgba(255,255,255,.045),transparent 55%),radial-gradient(650px circle at 108% 72%,rgba(47,128,237,.09),transparent 55%);animation:ambient 12s ease-in-out infinite alternate}
-    @keyframes ambient{to{transform:scale(1.13) translateY(18px);opacity:.74}}
-    button,input,select{font:inherit}button{border:0;color:inherit;cursor:pointer}button:disabled{opacity:.42;pointer-events:none}.hidden{display:none!important}
-    .app{width:min(100%,680px);min-height:100vh;margin:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(105px + env(safe-area-inset-bottom))}
-    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0 19px;margin-bottom:19px;border-bottom:1px solid var(--line)}
-    .brand{display:flex;align-items:center;gap:11px}.logo{display:grid;place-items:center;width:45px;height:45px;border:1px solid rgba(215,217,221,.62);border-radius:14px;background:linear-gradient(145deg,#191919,#080808);box-shadow:inset 0 1px rgba(255,255,255,.08),0 12px 25px rgba(0,0,0,.3)}.logo svg{width:29px}.brand b{display:block;font-size:16px;letter-spacing:-.45px}.brand small,.clock small{display:block;margin-top:3px;color:var(--muted);font-size:10px}.clock{text-align:right;font-variant-numeric:tabular-nums}.clock b{font-size:15px}
-    .screen{display:none;animation:screenIn .22s cubic-bezier(.2,.8,.2,1)}.screen.active{display:block}@keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-    .hero,.panel{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,var(--card),var(--deep))}.hero{padding:22px;margin-bottom:14px}.panel{padding:17px;margin-bottom:14px}
-    .eyebrow{font-size:10px;font-weight:800;letter-spacing:1.3px;color:var(--silver)}h1,h2,h3,p{margin:0}h1{margin-top:10px;font-size:31px;line-height:1.08;letter-spacing:-1.6px}h2{font-size:20px;letter-spacing:-.65px}.desc{margin-top:12px;color:var(--muted);font-size:14px;line-height:1.55}
-    .label{display:block;margin:18px 0 9px;color:var(--silver);font-size:13px;font-weight:750}.search{width:100%;height:53px;padding:0 14px;border:1px solid var(--line);border-radius:15px;outline:0;background:#0C0C0C;color:var(--text)}.search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,128,237,.12)}
-    .primary,.secondary,.asset,.tile,.nav,.mode,.outcome,.theme{transition:transform .16s ease,background .2s,border-color .2s}.primary:active,.secondary:active,.asset:active,.tile:active,.nav:active,.mode:active,.outcome:active,.theme:active{transform:scale(.98)}
-    .primary{position:relative;overflow:hidden;width:100%;min-height:55px;border-radius:16px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;box-shadow:0 12px 27px rgba(47,128,237,.22)}.primary:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);transform:translateX(-130%);transition:.55s}.primary:hover:after{transform:translateX(130%)}[data-theme="black"] .primary{color:#111}
-    .secondary{width:100%;min-height:51px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--silver);font-size:14px;font-weight:750}.rows{display:grid;gap:9px;margin-top:15px}
-    .assets{display:grid;gap:8px;max-height:215px;margin-top:9px;overflow:auto}.asset{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:15px;background:var(--deep);font-weight:750;text-align:left}.asset small{color:var(--muted)}.selected{border-color:rgba(215,217,221,.84)!important;background:var(--surface)!important;box-shadow:inset 3px 0 var(--accent)}
-    .grid3,.grid2{display:grid;gap:8px}.grid3{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:repeat(2,1fr)}.tile{min-height:49px;padding:7px;border:1px solid var(--line);border-radius:14px;background:var(--deep);color:var(--silver);font-size:12px;font-weight:750}
-    .modes{display:grid;gap:8px}.mode{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--deep);text-align:left}.mode-icon{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;color:var(--silver);font-size:18px}.mode b{display:block;font-size:14px}.mode small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
-    .upload{position:relative;display:grid;place-items:center;min-height:224px;border:1px dashed rgba(215,217,221,.54);border-radius:20px;background:linear-gradient(145deg,#111,#0B0B0B);text-align:center;cursor:pointer}.upload input{position:absolute;inset:0;opacity:0;cursor:pointer}.upload svg{width:37px;color:var(--silver)}.upload b{display:block;margin-top:12px;font-size:17px}.upload span{display:block;margin-top:8px;color:var(--muted);font-size:12px}
-    .preview{overflow:hidden;border:1px solid var(--line);border-radius:19px;background:#050505}.preview img{display:block;width:100%;max-height:390px;object-fit:contain}.remove{display:block;margin:10px 0 0 auto;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--down);font-size:12px;font-weight:750}
-    .empty{text-align:center;padding:28px 16px}.empty i{display:grid;place-items:center;width:51px;height:51px;margin:0 auto 13px;border:1px solid var(--line);border-radius:16px;color:var(--silver);font-style:normal}.empty p{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.5}
-    .list{display:grid;gap:12px}.history{padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--card)}.head{display:flex;justify-content:space-between;gap:10px}.sub{display:block;margin-bottom:5px;color:var(--muted);font-size:10px}.title{font-size:16px;font-weight:800}.badge{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:850}.up{color:var(--up);background:rgba(57,200,120,.13)}.down{color:var(--down);background:rgba(239,91,104,.13)}.wait{color:#B8B8B8;background:rgba(255,255,255,.08)}
-    .meta,.times{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}.meta{color:var(--muted);font-size:11px;line-height:1.55}.meta b,.times b{display:block;color:var(--muted);font-size:9px;letter-spacing:.8px}.outcomes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}.outcome{min-height:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--silver);font-size:12px;font-weight:800}.outcome.win.active{border-color:var(--up);color:var(--up);background:rgba(57,200,120,.12)}.outcome.loss.active{border-color:var(--down);color:var(--down);background:rgba(239,91,104,.12)}
-    .profile-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:61px;border-bottom:1px solid var(--line)}.profile-row:last-child{border:0}.profile-row b{display:block;font-size:14px}.profile-row span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.select{padding:9px 28px 9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}.switch{width:48px;height:29px;padding:3px;border-radius:99px;background:#303030}.switch i{display:block;width:23px;height:23px;border-radius:50%;background:#aaa;transition:.2s}.switch.on{background:var(--accent)}.switch.on i{transform:translateX(19px);background:#fff}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px 7px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:center}.stat b{display:block;font-size:18px}.stat small{display:block;margin-top:5px;color:var(--muted);font-size:9px}
-    .theme-list{display:grid;gap:8px}.theme{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}.theme.selected{border-color:var(--silver)}.theme-left{display:flex;align-items:center;gap:10px}.dot{width:21px;height:21px;border:1px solid rgba(255,255,255,.25);border-radius:7px;background:#151515}.dot.midnight{background:#15233A}.dot.carbon{background:#193B25}.dot.black{background:#000}.dot.launch{background:linear-gradient(135deg,#151515,#2F80ED)}
-    .bottom{position:fixed;z-index:20;bottom:0;left:50%;display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,680px);min-height:calc(84px + env(safe-area-inset-bottom));padding:8px 9px calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);border-top:1px solid var(--line);background:rgba(10,10,10,.95);backdrop-filter:blur(18px)}.nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;background:transparent;color:#777;font-size:10px;font-weight:750}.nav svg{width:20px;height:20px}.nav.active{background:var(--surface);color:var(--silver);box-shadow:inset 0 -2px var(--accent)}
-    .modal{position:fixed;z-index:60;inset:0;display:grid;place-items:end center;padding:16px;background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}.modal-box{width:min(100%,540px);max-height:88vh;overflow:auto;padding:20px;border:1px solid var(--line);border-radius:25px;background:var(--deep);animation:pop .22s ease}@keyframes pop{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:none}}.modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--silver);font-size:20px}
-    .result{position:relative;overflow:hidden;padding:20px;border:1px solid var(--line);border-radius:22px;background:var(--card)}.result:before{content:"";position:absolute;right:-90px;top:-90px;width:210px;height:210px;border-radius:50%;background:rgba(47,128,237,.11);filter:blur(14px)}.result>*{position:relative}.asset-name{font-size:20px;font-weight:800}.result-mode{margin-top:4px;color:var(--muted);font-size:11px}.signal{margin:25px 0 19px;font-size:38px;font-weight:850;letter-spacing:-1.8px}.confidence{display:flex;align-items:center;gap:13px;margin-bottom:19px}.ring{position:relative;display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0)}.ring:before{content:"";position:absolute;width:51px;height:51px;border-radius:50%;background:var(--card)}.ring span{position:relative;font-size:12px;font-weight:850}.confidence b{display:block;font-size:13px}.confidence small{display:block;margin-top:4px;color:var(--muted);font-size:11px}.times{padding-top:16px;border-top:1px solid var(--line)}.times strong{display:block;margin-top:6px;font-size:15px;font-variant-numeric:tabular-nums}.times span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.count{display:flex;justify-content:space-between;margin-top:15px;padding:12px 13px;border-radius:13px;background:var(--surface)}.count span{color:var(--muted);font-size:12px}.count b{font-variant-numeric:tabular-nums}details{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}summary{font-size:12px;font-weight:750;color:var(--silver)}.reasons{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.65}
-    .loader,.welcome{position:fixed;z-index:100;inset:0;display:grid;place-items:center;padding:25px;background:var(--bg)}.loader.done{opacity:0;visibility:hidden;transition:.4s}.center{width:min(100%,430px);text-align:center}.launch-logo{display:grid;place-items:center;width:125px;height:125px;margin:0 auto 26px;border:1px solid rgba(215,217,221,.72);border-radius:36px;background:#0D0D0D}.launch-logo svg{width:82px;overflow:visible}.draw{fill:none;stroke:var(--silver);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:170;stroke-dashoffset:170;animation:draw .7s ease forwards}.arrow{opacity:0;animation:arrow .3s .7s forwards}@keyframes draw{to{stroke-dashoffset:0}}@keyframes arrow{to{opacity:1}}.center h1{margin:0;font-size:31px}.center p{margin-top:11px;color:var(--muted)}.toast{position:fixed;z-index:120;bottom:102px;left:50%;max-width:calc(100% - 32px);padding:12px 14px;transform:translate(-50%,14px);border:1px solid var(--line);border-radius:13px;background:#1D1D1D;color:var(--silver);font-size:12px;opacity:0;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      transition: background .4s ease, color .4s ease;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% -12%, rgba(255, 255, 255, .04), transparent 32%),
+        linear-gradient(180deg, var(--bg) 0%, #070707 100%);
+    }
+
+    button, input, select { font: inherit; }
+    button { border: 0; color: inherit; cursor: pointer; background: none; }
+
+    .app {
+      width: min(100%, 560px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: env(safe-area-inset-top) 18px calc(104px + env(safe-area-inset-bottom));
+    }
+
+    /* Topbar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 44px; height: 44px; flex: 0 0 auto;
+      display: grid; place-items: center;
+      border: 1px solid rgba(255, 255, 255, .5);
+      border-radius: 14px;
+      background: #0b0b0b;
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, .05), 0 8px 22px rgba(0, 0, 0, .4);
+      overflow: hidden;
+    }
+    .brand-mark svg { width: 30px; height: 30px; }
+    .brand h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+    .brand p {
+      margin: 3px 0 0; overflow: hidden; color: var(--muted);
+      font-size: 11px; text-overflow: ellipsis; white-space: nowrap; max-width: 210px;
+    }
+    .clock { text-align: right; color: var(--silver); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .clock small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; font-weight: 700; }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; animation: rise .22s ease; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero {
+      margin-top: 16px; padding: 20px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--bg2); box-shadow: var(--shadow);
+    }
+    .eyebrow { margin: 0 0 8px; color: var(--silver); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+    .hero h2 { margin: 0; font-size: 23px; line-height: 1.14; letter-spacing: -.03em; }
+    .hero p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    .card {
+      margin-top: 13px; padding: 16px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card);
+    }
+    .section-title { margin: 22px 0 4px; font-size: 17px; letter-spacing: -.02em; }
+    .section-text { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    /* Buttons */
+    .primary, .secondary, .choice, .asset-option, .mode-card, .outcome, .nav-item, .theme-chip, .seg-btn {
+      transition: transform .16s ease, border-color .16s ease, background .2s ease, box-shadow .2s ease, opacity .16s ease;
+    }
+    .primary:active, .secondary:active, .choice:active, .asset-option:active,
+    .mode-card:active, .outcome:active, .theme-chip:active, .seg-btn:active { transform: scale(.975); }
+
+    .primary {
+      position: relative; overflow: hidden;
+      width: 100%; min-height: 54px; margin-top: 15px; padding: 15px;
+      border-radius: 14px; background: var(--accent);
+      box-shadow: 0 12px 26px rgba(47, 128, 237, .22);
+      font-size: 15px; font-weight: 800; color: #fff;
+    }
+    .primary::after {
+      content: ""; position: absolute; top: 0; left: -60%;
+      width: 45%; height: 100%; transform: skewX(-20deg);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent);
+      opacity: 0;
+    }
+    .primary:active::after { animation: shine .5s ease; }
+    @keyframes shine { from { left: -60%; opacity: 1; } to { left: 120%; opacity: 0; } }
+    .primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+    .secondary {
+      width: 100%; min-height: 50px; margin-top: 10px; padding: 13px;
+      border: 1px solid rgba(215, 217, 221, .4); border-radius: 14px;
+      background: #101010; color: var(--silver); font-size: 14px; font-weight: 700;
+    }
+
+    .field-label { display: block; margin: 18px 0 8px; color: var(--silver); font-size: 13px; font-weight: 800; }
+    .search {
+      width: 100%; padding: 14px; outline: none;
+      border: 1px solid var(--line); border-radius: 13px;
+      background: #0d0d0d; color: var(--text);
+    }
+    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+    .asset-list { display: grid; gap: 8px; max-height: 232px; margin-top: 10px; overflow-y: auto; }
+    .asset-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 13px; border: 1px solid var(--line); border-radius: 13px;
+      background: #111111; text-align: left;
+    }
+    .asset-option.selected { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 3px 0 0 var(--accent); }
+    .asset-option b { font-size: 14px; }
+    .asset-option span { color: var(--muted); font-size: 11px; font-weight: 700; }
+
+    .choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 8px; }
+    .choice-grid.two { grid-template-columns: repeat(2, 1fr); }
+    .choice {
+      min-height: 49px; padding: 8px 6px; border: 1px solid var(--line);
+      border-radius: 13px; background: #111111; color: var(--text);
+      font-size: 13px; font-weight: 800;
+    }
+    .choice.active { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 0 -2px 0 var(--accent); }
+
+    .mode-stack { display: grid; gap: 10px; margin-top: 13px; }
+    .mode-card {
+      display: flex; align-items: center; gap: 13px; padding: 15px;
+      border: 1px solid var(--line); border-radius: 15px; background: #111111; text-align: left;
+    }
+    .mode-card.selected { border-color: rgba(215, 217, 221, .7); background: var(--card2); box-shadow: inset 3px 0 0 var(--accent); }
+    .mode-icon {
+      display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto;
+      border: 1px solid var(--line); border-radius: 12px; background: #0d0d0d; color: var(--silver); font-size: 19px;
+    }
+    .mode-card b { display: block; font-size: 14px; }
+    .mode-card small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+    /* Upload */
+    .upload-zone {
+      display: block; padding: 28px 14px; border: 1px dashed rgba(215, 217, 221, .45);
+      border-radius: 16px; background: #101010; text-align: center; cursor: pointer;
+    }
+    .upload-zone input { display: none; }
+    .upload-icon { font-size: 28px; color: var(--silver); }
+    .upload-zone strong { display: block; margin-top: 9px; font-size: 15px; }
+    .upload-zone span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+
+    .preview-wrap {
+      display: none; position: relative; margin-top: 12px; overflow: hidden;
+      border: 1px solid var(--line); border-radius: 15px; background: #050505;
+    }
+    .preview-wrap.show { display: block; }
+    #previewImage { display: block; width: 100%; height: auto; object-fit: contain; }
+    .remove-image {
+      position: absolute; top: 10px; right: 10px; width: 36px; height: 36px;
+      display: grid; place-items: center; border-radius: 50%;
+      background: rgba(5, 5, 5, .9); color: #fff; font-size: 20px; border: 1px solid var(--line);
+    }
+
+    /* Vision processing card */
+    .processing {
+      display: none; margin-top: 14px; padding: 22px 16px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card2); text-align: center;
+    }
+    .processing.show { display: block; animation: rise .24s ease; }
+    .ring-wrap { position: relative; width: 128px; height: 128px; margin: 0 auto 14px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--line); stroke-width: 8; }
+    .ring-fg { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
+    .ring-pct {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 26px; font-weight: 800; color: var(--silver); font-variant-numeric: tabular-nums;
+    }
+    .processing-meta { display: flex; justify-content: center; gap: 18px; margin-bottom: 12px; }
+    .processing-meta div { text-align: center; }
+    .processing-meta small { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+    .processing-meta b { font-size: 13px; }
+    .stage { color: var(--silver); font-size: 13px; font-weight: 600; min-height: 18px; transition: opacity .3s ease; }
+
+    .status {
+      display: none; align-items: center; justify-content: center; gap: 9px;
+      margin-top: 13px; min-height: 42px; padding: 12px; border-radius: 12px;
+      border: 1px solid rgba(47, 128, 237, .28); background: var(--accent-soft);
+      color: #bcd8ff; font-size: 12px; font-weight: 700; text-align: center;
+    }
+    .status.show { display: flex; }
+    .status.error { border-color: rgba(239, 91, 104, .3); background: rgba(239, 91, 104, .1); color: #ff9da5; }
+
+    /* Result card */
+    .result-card {
+      display: none; margin-top: 14px; padding: 18px;
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--card2);
+    }
+    .result-card.show { display: block; animation: rise .26s ease; }
+    .result-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .result-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    .direction {
+      padding: 7px 12px; border-radius: 99px; font-size: 12px; font-weight: 900; white-space: nowrap;
+    }
+    .direction.UP { background: rgba(57, 200, 121, .14); color: #7ce5a8; }
+    .direction.DOWN { background: rgba(239, 91, 104, .14); color: #ff9da5; }
+    .direction.NONE { background: rgba(255, 255, 255, .08); color: var(--silver); }
+
+    .direction-big {
+      margin: 16px 0 2px; font-size: 34px; font-weight: 900; letter-spacing: -.03em; text-align: center;
+    }
+    .direction-big.UP { color: var(--green); }
+    .direction-big.DOWN { color: var(--red); }
+    .direction-big.NONE { color: var(--silver); }
+    .result-asset { text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .confidence-line { margin: 12px 0 0; text-align: center; color: var(--silver); font-size: 13px; font-weight: 700; }
+    .result-summary { margin: 12px 0 0; color: #cfd3da; font-size: 13px; line-height: 1.5; }
+
+    .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 14px; }
+    .fact { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #111111; }
+    .fact small { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+    .fact b { font-size: 13px; font-variant-numeric: tabular-nums; }
+    .fact b.count { color: var(--accent); }
+
+    .reasons-toggle {
+      width: 100%; margin-top: 12px; padding: 12px; text-align: left;
+      border: 1px solid var(--line); border-radius: 12px; background: #111111;
+      color: var(--silver); font-size: 13px; font-weight: 700;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .reasons { margin: 10px 0 0; padding-left: 18px; color: #cfd3da; font-size: 13px; line-height: 1.6; }
+    .reasons.collapsed { display: none; }
+
+    .disclaimer {
+      margin-top: 14px; padding: 11px 13px; border-left: 2px solid var(--line);
+      border-radius: 8px; background: rgba(255, 255, 255, .03);
+      color: var(--muted); font-size: 11px; line-height: 1.45;
+    }
+
+    .result-actions { display: grid; gap: 8px; margin-top: 14px; }
+
+    /* Empty / history */
+    .empty { padding: 28px 16px; text-align: center; }
+    .empty-icon {
+      display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 12px;
+      border: 1px solid var(--line); border-radius: 18px; background: #0d0d0d; color: var(--silver); font-size: 24px;
+    }
+    .empty h3 { margin: 0; font-size: 17px; }
+    .empty p { margin: 8px auto 0; max-width: 300px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .history-item { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: #111111; }
+    .history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .history-head b { font-size: 14px; }
+    .history-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .history-summary { margin: 10px 0 0; color: #c4c8cf; font-size: 12px; line-height: 1.45; }
+    .tag { display: inline-block; margin-bottom: 6px; padding: 3px 9px; border-radius: 99px; background: #0d0d0d; border: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; }
+
+    .outcome-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
+    .outcome { min-height: 38px; border: 1px solid var(--line); border-radius: 10px; background: #0d0d0d; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .outcome.win.active { border-color: var(--green); color: #8df2bd; background: rgba(57, 200, 121, .12); }
+    .outcome.loss.active { border-color: var(--red); color: #ff9da5; background: rgba(239, 91, 104, .12); }
+    .outcome.skip.active { border-color: var(--silver); color: var(--silver); background: rgba(255, 255, 255, .06); }
+
+    /* Profile */
+    .profile-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+    .profile-row:last-child { border-bottom: 0; }
+    .profile-row b { display: block; font-size: 14px; }
+    .profile-row span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    select { padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; outline: none; background: #0d0d0d; color: var(--text); }
+    .toggle { min-width: 70px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 11px; background: #0d0d0d; color: var(--silver); font-size: 12px; font-weight: 800; }
+    .toggle.on { border-color: var(--accent); background: var(--accent-soft); color: #dceaff; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .stat { padding: 14px 8px; border: 1px solid var(--line); border-radius: 13px; background: #111111; text-align: center; }
+    .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+    .stat small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; font-weight: 700; }
+
+    /* Owner Pulse Control + Design Control */
+    .owner-block { display: none; }
+    .owner-block.show { display: block; }
+    .theme-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+    .theme-chip { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #111111; text-align: left; }
+    .theme-chip.selected { border-color: rgba(215, 217, 221, .7); box-shadow: inset 3px 0 0 var(--accent); }
+    .theme-dot { width: 22px; height: 22px; flex: 0 0 auto; border-radius: 7px; border: 1px solid rgba(255, 255, 255, .2); }
+    .theme-chip b { font-size: 12px; }
+    .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+    .seg-btn { min-height: 40px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 10px; background: #111111; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .seg-btn.active { border-color: var(--accent); color: var(--silver); background: var(--accent-soft); }
+    .schedule-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .schedule-row input { width: 70px; padding: 9px; text-align: center; border: 1px solid var(--line); border-radius: 10px; background: #0d0d0d; color: var(--text); outline: none; }
+    .schedule-row span { color: var(--muted); font-size: 12px; }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed; z-index: 20; bottom: 0; left: 50%; transform: translateX(-50%);
+      display: grid; grid-template-columns: repeat(4, 1fr); width: min(100%, 560px);
+      padding: 9px 8px calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line); background: rgba(10, 10, 10, .94); backdrop-filter: blur(18px);
+    }
+    .nav-item { padding: 8px 2px; border-radius: 12px; color: #6f6f6f; font-size: 10px; font-weight: 700; }
+    .nav-item i { display: block; margin-bottom: 5px; font-size: 18px; font-style: normal; }
+    .nav-item.active { color: var(--silver); box-shadow: inset 0 -2px 0 var(--accent); }
+
+    /* Launch */
+    .launch {
+      position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 26px;
+      background: var(--bg); transition: opacity .4s ease, visibility .4s ease;
+    }
+    .launch.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+    .launch-inner { width: min(100%, 380px); text-align: center; }
+    .launch-logo { width: 128px; height: 128px; margin: 0 auto 26px; }
+    .launch-logo svg { width: 100%; height: 100%; }
+    .draw { stroke-dasharray: 260; stroke-dashoffset: 260; animation: draw .7s ease forwards; }
+    .arrowhead { opacity: 0; animation: fadein .4s ease .7s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes fadein { to { opacity: 1; } }
+
+    .loader-content, .welcome-content { transition: opacity .35s ease; }
+    .loader-content.hide { display: none; }
+    .welcome-content { display: none; }
+    .welcome-content.show { display: block; animation: rise .4s ease; }
+    .launch h2 { margin: 0; font-size: 27px; letter-spacing: -.03em; }
+    .launch p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .launch-bar { width: 180px; height: 3px; margin: 24px auto 0; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .1); }
+    .launch-bar span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--silver); animation: loading 1.1s ease-in-out infinite; }
+    @keyframes loading { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
+    .welcome-btns { margin-top: 26px; }
   </style>
 </head>
+
 <body>
-  <div class="loader" id="loader"><div class="center"><div class="launch-logo"><svg viewBox="0 0 110 80"><path class="draw" d="M7 49h25l12-24 17 39 17-32 15-12"/><path class="arrow" fill="none" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M80 15h16v16"/></svg></div><h1>Signal Pulse</h1><p id="loaderText"></p></div></div>
-  <div class="welcome hidden" id="welcome"><div class="center"><div class="launch-logo" style="width:88px;height:88px;border-radius:27px"><svg viewBox="0 0 110 80" style="width:57px"><path fill="none" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M7 49h25l12-24 17 39 17-32 15-12M80 15h16v16"/></svg></div><h1 id="hello"></h1><p id="welcomeText"></p><div class="rows" style="margin-top:25px"><button class="primary" id="welcomeVision">Pulse Vision</button><button class="secondary" id="welcomeQuick">Pulse Quick</button></div></div></div>
+  <!-- Launch -->
+  <div class="launch" id="launch">
+    <div class="launch-inner">
+      <div class="launch-logo" id="launchLogo"></div>
+      <div class="loader-content" id="loaderContent">
+        <h2>Signal Pulse</h2>
+        <p id="loaderText">Готовим Signal Pulse…</p>
+        <div class="launch-bar"><span></span></div>
+      </div>
+      <div class="welcome-content" id="welcomeContent">
+        <h2 id="welcomeTitle">Добро пожаловать</h2>
+        <p id="welcomeText">Signal Pulse готов к работе.</p>
+        <div class="welcome-btns">
+          <button class="primary" id="welcomeVision">Pulse Vision</button>
+          <button class="secondary" id="welcomeQuick">Pulse Quick</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <main class="app">
-    <header class="topbar"><div class="brand"><div class="logo"><svg viewBox="0 0 110 80" fill="none"><path d="M7 49h25l12-24 17 39 17-32 15-12M80 15h16v16" stroke="#D7D9DD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Signal Pulse</b><small id="brandText"></small></div></div><div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div></header>
-    <section class="screen active" id="historyScreen"><div class="hero"><div class="eyebrow" id="historyEyebrow"></div><h1 id="historyTitle"></h1><p class="desc" id="historyText"></p></div><div id="historyList"></div></section>
-    <section class="screen" id="createScreen"><div class="hero"><div class="eyebrow" id="createEyebrow"></div><h1 id="createTitle"></h1><p class="desc" id="createText"></p></div><div class="panel"><label class="label" id="assetLabel"></label><input class="search" id="assetSearch"><div class="assets" id="assetList"></div><label class="label" id="durationLabel"></label><div class="grid3" id="durationList"></div><label class="label" id="entryLabel"></label><div class="grid2" id="entryList"></div><label class="label" id="modeLabel"></label><div class="modes"><button class="mode" data-mode="vision"><i class="mode-icon">▧</i><span><b>Pulse Vision</b><small id="visionModeText"></small></span></button><button class="mode" data-mode="quick"><i class="mode-icon">↗</i><span><b>Pulse Quick</b><small id="quickModeText"></small></span></button></div><button class="primary" id="createButton" style="margin-top:18px"></button></div></section>
-    <section class="screen" id="visionScreen"><div class="hero"><div class="eyebrow">PULSE VISION</div><h1 id="visionTitle"></h1><p class="desc" id="visionText"></p></div><div class="panel"><div id="uploadBox"><label class="upload"><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 15 3-3 3 3 2-2 3 3"/></svg><b id="uploadTitle"></b><span id="uploadHint"></span></div></label></div><div id="previewBox" class="hidden"><div class="preview"><img id="previewImage" alt="Chart"></div><button class="remove" id="removeImage"></button></div><button class="primary" id="analyzeButton" disabled style="margin-top:14px"></button></div></section>
-    <section class="screen" id="profileScreen"><div class="hero"><div class="eyebrow" id="profileEyebrow"></div><h1 id="profileTitle"></h1><p class="desc" id="profileText"></p></div><div class="panel"><div class="profile-row"><div><b id="languageTitle"></b><span id="languageSub"></span></div><select class="select" id="languageSelect"><option value="ru">Русский</option><option value="en">English</option></select></div><div class="profile-row"><div><b id="soundTitle"></b><span id="soundSub"></span></div><button class="switch" id="soundSwitch"><i></i></button></div><div class="profile-row"><div><b id="hapticTitle"></b><span id="hapticSub"></span></div><button class="switch" id="hapticSwitch"><i></i></button></div></div><div class="panel"><h2 id="statsTitle" style="margin-bottom:14px"></h2><div class="stats" id="stats"></div></div><div id="ownerPanel" class="hidden"><div class="panel"><h2>Pulse Control</h2><div class="stats" id="serverStats" style="margin-top:14px"></div><button class="secondary" id="refreshStats" style="margin-top:13px"></button></div><div class="panel"><h2>Pulse Design Control</h2><div class="theme-list" id="themeList" style="margin-top:14px"></div></div></div></section>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" id="brandMark"></div>
+        <div>
+          <h1>Signal Pulse</h1>
+          <p id="brandText">Личный помощник для работы с графиком</p>
+        </div>
+      </div>
+      <div class="clock">
+        <span id="clock">--:--:--</span>
+        <small>Asia/Oral · UTC+5</small>
+      </div>
+    </header>
+
+    <!-- History -->
+    <section class="view active" id="historyView">
+      <div class="hero">
+        <p class="eyebrow" id="historyEyebrow">ИСТОРИЯ</p>
+        <h2 id="historyTitle">История результатов</h2>
+        <p id="historyText">Здесь появятся результаты Pulse Vision и Pulse Quick.</p>
+      </div>
+      <div id="historyList"></div>
+      <div class="card empty" id="emptyHistory">
+        <div class="empty-icon">◍</div>
+        <h3 id="emptyTitle">История пока пуста</h3>
+        <p id="emptyText">Загрузи график в Pulse Vision или создай быстрый результат.</p>
+        <button class="primary" id="historyVision">Перейти к Pulse Vision</button>
+      </div>
+    </section>
+
+    <!-- Create -->
+    <section class="view" id="createView">
+      <div class="hero">
+        <p class="eyebrow" id="createEyebrow">СОЗДАТЬ</p>
+        <h2 id="createTitle">Параметры результата</h2>
+        <p id="createText">Выбери OTC-актив, длительность и режим.</p>
+      </div>
+      <div class="card">
+        <label class="field-label" id="assetLabel">OTC-актив</label>
+        <input class="search" id="assetSearch" type="text" autocomplete="off" placeholder="Поиск актива" />
+        <div class="asset-list" id="assetList"></div>
+
+        <label class="field-label" id="durationLabel">Длительность</label>
+        <div class="choice-grid" id="durationGrid"></div>
+
+        <label class="field-label" id="entryLabel">Тип входа</label>
+        <div class="choice-grid two">
+          <button class="choice active" data-entry="nearest" id="nearestButton">Ближайшая точка</button>
+          <button class="choice" data-entry="later" id="laterButton">После длительности</button>
+        </div>
+
+        <label class="field-label" id="modeLabel">Режим</label>
+        <div class="mode-stack">
+          <button class="mode-card selected" data-mode="vision">
+            <span class="mode-icon">▧</span>
+            <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
+          </button>
+          <button class="mode-card" data-mode="quick">
+            <span class="mode-icon">↗</span>
+            <span><b>Pulse Quick</b><small id="quickModeText">Быстрый режим без анализа графика</small></span>
+          </button>
+        </div>
+
+        <button class="primary" id="createAction">Перейти к Pulse Vision</button>
+      </div>
+
+      <!-- Quick result -->
+      <div class="result-card" id="quickResult">
+        <div class="result-top">
+          <span class="result-label">PULSE QUICK</span>
+          <span class="direction NONE" id="quickBadge">—</span>
+        </div>
+        <div class="direction-big NONE" id="quickBig">—</div>
+        <div class="result-asset" id="quickAssetTop">—</div>
+        <div class="facts">
+          <div class="fact"><small id="quickDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="quickDuration">—</b></div>
+          <div class="fact"><small id="quickEntryLabel">ВХОД</small><b id="quickEntry">—</b></div>
+          <div class="fact"><small id="quickOutcomeLabel">РЕЗУЛЬТАТ В</small><b id="quickOutcome">—</b></div>
+          <div class="fact"><small id="quickCountdownLabel">ДО ВХОДА</small><b id="quickCountdown" class="count">—</b></div>
+        </div>
+        <div class="disclaimer" id="quickNotice">Быстрый режим. Не анализирует график и не является рыночным прогнозом.</div>
+        <div class="result-actions">
+          <button class="primary" id="quickAgain">Новый Pulse Quick</button>
+          <button class="secondary" id="quickHistory">Открыть историю</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vision -->
+    <section class="view" id="visionView">
+      <div class="hero">
+        <p class="eyebrow">PULSE VISION</p>
+        <h2 id="visionTitle">Анализ графика</h2>
+        <p id="visionText">Загрузи полный скриншот. Приложение сохранит пропорции без обрезки.</p>
+      </div>
+      <div class="card">
+        <label class="upload-zone" for="imageInput">
+          <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+          <div class="upload-icon">▧</div>
+          <strong id="uploadTitle">Выбрать скриншот</strong>
+          <span id="uploadText">PNG, JPG или WEBP · до 8 МБ</span>
+        </label>
+        <div class="preview-wrap" id="previewWrap">
+          <img id="previewImage" alt="График" />
+          <button class="remove-image" id="removeImage" aria-label="Удалить">×</button>
+        </div>
+        <button class="primary" id="analyzeButton" disabled>Анализировать график</button>
+
+        <!-- Processing -->
+        <div class="processing" id="visionProcessing">
+          <div class="ring-wrap">
+            <svg width="128" height="128" viewBox="0 0 128 128">
+              <circle class="ring-bg" cx="64" cy="64" r="56"></circle>
+              <circle class="ring-fg" id="ringFg" cx="64" cy="64" r="56"></circle>
+            </svg>
+            <div class="ring-pct" id="ringPct">0%</div>
+          </div>
+          <div class="processing-meta">
+            <div><small id="procAssetLabel">АКТИВ</small><b id="procAsset">—</b></div>
+            <div><small id="procDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="procDuration">—</b></div>
+          </div>
+          <div class="stage" id="stageText">Подготавливаем изображение</div>
+        </div>
+
+        <div class="status" id="visionStatus"><span id="visionStatusText"></span></div>
+
+        <!-- Vision result -->
+        <div class="result-card" id="visionResult">
+          <div class="result-top">
+            <span class="result-label" id="analysisLabel">РЕЗУЛЬТАТ АНАЛИЗА</span>
+            <span class="direction NONE" id="visionBadge">НЕТ СИГНАЛА</span>
+          </div>
+          <div class="direction-big NONE" id="visionBig">—</div>
+          <div class="result-asset" id="visionAssetTop">—</div>
+          <div class="confidence-line" id="visionConfidence"></div>
+          <div class="facts">
+            <div class="fact"><small id="factDurationLabel">ДЛИТЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
+            <div class="fact"><small id="factEntryLabel">ВХОД</small><b id="visionEntry">—</b></div>
+            <div class="fact"><small id="factOutcomeLabel">РЕЗУЛЬТАТ В</small><b id="visionOutcome">—</b></div>
+            <div class="fact"><small id="factCountdownLabel">ДО ВХОДА</small><b id="visionCountdown" class="count">—</b></div>
+          </div>
+          <p class="result-summary" id="visionSummary"></p>
+          <button class="reasons-toggle" id="reasonsToggle">
+            <span id="reasonsToggleText">Причины анализа</span><span>▾</span>
+          </button>
+          <ul class="reasons collapsed" id="visionReasons"></ul>
+          <div class="disclaimer" id="visionRisk"></div>
+          <div class="result-actions">
+            <button class="secondary" id="visionHistory">Открыть историю</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Profile -->
+    <section class="view" id="profileView">
+      <div class="hero">
+        <p class="eyebrow" id="profileEyebrow">ПРОФИЛЬ</p>
+        <h2 id="profileTitle">Настройки</h2>
+        <p id="profileText">Настройки сохраняются на этом устройстве.</p>
+      </div>
+
+      <div class="card">
+        <div class="profile-row">
+          <div><b id="languageTitle">Язык интерфейса</b><span id="languageText">Сохраняется после перезапуска</span></div>
+          <select id="languageSelect">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div class="profile-row">
+          <div><b id="soundTitle">Звук интерфейса</b><span id="soundText">Тихий отклик при нажатии</span></div>
+          <button class="toggle" id="soundToggle">Выкл</button>
+        </div>
+        <div class="profile-row">
+          <div><b id="hapticTitle">Тактильный отклик</b><span id="hapticText">Вибрация Telegram при нажатии</span></div>
+          <button class="toggle" id="hapticToggle">Вкл</button>
+        </div>
+        <div class="profile-row">
+          <div><b id="selectedAssetTitle">Выбранный актив</b><span id="selectedAssetText">Используется при создании результата</span></div>
+          <strong id="profileAsset">EUR/GBP OTC</strong>
+        </div>
+      </div>
+
+      <h3 class="section-title" id="statsTitle">Личная статистика</h3>
+      <div class="stats">
+        <div class="stat"><b id="statAll">0</b><small id="statAllLabel">Всего</small></div>
+        <div class="stat"><b id="statWin">0</b><small id="statWinLabel">Win</small></div>
+        <div class="stat"><b id="statLoss">0</b><small id="statLossLabel">Loss</small></div>
+      </div>
+
+      <div class="disclaimer" id="profileNotice">
+        Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.
+      </div>
+
+      <!-- Owner: Pulse Control -->
+      <section class="card owner-block" id="pulseControl">
+        <p class="eyebrow">PULSE CONTROL</p>
+        <h3 class="section-title" style="margin-top:2px" id="pcTitle">Панель владельца</h3>
+        <p class="section-text" id="pcSubtitle">Серверная статистика. Доступ подтверждён через Telegram.</p>
+        <div class="stats">
+          <div class="stat"><b id="pcUsers">—</b><small id="pcUsersLabel">Пользователи</small></div>
+          <div class="stat"><b id="pcResults">—</b><small id="pcResultsLabel">Результаты</small></div>
+          <div class="stat"><b id="pcEvents">—</b><small id="pcEventsLabel">События</small></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="pcVision">—</b><small>Pulse Vision</small></div>
+          <div class="stat"><b id="pcQuick">—</b><small>Pulse Quick</small></div>
+          <div class="stat"><b id="pcToday">—</b><small id="pcTodayLabel">Сегодня</small></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="pcWins">—</b><small>Win</small></div>
+          <div class="stat"><b id="pcLosses">—</b><small>Loss</small></div>
+          <div class="stat"><b>✓</b><small id="pcVerifiedLabel">Владелец</small></div>
+        </div>
+        <button class="secondary" id="pcRefresh">Обновить показатели</button>
+      </section>
+
+      <!-- Owner: Pulse Design Control -->
+      <section class="card owner-block" id="designControl">
+        <p class="eyebrow">PULSE DESIGN CONTROL</p>
+        <h3 class="section-title" style="margin-top:2px" id="dcTitle">Тема оформления</h3>
+        <p class="section-text" id="dcSubtitle">Локальные темы. Меняют фон, карточки, контуры, акцент и логотип.</p>
+        <div class="theme-chips" id="themeChips"></div>
+
+        <label class="field-label" id="dcModeLabel">Режим показа</label>
+        <div class="seg" id="themeModes"></div>
+
+        <div class="schedule-row" id="scheduleRow" style="display:none">
+          <span id="dcFromLabel">С</span>
+          <input type="number" min="0" max="23" id="scheduleFrom" />
+          <span id="dcToLabel">до</span>
+          <input type="number" min="0" max="23" id="scheduleTo" />
+          <span>UTC+5</span>
+        </div>
+
+        <button class="secondary" id="themePreview">Предпросмотр темы</button>
+        <button class="primary" id="themeApply">Сохранить оформление</button>
+      </section>
+    </section>
   </main>
 
-  <nav class="bottom"><button class="nav active" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg><span id="navHistory"></span></button><button class="nav" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span id="navCreate"></span></button><button class="nav" data-tab="vision"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16"/><path d="m7 16 3-3 3 3 2-2 3 3"/></svg><span>Vision</span></button><button class="nav" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c.8-3.5 3.1-5.2 7-5.2s6.2 1.7 7 5.2"/></svg><span id="navProfile"></span></button></nav>
-
-  <div class="modal hidden" id="processingModal"><div class="modal-box" style="text-align:center"><div class="eyebrow" id="processMode"></div><div class="ring" id="progressRing" style="--p:0;width:150px;height:150px;margin:18px auto 22px"><span id="progressText" style="font-size:30px">0%</span></div><b id="processStage"></b></div></div>
-  <div class="modal hidden" id="resultModal"><div class="modal-box"><div class="modal-top"><h2 id="resultHeading"></h2><button class="close" data-close="resultModal">×</button></div><div id="resultContent"></div></div></div>
-  <div class="toast" id="toast"></div>
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="history"><i>◍</i><span id="navHistory">История</span></button>
+    <button class="nav-item" data-tab="create"><i>＋</i><span id="navCreate">Создать</span></button>
+    <button class="nav-item" data-tab="vision"><i>▧</i><span>Vision</span></button>
+    <button class="nav-item" data-tab="profile"><i>◎</i><span id="navProfile">Профиль</span></button>
+  </nav>
 
   <script>
-    const tg=window.Telegram?.WebApp;
-    if(tg){tg.ready();tg.expand();tg.setHeaderColor("#0A0A0A");tg.setBackgroundColor("#0A0A0A")}
+    "use strict";
 
-    const $=id=>document.getElementById(id);
-    const ASSETS=["EUR/GBP OTC","EUR/USD OTC","GBP/USD OTC","USD/JPY OTC","USD/CHF OTC","AUD/CAD OTC","AUD/JPY OTC","CAD/JPY OTC","EUR/JPY OTC","GBP/JPY OTC","NZD/USD OTC","USD/CAD OTC"];
-    const DURATIONS=[15,30,60,180,300,900];
+    /* ---------- Data ---------- */
+    const OTC_ASSETS = [
+      "EUR/GBP OTC", "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "USD/CHF OTC",
+      "AUD/CAD OTC", "AUD/JPY OTC", "CAD/JPY OTC", "EUR/JPY OTC", "GBP/JPY OTC"
+    ];
+    const DURATIONS = [15, 30, 60, 180, 300, 900];
+    const TZ = "Asia/Oral";
 
-    const L={
-      ru:{loader:"Подготавливаем Signal Pulse…",brand:"Персональный помощник по графику",history:"История",create:"Создать",profile:"Профиль",signals:"СИГНАЛЫ",historyTitle:"История результатов",historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",createTitle:"Параметры результата",createText:"Выберите OTC-актив, длительность и режим.",asset:"OTC-актив",search:"Поиск актива",duration:"Длительность",entry:"Тип входа",nearest:"Ближайшая точка",later:"После длительности",mode:"Режим",visionMode:"Анализ загруженного графика",quickMode:"Результат без анализа загруженного графика",openVision:"Перейти к Pulse Vision",startQuick:"Запустить Pulse Quick",visionTitle:"Анализ графика",visionText:"Загрузите полный скриншот. Изображение сохранит пропорции.",choose:"Выбрать скриншот",hint:"PNG, JPG или WEBP · до 8 МБ",remove:"Удалить изображение",analyze:"Анализировать график",profileTitle:"Настройки",profileText:"Настройки сохраняются на этом устройстве.",language:"Язык",languageSub:"Язык интерфейса",sound:"Звук интерфейса",soundSub:"Тихий отклик кнопок",haptic:"Тактильный отклик",hapticSub:"Telegram Haptic Feedback",stats:"Личная статистика",refresh:"Обновить показатели",empty:"История пока пуста",emptyText:"Создайте Pulse Vision или Pulse Quick — результат появится здесь.",up:"ВВЕРХ",down:"ВНИЗ",wait:"ПОДОЖДАТЬ",entryTime:"Вход",outcome:"Результат до",count:"До результата",confidence:"Уверенность",reasons:"Причины анализа",win:"Win",loss:"Loss",skip:"Пропустить",result:"Ваш результат",newAnalysis:"Новый анализ",newQuick:"Новый Pulse Quick",openHistory:"Открыть историю",settings:"Изменить параметры",badImage:"Выберите PNG, JPG или WEBP до 8 МБ.",unavailable:"Pulse Vision временно недоступен. Попробуйте позже.",users:"Пользователи",results:"Результаты",events:"События",wins:"Win",losses:"Loss"},
-      en:{loader:"Preparing Signal Pulse…",brand:"Personal chart assistant",history:"History",create:"Create",profile:"Profile",signals:"SIGNALS",historyTitle:"Result history",historyText:"Pulse Vision and Pulse Quick results appear here.",createTitle:"Result settings",createText:"Select an OTC asset, duration, and mode.",asset:"OTC asset",search:"Search asset",duration:"Duration",entry:"Entry type",nearest:"Nearest point",later:"After duration",mode:"Mode",visionMode:"Uploaded chart analysis",quickMode:"Result without chart analysis",openVision:"Open Pulse Vision",startQuick:"Start Pulse Quick",visionTitle:"Chart analysis",visionText:"Upload a full screenshot. The image keeps its proportions.",choose:"Choose screenshot",hint:"PNG, JPG, or WEBP · up to 8 MB",remove:"Remove image",analyze:"Analyze chart",profileTitle:"Settings",profileText:"Settings are stored on this device.",language:"Language",languageSub:"Interface language",sound:"Interface sound",soundSub:"Quiet button response",haptic:"Haptic feedback",hapticSub:"Telegram Haptic Feedback",stats:"Personal statistics",refresh:"Refresh metrics",empty:"No results yet",emptyText:"Create Pulse Vision or Pulse Quick to see a result here.",up:"UP",down:"DOWN",wait:"WAIT",entryTime:"Entry",outcome:"Outcome by",count:"Until outcome",confidence:"Confidence",reasons:"Analysis reasons",win:"Win",loss:"Loss",skip:"Skip",result:"Your result",newAnalysis:"New analysis",newQuick:"New Pulse Quick",openHistory:"Open history",settings:"Change settings",badImage:"Choose a PNG, JPG, or WEBP image up to 8 MB.",unavailable:"Pulse Vision is temporarily unavailable. Try again later.",users:"Users",results:"Results",events:"Events",wins:"Wins",losses:"Losses"}
+    const THEMES = {
+      obsidian: { label: "Obsidian Silver", dot: "#2f80ed",
+        vars: { "--bg": "#0a0a0a", "--bg2": "#111111", "--card": "#151515", "--card2": "#1b1b1b", "--line": "#2a2a2a", "--accent": "#2f80ed", "--accent-soft": "rgba(47,128,237,.14)", "--silver": "#d7d9dd", "--logo": "#e7e8ea" } },
+      midnight: { label: "Midnight Blue", dot: "#3b82f6",
+        vars: { "--bg": "#070d1a", "--bg2": "#0a1120", "--card": "#0d1526", "--card2": "#111c33", "--line": "#1d2a44", "--accent": "#3b82f6", "--accent-soft": "rgba(59,130,246,.16)", "--silver": "#cdd8f0", "--logo": "#d6e2ff" } },
+      carbon: { label: "Carbon Green", dot: "#39c879",
+        vars: { "--bg": "#080b08", "--bg2": "#0c110c", "--card": "#101610", "--card2": "#141c14", "--line": "#243024", "--accent": "#39c879", "--accent-soft": "rgba(57,200,121,.16)", "--silver": "#cfeddd", "--logo": "#d7f5e4" } },
+      pureblack: { label: "Pure Black", dot: "#d7d9dd",
+        vars: { "--bg": "#000000", "--bg2": "#060606", "--card": "#0b0b0b", "--card2": "#111111", "--line": "#1f1f1f", "--accent": "#d7d9dd", "--accent-soft": "rgba(215,217,221,.14)", "--silver": "#f4f4f4", "--logo": "#ffffff" } },
+      launch: { label: "Pulse Launch", dot: "#5aa0ff",
+        vars: { "--bg": "#050b16", "--bg2": "#0a1526", "--card": "#0e1a2e", "--card2": "#12213a", "--line": "#213453", "--accent": "#5aa0ff", "--accent-soft": "rgba(90,160,255,.18)", "--silver": "#dbe7ff", "--logo": "#eaf2ff" } }
     };
 
-    function loadHistory(){
-      try{
-        const raw=JSON.parse(localStorage.getItem("pulse_history")||"[]");
-        if(!Array.isArray(raw))return [];
-        return raw.map((item,index)=>{
-          const created=item.createdAt&&!Number.isNaN(new Date(item.createdAt).getTime())?item.createdAt:new Date().toISOString();
-          const durationSeconds=Math.max(1,Number(item.durationSeconds||item.duration||15)||15);
-          const entryTime=item.entryTime&&!Number.isNaN(new Date(item.entryTime).getTime())?item.entryTime:created;
-          const outcomeTime=item.outcomeTime&&!Number.isNaN(new Date(item.outcomeTime).getTime())?item.outcomeTime:new Date(new Date(entryTime).getTime()+durationSeconds*1000).toISOString();
-          return {...item,id:item.id||`legacy_${index}_${Date.now()}`,type:item.type==="quick"?"quick":"vision",direction:item.direction||"NONE",asset:item.asset||"OTC",durationSeconds,entryTime,outcomeTime,outcome:["win","loss","skip"].includes(item.outcome)?item.outcome:"skip",serverId:item.serverId||null,reasons:Array.isArray(item.reasons)?item.reasons:[]};
+    const translations = {
+      ru: {
+        loader: "Готовим Signal Pulse…", welcomeText: "Signal Pulse готов к работе.",
+        brand: "Личный помощник для работы с графиком",
+        historyEyebrow: "ИСТОРИЯ", historyTitle: "История результатов",
+        historyText: "Здесь появятся результаты Pulse Vision и Pulse Quick.",
+        emptyTitle: "История пока пуста", emptyText: "Загрузи график в Pulse Vision или создай быстрый результат.",
+        historyVision: "Перейти к Pulse Vision",
+        createEyebrow: "СОЗДАТЬ", createTitle: "Параметры результата", createText: "Выбери OTC-актив, длительность и режим.",
+        assetLabel: "OTC-актив", search: "Поиск актива", durationLabel: "Длительность", entryLabel: "Тип входа",
+        nearest: "Ближайшая точка", later: "После длительности", modeLabel: "Режим",
+        visionModeText: "Анализ загруженного графика", quickModeText: "Быстрый режим без анализа графика",
+        openVision: "Перейти к Pulse Vision", startQuick: "Запустить Pulse Quick", quickLoading: "Формируем результат…",
+        quickAgain: "Новый Pulse Quick", quickHistory: "Открыть историю",
+        quickNotice: "Быстрый режим. Не анализирует график и не является рыночным прогнозом.",
+        visionTitle: "Анализ графика", visionText: "Загрузи полный скриншот. Приложение сохранит пропорции без обрезки.",
+        uploadTitle: "Выбрать скриншот", uploadText: "PNG, JPG или WEBP · до 8 МБ", analyze: "Анализировать график",
+        stage0: "Подготавливаем изображение", stage1: "Изучаем структуру графика", stage2: "Проверяем видимые уровни", stage3: "Формируем результат",
+        retrying: "Pulse Vision занят. Повторяем попытку…", result: "РЕЗУЛЬТАТ АНАЛИЗА",
+        confidence: "Уверенность", asset: "АКТИВ", duration: "ДЛИТЕЛЬНОСТЬ", entry: "ВХОД", outcome: "РЕЗУЛЬТАТ В",
+        countdown: "ДО ВХОДА", reasonsToggle: "Причины анализа", visionHistory: "Открыть историю",
+        noSignal: "НЕТ СИГНАЛА", up: "ВВЕРХ", down: "ВНИЗ", wait: "ПОДОЖДАТЬ",
+        profileEyebrow: "ПРОФИЛЬ", profileTitle: "Настройки", profileText: "Настройки сохраняются на этом устройстве.",
+        languageTitle: "Язык интерфейса", languageText: "Сохраняется после перезапуска",
+        soundTitle: "Звук интерфейса", soundText: "Тихий отклик при нажатии",
+        hapticTitle: "Тактильный отклик", hapticText: "Вибрация Telegram при нажатии",
+        selectedAssetTitle: "Выбранный актив", selectedAssetText: "Используется при создании результата",
+        statsTitle: "Личная статистика", all: "Всего", win: "Win", loss: "Loss", skip: "Пропустить",
+        profileNotice: "Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
+        navHistory: "История", navCreate: "Создать", navProfile: "Профиль",
+        pcTitle: "Панель владельца", pcSubtitle: "Серверная статистика. Доступ подтверждён через Telegram.",
+        pcUsers: "Пользователи", pcResults: "Результаты", pcEvents: "События", pcToday: "Сегодня", pcVerified: "Владелец", pcRefresh: "Обновить показатели",
+        dcTitle: "Тема оформления", dcSubtitle: "Локальные темы. Меняют фон, карточки, контуры, акцент и логотип.",
+        dcModeLabel: "Режим показа", dcFrom: "С", dcTo: "до", themePreview: "Предпросмотр темы", themeApply: "Сохранить оформление",
+        modeAlways: "Постоянно", modeNow: "Сейчас", modeSchedule: "Расписание", modeLaunch: "Запуск", modeVision: "Vision", modeQuick: "Quick",
+        on: "Вкл", off: "Выкл",
+        noImage: "Сначала выбери скриншот.", imageTooLarge: "Изображение больше 8 МБ. Выбери файл поменьше.",
+        badImage: "Поддерживаются только PNG, JPG и WEBP.", failed: "Pulse Vision временно недоступен. Попробуйте позже.",
+        cooldown: "Подождите несколько секунд перед следующим анализом.",
+        quickSummary: "Быстрый результат Pulse Quick.", riskDefault: "Это разбор изображения, а не гарантия результата.",
+        entryNow: "Вход открыт", themeSaved: "Оформление сохранено"
+      },
+      en: {
+        loader: "Preparing Signal Pulse…", welcomeText: "Signal Pulse is ready.",
+        brand: "Personal chart assistant",
+        historyEyebrow: "HISTORY", historyTitle: "Result history",
+        historyText: "Pulse Vision and Pulse Quick results will appear here.",
+        emptyTitle: "No history yet", emptyText: "Upload a chart in Pulse Vision or create a quick result.",
+        historyVision: "Open Pulse Vision",
+        createEyebrow: "CREATE", createTitle: "Result settings", createText: "Select an OTC asset, duration, and mode.",
+        assetLabel: "OTC asset", search: "Search asset", durationLabel: "Duration", entryLabel: "Entry type",
+        nearest: "Nearest point", later: "After duration", modeLabel: "Mode",
+        visionModeText: "Uploaded chart analysis", quickModeText: "Quick mode without chart analysis",
+        openVision: "Open Pulse Vision", startQuick: "Start Pulse Quick", quickLoading: "Preparing result…",
+        quickAgain: "New Pulse Quick", quickHistory: "Open history",
+        quickNotice: "Quick mode. It does not analyze a chart and is not a market forecast.",
+        visionTitle: "Chart analysis", visionText: "Upload a full screenshot. The app keeps full proportions.",
+        uploadTitle: "Choose screenshot", uploadText: "PNG, JPG, or WEBP · up to 8 MB", analyze: "Analyze chart",
+        stage0: "Preparing the image", stage1: "Studying the chart structure", stage2: "Checking visible levels", stage3: "Building the result",
+        retrying: "Pulse Vision is busy. Retrying…", result: "ANALYSIS RESULT",
+        confidence: "Confidence", asset: "ASSET", duration: "DURATION", entry: "ENTRY", outcome: "OUTCOME AT",
+        countdown: "UNTIL ENTRY", reasonsToggle: "Analysis reasons", visionHistory: "Open history",
+        noSignal: "NO SIGNAL", up: "UP", down: "DOWN", wait: "WAIT",
+        profileEyebrow: "PROFILE", profileTitle: "Settings", profileText: "Settings are stored on this device.",
+        languageTitle: "Interface language", languageText: "Saved after restart",
+        soundTitle: "Interface sound", soundText: "Soft feedback on tap",
+        hapticTitle: "Haptic feedback", hapticText: "Telegram vibration on tap",
+        selectedAssetTitle: "Selected asset", selectedAssetText: "Used while creating a result",
+        statsTitle: "Personal statistics", all: "All", win: "Win", loss: "Loss", skip: "Skip",
+        profileNotice: "Pulse Vision analyzes only visible elements of the uploaded chart and does not guarantee a direction or outcome.",
+        navHistory: "History", navCreate: "Create", navProfile: "Profile",
+        pcTitle: "Owner panel", pcSubtitle: "Server statistics. Access verified via Telegram.",
+        pcUsers: "Users", pcResults: "Results", pcEvents: "Events", pcToday: "Today", pcVerified: "Owner", pcRefresh: "Refresh metrics",
+        dcTitle: "Appearance theme", dcSubtitle: "Local themes. Change background, cards, borders, accent, and logo.",
+        dcModeLabel: "Display mode", dcFrom: "From", dcTo: "to", themePreview: "Preview theme", themeApply: "Save appearance",
+        modeAlways: "Always", modeNow: "Now", modeSchedule: "Schedule", modeLaunch: "Launch", modeVision: "Vision", modeQuick: "Quick",
+        on: "On", off: "Off",
+        noImage: "Choose a screenshot first.", imageTooLarge: "Image is larger than 8 MB. Choose a smaller file.",
+        badImage: "Only PNG, JPG, and WEBP are supported.", failed: "Pulse Vision is unavailable right now. Try again later.",
+        cooldown: "Wait a few seconds before the next analysis.",
+        quickSummary: "Pulse Quick result.", riskDefault: "This is image review, not a guarantee of any result.",
+        entryNow: "Entry open", themeSaved: "Appearance saved"
+      }
+    };
+
+    /* ---------- Language detection ---------- */
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    const tgUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+
+    function detectLanguage() {
+      const stored = localStorage.getItem("pulse_language");
+      if (stored === "ru" || stored === "en") return stored;
+      const tgCode = tgUser && tgUser.language_code ? tgUser.language_code : "";
+      if (tgCode) return tgCode.toLowerCase().startsWith("ru") ? "ru" : "en";
+      const nav = (navigator.language || "ru").toLowerCase();
+      if (nav.startsWith("ru")) return "ru";
+      if (nav.startsWith("en")) return "en";
+      return "ru";
+    }
+
+    const state = {
+      language: detectLanguage(),
+      asset: localStorage.getItem("pulse_asset") || "EUR/GBP OTC",
+      duration: Number(localStorage.getItem("pulse_duration") || 30),
+      entryMode: localStorage.getItem("pulse_entry_mode") || "nearest",
+      mode: "vision",
+      image: null,
+      analyzing: false,
+      cooldownUntil: 0,
+      history: [],
+      isOwner: false,
+      countdown: { entryMs: 0, outcomeMs: 0, target: null }
+    };
+    try { state.history = JSON.parse(localStorage.getItem("pulse_history") || "[]"); } catch (e) { state.history = []; }
+
+    const design = {
+      theme: localStorage.getItem("pulse_theme") || "obsidian",
+      mode: localStorage.getItem("pulse_theme_mode") || "always",
+      from: Number(localStorage.getItem("pulse_theme_from") || 20),
+      to: Number(localStorage.getItem("pulse_theme_to") || 7)
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const t = (key) => (translations[state.language] && translations[state.language][key]) || (translations.ru[key]) || key;
+
+    function esc(v) {
+      return String(v == null ? "" : v)
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    function saveState() {
+      localStorage.setItem("pulse_language", state.language);
+      localStorage.setItem("pulse_asset", state.asset);
+      localStorage.setItem("pulse_duration", String(state.duration));
+      localStorage.setItem("pulse_entry_mode", state.entryMode);
+      localStorage.setItem("pulse_history", JSON.stringify(state.history));
+    }
+
+    function fmtTime(ms) {
+      return new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB", {
+        timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      }).format(new Date(ms));
+    }
+    function durationText(seconds) {
+      const unitSec = state.language === "ru" ? "сек" : "sec";
+      const unitMin = state.language === "ru" ? "мин" : "min";
+      return seconds < 60 ? `${seconds} ${unitSec}` : `${seconds / 60} ${unitMin}`;
+    }
+
+    function getTiming() {
+      const safety = state.entryMode === "nearest" ? 12 : state.duration;
+      const target = Date.now() + safety * 1000;
+      const durationMs = state.duration * 1000;
+      const entryMs = Math.ceil(target / durationMs) * durationMs;
+      const outcomeMs = entryMs + durationMs;
+      return {
+        entryMs, outcomeMs,
+        entry: fmtTime(entryMs), outcome: fmtTime(outcomeMs),
+        entryISO: new Date(entryMs).toISOString(), outcomeISO: new Date(outcomeMs).toISOString(),
+        duration: durationText(state.duration)
+      };
+    }
+
+    /* ---------- Logo (silver pulse line into arrow) ---------- */
+    function logoSVG(animated) {
+      const cls = animated ? ' class="draw"' : "";
+      const head = animated ? ' class="arrowhead"' : "";
+      return `<svg viewBox="0 0 100 100" aria-hidden="true">
+        <path${cls} d="M12 58 H30 L41 40 L54 72 L66 50 L84 30" fill="none" stroke="var(--logo)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path${head} d="M74 30 H84 V40" fill="none" stroke="var(--logo)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+
+    /* ---------- Theme engine ---------- */
+    function setVars(themeId) {
+      const th = THEMES[themeId] || THEMES.obsidian;
+      Object.entries(th.vars).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
+      if (tg) { try { tg.setHeaderColor(th.vars["--bg"]); tg.setBackgroundColor(th.vars["--bg"]); } catch (e) {} }
+    }
+    function resetVars() { setVars("obsidian"); }
+
+    function inSchedule() {
+      const h = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }));
+      const { from, to } = design;
+      if (from === to) return false;
+      return from < to ? (h >= from && h < to) : (h >= from || h < to);
+    }
+
+    function applyDesign(context) {
+      // context: "load" | "launch" | "vision" | "quick" | "tick"
+      const mode = design.mode;
+      if (mode === "always" || mode === "now") { setVars(design.theme); return; }
+      if (mode === "schedule") { inSchedule() ? setVars(design.theme) : resetVars(); return; }
+      if (mode === "launch") { context === "launch" ? setVars(design.theme) : resetVars(); return; }
+      if (mode === "vision") { context === "vision" ? setVars(design.theme) : resetVars(); return; }
+      if (mode === "quick") { context === "quick" ? setVars(design.theme) : resetVars(); return; }
+      resetVars();
+    }
+
+    /* ---------- Clock & greeting ---------- */
+    function updateClock() {
+      $("clock").textContent = fmtTime(Date.now());
+      if (design.mode === "schedule") applyDesign("tick");
+    }
+    function greeting() {
+      const h = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }));
+      const name = tgUser && tgUser.first_name ? tgUser.first_name : "";
+      const suffix = name ? `, ${name}` : "";
+      if (state.language === "ru") {
+        if (h < 12) return `Доброе утро${suffix}`;
+        if (h < 18) return `Добрый день${suffix}`;
+        return `Добрый вечер${suffix}`;
+      }
+      if (h < 12) return `Good morning${suffix}`;
+      if (h < 18) return `Good afternoon${suffix}`;
+      return `Good evening${suffix}`;
+    }
+
+    /* ---------- Tabs ---------- */
+    function setTab(tab) {
+      document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
+      $(tab + "View").classList.add("active");
+      const nav = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+      if (nav) nav.classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (tab === "vision") applyDesign("vision"); else applyDesign("tick");
+    }
+
+    /* ---------- Direction helper ---------- */
+    function directionInfo(direction) {
+      if (direction === "BUY" || direction === "UP") return { cls: "UP", text: t("up") };
+      if (direction === "SELL" || direction === "DOWN") return { cls: "DOWN", text: t("down") };
+      return { cls: "NONE", text: t("noSignal") };
+    }
+
+    /* ---------- Create screen renderers ---------- */
+    function renderDurations() {
+      $("durationGrid").innerHTML = DURATIONS.map((v) =>
+        `<button class="choice ${v === state.duration ? "active" : ""}" data-duration="${v}">${durationText(v)}</button>`
+      ).join("");
+      document.querySelectorAll("[data-duration]").forEach((b) => {
+        b.addEventListener("click", () => { state.duration = Number(b.dataset.duration); saveState(); renderDurations(); });
+      });
+    }
+    function renderAssets(query) {
+      const s = String(query || "").trim().toLowerCase();
+      const list = OTC_ASSETS.filter((a) => a.toLowerCase().includes(s));
+      $("assetList").innerHTML = list.map((a) =>
+        `<button class="asset-option ${a === state.asset ? "selected" : ""}" data-asset="${esc(a)}"><b>${esc(a)}</b><span>OTC</span></button>`
+      ).join("") || `<p class="section-text">—</p>`;
+      document.querySelectorAll("[data-asset]").forEach((b) => {
+        b.addEventListener("click", () => {
+          state.asset = b.dataset.asset; saveState();
+          $("profileAsset").textContent = state.asset;
+          renderAssets($("assetSearch").value);
         });
-      }catch{return []}
+      });
+    }
+    function setMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll("[data-mode]").forEach((b) => b.classList.toggle("selected", b.dataset.mode === mode));
+      $("quickResult").classList.remove("show");
+      $("createAction").textContent = mode === "vision" ? t("openVision") : t("startQuick");
     }
 
-    const state={
-      language:localStorage.getItem("pulse_language")||((tg?.initDataUnsafe?.user?.language_code||navigator.language||"ru").startsWith("ru")?"ru":"en"),
-      asset:localStorage.getItem("pulse_asset")||"EUR/USD OTC",
-      duration:Number(localStorage.getItem("pulse_duration")||15),
-      entryMode:localStorage.getItem("pulse_entry_mode")||"nearest",
-      mode:"vision",
-      image:null,
-      mimeType:null,
-      history:loadHistory(),
-      sound:localStorage.getItem("pulse_sound")!=="false",
-      haptic:localStorage.getItem("pulse_haptic")!=="false",
-      theme:localStorage.getItem("pulse_theme")||"obsidian"
-    };
-
-    const t=k=>L[state.language][k]||k;
-    const initData=()=>tg?.initData||"";
-
-    function save(){
-      localStorage.setItem("pulse_language",state.language);
-      localStorage.setItem("pulse_asset",state.asset);
-      localStorage.setItem("pulse_duration",state.duration);
-      localStorage.setItem("pulse_entry_mode",state.entryMode);
-      localStorage.setItem("pulse_history",JSON.stringify(state.history.slice(0,80)));
+    /* ---------- History & stats ---------- */
+    function addHistory(item) {
+      const record = {
+        id: Date.now().toString() + Math.random().toString(16).slice(2, 6),
+        type: item.type, direction: item.direction, asset: item.asset,
+        duration: item.duration, entry: item.entry, outcomeTime: item.outcomeTime,
+        entryISO: item.entryISO, outcomeISO: item.outcomeISO,
+        summary: item.summary || "", confidence: item.confidence || "",
+        createdAt: new Date().toISOString(), outcome: "skip"
+      };
+      state.history.unshift(record);
+      state.history = state.history.slice(0, 60);
+      saveState();
+      renderHistory();
+      renderStats();
+      syncResultToServer(record);
+    }
+    function renderHistory() {
+      const listEl = $("historyList");
+      if (!state.history.length) { listEl.innerHTML = ""; $("emptyHistory").style.display = "block"; return; }
+      $("emptyHistory").style.display = "none";
+      listEl.innerHTML = state.history.map((item) => {
+        const dir = directionInfo(item.direction);
+        const typeLabel = item.type === "vision" ? "Pulse Vision" : "Pulse Quick";
+        const created = new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB",
+          { dateStyle: "medium", timeStyle: "short" }).format(new Date(isNaN(Date.parse(item.createdAt)) ? Date.now() : item.createdAt));
+        return `<article class="history-item">
+          <span class="tag">${esc(typeLabel)}</span>
+          <div class="history-head">
+            <b>${esc(item.asset)}</b>
+            <span class="direction ${dir.cls}">${dir.text}</span>
+          </div>
+          <div class="history-meta">
+            <span>${t("entry")}: ${esc(item.entry)}</span>
+            <span>${t("outcome")}: ${esc(item.outcomeTime)}</span>
+            <span>${t("duration")}: ${esc(item.duration)}</span>
+            <span>${esc(created)}</span>
+          </div>
+          ${item.summary ? `<p class="history-summary">${esc(item.summary)}</p>` : ""}
+          <div class="outcome-grid">
+            <button class="outcome win ${item.outcome === "win" ? "active" : ""}" data-outcome="win" data-id="${item.id}">${t("win")}</button>
+            <button class="outcome loss ${item.outcome === "loss" ? "active" : ""}" data-outcome="loss" data-id="${item.id}">${t("loss")}</button>
+            <button class="outcome skip ${item.outcome === "skip" ? "active" : ""}" data-outcome="skip" data-id="${item.id}">${t("skip")}</button>
+          </div>
+        </article>`;
+      }).join("");
+      document.querySelectorAll("[data-outcome]").forEach((b) => {
+        b.addEventListener("click", () => {
+          const item = state.history.find((e) => e.id === b.dataset.id);
+          if (!item) return;
+          item.outcome = b.dataset.outcome;
+          saveState(); renderHistory(); renderStats();
+          syncResultToServer(item);
+        });
+      });
+    }
+    function renderStats() {
+      $("statAll").textContent = state.history.length;
+      $("statWin").textContent = state.history.filter((i) => i.outcome === "win").length;
+      $("statLoss").textContent = state.history.filter((i) => i.outcome === "loss").length;
     }
 
-    function formatTime(value){
-      const date=new Date(value);
-      if(Number.isNaN(date.getTime()))return "—";
-      return new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date);
+    /* ---------- Countdown ---------- */
+    function tickCountdown() {
+      const c = state.countdown;
+      if (!c.target) return;
+      const now = Date.now();
+      const remain = Math.max(0, Math.ceil((c.entryMs - now) / 1000));
+      const label = remain > 0 ? `${remain} ${state.language === "ru" ? "сек" : "sec"}` : t("entryNow");
+      if (c.target === "vision") $("visionCountdown").textContent = label;
+      if (c.target === "quick") $("quickCountdown").textContent = label;
     }
 
-    function durationText(value){
-      return value<60?`${value} ${state.language==="ru"?"сек":"sec"}`:`${value/60} ${state.language==="ru"?"мин":"min"}`;
+    /* ---------- Vision ---------- */
+    const RING_CIRC = 2 * Math.PI * 56;
+    function setRing(pct) {
+      $("ringFg").style.strokeDasharray = String(RING_CIRC);
+      $("ringFg").style.strokeDashoffset = String(RING_CIRC * (1 - pct / 100));
+      $("ringPct").textContent = Math.round(pct) + "%";
+    }
+    let procTimer = null, stageTimer = null;
+    function startProcessing() {
+      $("visionResult").classList.remove("show");
+      $("visionStatus").classList.remove("show", "error");
+      $("procAsset").textContent = state.asset;
+      $("procDuration").textContent = durationText(state.duration);
+      $("visionProcessing").classList.add("show");
+      const stages = [t("stage0"), t("stage1"), t("stage2"), t("stage3")];
+      let stageIdx = 0; $("stageText").textContent = stages[0];
+      setRing(4);
+      let pct = 4;
+      procTimer = setInterval(() => { pct = Math.min(pct + Math.random() * 6 + 2, 92); setRing(pct); }, 260);
+      stageTimer = setInterval(() => { stageIdx = Math.min(stageIdx + 1, stages.length - 1); $("stageText").textContent = stages[stageIdx]; }, 1400);
+    }
+    function stopProcessing(complete) {
+      clearInterval(procTimer); clearInterval(stageTimer);
+      if (complete) { setRing(100); setTimeout(() => $("visionProcessing").classList.remove("show"), 350); }
+      else { $("visionProcessing").classList.remove("show"); }
+    }
+    function setStatus(text, isError) {
+      $("visionStatusText").textContent = text;
+      $("visionStatus").classList.toggle("show", !!text);
+      $("visionStatus").classList.toggle("error", !!isError);
     }
 
-    function futureTimes(){
-      const now=Date.now();
-      const duration=state.duration*1000;
-      const entry=state.entryMode==="later"?now+Math.max(30000,duration):Math.ceil((now+11000)/duration)*duration;
-      return {entryTime:new Date(entry).toISOString(),outcomeTime:new Date(entry+duration).toISOString()};
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const maxSide = 2000; let w = img.width, h = img.height;
+            if (w > maxSide || h > maxSide) { const s = Math.min(maxSide / w, maxSide / h); w = Math.round(w * s); h = Math.round(h * s); }
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.82));
+          };
+          img.onerror = reject; img.src = reader.result;
+        };
+        reader.onerror = reject; reader.readAsDataURL(file);
+      });
+    }
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function showVisionResult(result) {
+      const dir = directionInfo(result.direction);
+      const timing = getTiming();
+      $("visionBadge").className = `direction ${dir.cls}`;
+      $("visionBadge").textContent = dir.text;
+      $("visionBig").className = `direction-big ${dir.cls}`;
+      $("visionBig").textContent = dir.text;
+      const asset = result.asset && result.asset !== "Не распознан" && result.asset !== "Not recognized" ? result.asset : state.asset;
+      $("visionAssetTop").textContent = asset + " · OTC";
+      $("visionConfidence").textContent = result.confidence ? `${t("confidence")}: ${result.confidence}` : "";
+      $("visionDuration").textContent = timing.duration;
+      $("visionEntry").textContent = timing.entry;
+      $("visionOutcome").textContent = timing.outcome;
+      $("visionSummary").textContent = result.summary || "";
+      const reasons = Array.isArray(result.reasons) ? result.reasons : [];
+      $("visionReasons").innerHTML = reasons.map((r) => `<li>${esc(r)}</li>`).join("");
+      $("reasonsToggle").style.display = reasons.length ? "flex" : "none";
+      $("visionRisk").textContent = result.risk || t("riskDefault");
+      $("visionResult").classList.add("show");
+      state.countdown = { entryMs: timing.entryMs, outcomeMs: timing.outcomeMs, target: "vision" };
+      tickCountdown();
+      addHistory({
+        type: "vision", direction: result.direction, asset: asset, duration: timing.duration,
+        entry: timing.entry, outcomeTime: timing.outcome, entryISO: timing.entryISO, outcomeISO: timing.outcomeISO,
+        summary: result.summary || "", confidence: result.confidence || ""
+      });
     }
 
-    function direction(raw){
-      const value=String(raw||"").toUpperCase();
-      if(["UP","BUY","CALL","ВВЕРХ"].includes(value))return "UP";
-      if(["DOWN","SELL","PUT","ВНИЗ"].includes(value))return "DOWN";
+    async function analyzeChart() {
+      if (!state.image || state.analyzing) return;
+      if (Date.now() < state.cooldownUntil) { setStatus(t("cooldown")); return; }
+      state.analyzing = true;
+      $("analyzeButton").disabled = true;
+      startProcessing();
+      try {
+        let data = null, lastError = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            const response = await fetch("/api/analyze", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: state.image, mimeType: "image/jpeg", language: state.language })
+            });
+            data = await response.json();
+            if (response.ok) break;
+            const message = (data && data.error) || "";
+            const temporary = /high demand|temporarily|quota|rate|busy|429|503/i.test(message);
+            if (!temporary || attempt === 2) throw new Error(message || "analysis_failed");
+            $("stageText").textContent = t("retrying");
+            await wait(attempt === 0 ? 3000 : 8000);
+          } catch (err) {
+            lastError = err;
+            if (attempt === 2) throw err;
+            $("stageText").textContent = t("retrying");
+            await wait(attempt === 0 ? 3000 : 8000);
+          }
+        }
+        if (!data) throw lastError || new Error("analysis_failed");
+        stopProcessing(true);
+        showVisionResult(data);
+        state.cooldownUntil = Date.now() + 20000;
+      } catch (err) {
+        stopProcessing(false);
+        setStatus(t("failed"), true);
+      } finally {
+        state.analyzing = false;
+        $("analyzeButton").disabled = false;
+      }
+    }
+
+    /* ---------- Pulse Quick (honest: not analysis, not a forecast) ---------- */
+    async function runQuick() {
+      $("quickResult").classList.remove("show");
+      $("createAction").disabled = true;
+      $("createAction").textContent = t("quickLoading");
+      applyDesign("quick");
+      await wait(1500);
+      const direction = Math.random() >= 0.5 ? "UP" : "DOWN";
+      const dir = directionInfo(direction);
+      const timing = getTiming();
+      $("quickBadge").className = `direction ${dir.cls}`;
+      $("quickBadge").textContent = dir.text;
+      $("quickBig").className = `direction-big ${dir.cls}`;
+      $("quickBig").textContent = dir.text;
+      $("quickAssetTop").textContent = state.asset + " · OTC";
+      $("quickDuration").textContent = timing.duration;
+      $("quickEntry").textContent = timing.entry;
+      $("quickOutcome").textContent = timing.outcome;
+      $("quickResult").classList.add("show");
+      state.countdown = { entryMs: timing.entryMs, outcomeMs: timing.outcomeMs, target: "quick" };
+      tickCountdown();
+      addHistory({
+        type: "quick", direction: direction, asset: state.asset, duration: timing.duration,
+        entry: timing.entry, outcomeTime: timing.outcome, entryISO: timing.entryISO, outcomeISO: timing.outcomeISO,
+        summary: t("quickSummary")
+      });
+      $("createAction").disabled = false;
+      $("createAction").textContent = t("startQuick");
+    }
+
+    /* ---------- Server sync ---------- */
+    function normalizeDirection(d) {
+      if (d === "BUY" || d === "UP") return "UP";
+      if (d === "SELL" || d === "DOWN") return "DOWN";
       return "NONE";
     }
-
-    function directionData(value){
-      if(value==="UP")return {className:"up",icon:"🟢",text:t("up")};
-      if(value==="DOWN")return {className:"down",icon:"🔴",text:t("down")};
-      return {className:"wait",icon:"⚪",text:t("wait")};
-    }
-
-    function feedback(success=false){
-      if(state.haptic&&tg?.HapticFeedback){
-        try{success?tg.HapticFeedback.notificationOccurred("success"):tg.HapticFeedback.impactOccurred("light")}catch{}
-      }
-    }
-
-    function toast(text){
-      $("toast").textContent=text;
-      $("toast").classList.add("show");
-      clearTimeout(window.toastTimer);
-      window.toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2800);
-    }
-
-    function openTab(name){
-      feedback();
-      document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
-      document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
-      $(`${name}Screen`).classList.add("active");
-      scrollTo({top:0,behavior:"smooth"});
-    }
-
-    function renderCreate(){
-      const search=$("assetSearch").value.toLowerCase();
-      $("assetList").innerHTML=ASSETS.filter(x=>x.toLowerCase().includes(search)).map(x=>`<button class="asset ${x===state.asset?"selected":""}" data-asset="${x}">${x}<small>OTC</small></button>`).join("");
-      document.querySelectorAll("[data-asset]").forEach(x=>x.onclick=()=>{state.asset=x.dataset.asset;save();renderCreate()});
-
-      $("durationList").innerHTML=DURATIONS.map(x=>`<button class="tile ${x===state.duration?"selected":""}" data-duration="${x}">${durationText(x)}</button>`).join("");
-      document.querySelectorAll("[data-duration]").forEach(x=>x.onclick=()=>{state.duration=Number(x.dataset.duration);save();renderCreate()});
-
-      $("entryList").innerHTML=`<button class="tile ${state.entryMode==="nearest"?"selected":""}" data-entry="nearest">${t("nearest")}</button><button class="tile ${state.entryMode==="later"?"selected":""}" data-entry="later">${t("later")}</button>`;
-      document.querySelectorAll("[data-entry]").forEach(x=>x.onclick=()=>{state.entryMode=x.dataset.entry;save();renderCreate()});
-
-      document.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("selected",x.dataset.mode===state.mode));
-      $("createButton").textContent=state.mode==="vision"?t("openVision"):t("startQuick");
-    }
-
-    function renderHistory(){
-      if(!state.history.length){
-        $("historyList").innerHTML=`<div class="panel empty"><i>◌</i><h2>${t("empty")}</h2><p>${t("emptyText")}</p><button class="primary" id="emptyVision" style="margin-top:16px">Pulse Vision</button></div>`;
-        $("emptyVision").onclick=()=>openTab("vision");
-        return;
-      }
-
-      $("historyList").innerHTML=`<div class="list">${state.history.map(item=>{
-        const d=directionData(item.direction);
-        return `<article class="history"><div class="head"><div><span class="sub">${item.type==="quick"?"Pulse Quick":"Pulse Vision"}</span><div class="title">${item.asset}</div></div><span class="badge ${d.className}">${d.icon} ${d.text}</span></div><div class="meta"><div><b>${t("entryTime")}</b>${formatTime(item.entryTime)}</div><div><b>${t("outcome")}</b>${formatTime(item.outcomeTime)}NLBR${durationText(item.durationSeconds)}</div></div><div class="outcomes"><button class="outcome win ${item.outcome==="win"?"active":""}" data-outcome="${item.id}|win">${t("win")}</button><button class="outcome loss ${item.outcome==="loss"?"active":""}" data-outcome="${item.id}|loss">${t("loss")}</button><button class="outcome ${item.outcome==="skip"?"active":""}" data-outcome="${item.id}|skip">${t("skip")}</button></div></article>`;
-      }).join("")}</div>`;
-
-      document.querySelectorAll("[data-outcome]").forEach(x=>x.onclick=()=>changeOutcome(...x.dataset.outcome.split("|")));
-    }
-
-    function renderStats(){
-      const wins=state.history.filter(x=>x.outcome==="win").length;
-      const losses=state.history.filter(x=>x.outcome==="loss").length;
-      $("stats").innerHTML=`<div class="stat"><b>${state.history.length}</b><small>${t("results")}</small></div><div class="stat"><b>${wins}</b><small>${t("wins")}</small></div><div class="stat"><b>${losses}</b><small>${t("losses")}</small></div>`;
-    }
-
-    async function changeOutcome(id,outcome){
-      const item=state.history.find(x=>x.id===id);
-      if(!item)return;
-
-      const previous=item.outcome;
-      item.outcome=outcome;
-      save();
-      renderHistory();
-      renderStats();
-      feedback(outcome==="win");
-
-      if(!item.serverId)return;
-
-      try{
-        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"update_result",payload:{resultId:item.serverId,outcome}})});
-        if(!response.ok)throw new Error();
-      }catch{
-        item.outcome=previous;
-        save();
-        renderHistory();
-        renderStats();
-        toast(state.language==="ru"?"Не удалось обновить результат.":"Unable to update the result.");
-      }
-    }
-
-    function startProcessing(type){
-      $("processMode").textContent=type==="vision"?"PULSE VISION":"PULSE QUICK";
-      const stages=type==="vision"
-        ?[state.language==="ru"?"Подготавливаем изображение":"Preparing image",state.language==="ru"?"Изучаем структуру графика":"Studying chart structure",state.language==="ru"?"Проверяем видимые уровни":"Checking visible levels",state.language==="ru"?"Формируем результат":"Forming result"]
-        :[state.language==="ru"?"Формируем результат":"Forming result"];
-      let progress=0;
-
-      $("processingModal").classList.remove("hidden");
-      $("processStage").textContent=stages[0];
-      $("progressRing").style.setProperty("--p",0);
-      $("progressText").textContent="0%";
-      clearInterval(window.progressTimer);
-
-      window.progressTimer=setInterval(()=>{
-        progress=Math.min(94,progress+(type==="vision"?4:8));
-        $("progressRing").style.setProperty("--p",progress);
-        $("progressText").textContent=progress+"%";
-        $("processStage").textContent=stages[Math.min(stages.length-1,Math.floor(progress/25))];
-      },180);
-    }
-
-    function closeModal(id){
-      $(id).classList.add("hidden");
-      if(id==="processingModal")clearInterval(window.progressTimer);
-    }
-
-    function updateCountdowns(){
-      document.querySelectorAll("[data-countdown]").forEach(x=>{
-        const seconds=Math.max(0,Math.floor((new Date(x.dataset.countdown)-Date.now())/1000));
-        x.textContent=`${String(Math.floor(seconds/60)).padStart(2,"0")}:${String(seconds%60).padStart(2,"0")}`;
-      });
-    }
-
-    function showResult(item){
-      const d=directionData(item.direction);
-      const vision=item.type==="vision";
-
-      $("resultHeading").textContent=t("result");
-      $("resultContent").innerHTML=`<article class="result"><div class="head"><div><div class="asset-name">${item.asset}</div><div class="result-mode">${vision?"Pulse Vision":"Pulse Quick"}</div></div><span class="badge ${d.className}">${d.icon} OTC</span></div><div class="signal ${d.className}">${d.text}</div>${vision?`<div class="confidence"><div class="ring" style="--p:${item.confidenceNumber}"><span>${item.confidenceNumber}%</span></div><div><b>${t("confidence")}</b><small>${item.summary||""}</small></div></div>`:`<p class="desc" style="margin:0 0 18px">${state.language==="ru"?"Режим работает без анализа загруженного графика.":"This mode works without uploaded-chart analysis."}</p>`}<div class="times"><div><b>${t("entryTime")}</b><strong>${formatTime(item.entryTime)}</strong></div><div><b>${t("outcome")}</b><strong>${formatTime(item.outcomeTime)}</strong><span>${durationText(item.durationSeconds)}</span></div></div><div class="count"><span>${t("count")}</span><b data-countdown="${item.outcomeTime}">--:--</b></div>${vision&&item.reasons.length?`<toggle>${t("reasons")}<ul class="reasons">${item.reasons.map(x=>`<li>${x}</li>`).join("")}</ul></toggle>`:""}</article><div class="rows"><button class="primary" id="againButton">${vision?t("newAnalysis"):t("newQuick")}</button><button class="secondary" id="historyButton">${t("openHistory")}</button><button class="secondary" id="settingsButton">${t("settings")}</button></div>`;
-
-      $("resultModal").classList.remove("hidden");
-      $("againButton").onclick=()=>{closeModal("resultModal");if(vision)openTab("vision");else{state.mode="quick";openTab("create");runQuick()}};
-      $("historyButton").onclick=()=>{closeModal("resultModal");openTab("history")};
-      $("settingsButton").onclick=()=>{closeModal("resultModal");openTab("create")};
-      updateCountdowns();
-    }
-
-    async function addResult(data){
-      const time=futureTimes();
-      const item={
-        id:`pulse_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-        type:state.mode,
-        direction:direction(data.direction),
-        asset:state.asset,
-        durationSeconds:state.duration,
-        entryTime:time.entryTime,
-        outcomeTime:time.outcomeTime,
-        confidence:data.confidence||"",
-        confidenceNumber:data.confidenceNumber||0,
-        summary:data.summary||"",
-        reasons:Array.isArray(data.reasons)?data.reasons:[],
-        outcome:"skip",
-        serverId:null
-      };
-
-      state.history.unshift(item);
-      save();
-      renderHistory();
-      renderStats();
-      showResult(item);
-      feedback(true);
-
-      try{
-        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"save_result",payload:{mode:item.type,direction:item.direction,asset:item.asset,durationSeconds:item.durationSeconds,entryTime:item.entryTime,outcomeTime:item.outcomeTime,confidence:item.confidence,summary:item.summary,outcome:item.outcome}})});
-        const data=await response.json();
-
-        if(response.ok&&data.resultId){
-          item.serverId=data.resultId;
-          save();
-        }
-      }catch{}
-    }
-
-    async function analyze(){
-      if(!state.image)return;
-
-      feedback();
-      startProcessing("vision");
-
-      try{
-        const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:state.image,mimeType:state.mimeType,language:state.language})});
-        if(!response.ok)throw new Error();
-
-        const data=await response.json();
-        const confidenceRaw=String(data.confidence||"");
-        let confidence=Number(confidenceRaw);
-
-        if(!Number.isFinite(confidence)){
-          confidence=/high|высок/i.test(confidenceRaw)?78:/medium|сред/i.test(confidenceRaw)?58:36;
-        }
-
-        closeModal("processingModal");
-        state.mode="vision";
-
-        addResult({
-          direction:data.direction,
-          confidence:data.confidence||`${confidence}%`,
-          confidenceNumber:Math.max(0,Math.min(100,confidence)),
-          summary:data.summary||"",
-          reasons:Array.isArray(data.reasons)?data.reasons:[]
+    async function syncResultToServer(item) {
+      const initData = tg && tg.initData ? tg.initData : "";
+      if (!initData) return;
+      try {
+        await fetch("/api/pulse", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            initData, action: "save_result",
+            payload: {
+              mode: item.type, direction: normalizeDirection(item.direction),
+              asset: item.asset, durationSeconds: state.duration,
+              entryTime: item.entryISO || null, outcomeTime: item.outcomeISO || null,
+              confidence: item.confidence || "", summary: item.summary || "", outcome: item.outcome || "skip"
+            }
+          })
         });
-      }catch{
-        closeModal("processingModal");
-        toast(t("unavailable"));
-      }
+      } catch (e) { /* silent */ }
     }
 
-    function runQuick(){
-      feedback();
-      startProcessing("quick");
-
-      setTimeout(()=>{
-        closeModal("processingModal");
-        state.mode="quick";
-        const value=Math.floor(Date.now()/1000)%3;
-        addResult({direction:value===0?"UP":value===1?"DOWN":"NONE",summary:"Pulse Quick"});
-      },1700);
+    /* ---------- Owner Pulse Control ---------- */
+    async function checkOwner() {
+      const initData = tg && tg.initData ? tg.initData : "";
+      if (!initData) return;
+      try {
+        const response = await fetch("/api/owner", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData })
+        });
+        const access = await response.json();
+        if (!response.ok || !access.verified || !access.isOwner) return;
+        state.isOwner = true;
+        $("pulseControl").classList.add("show");
+        $("designControl").classList.add("show");
+        loadDashboard();
+      } catch (e) { /* silent */ }
+    }
+    async function loadDashboard() {
+      const initData = tg && tg.initData ? tg.initData : "";
+      if (!initData || !state.isOwner) return;
+      try {
+        const response = await fetch("/api/pulse", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData, action: "dashboard" })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.isOwner || !data.metrics) return;
+        const m = data.metrics;
+        $("pcUsers").textContent = m.usersTotal;
+        $("pcResults").textContent = m.resultsTotal;
+        $("pcEvents").textContent = m.eventsTotal;
+        $("pcVision").textContent = m.visionTotal;
+        $("pcQuick").textContent = m.quickTotal;
+        $("pcToday").textContent = m.usersToday != null ? m.usersToday : "—";
+        $("pcWins").textContent = m.wins;
+        $("pcLosses").textContent = m.losses;
+      } catch (e) { /* silent */ }
     }
 
-    async function owner(){
-      try{
-        const response=await fetch("/api/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData()})});
-        const data=await response.json();
+    /* ---------- Design Control UI ---------- */
+    function renderDesignControl() {
+      $("themeChips").innerHTML = Object.entries(THEMES).map(([id, th]) =>
+        `<button class="theme-chip ${id === design.theme ? "selected" : ""}" data-theme="${id}">
+          <span class="theme-dot" style="background:${th.vars["--bg"]};box-shadow:inset 0 0 0 2px ${th.dot}"></span>
+          <b>${esc(th.label)}</b>
+        </button>`
+      ).join("");
+      const modes = [["always", "modeAlways"], ["now", "modeNow"], ["schedule", "modeSchedule"], ["launch", "modeLaunch"], ["vision", "modeVision"], ["quick", "modeQuick"]];
+      $("themeModes").innerHTML = modes.map(([id, key]) =>
+        `<button class="seg-btn ${id === design.mode ? "active" : ""}" data-tmode="${id}">${t(key)}</button>`
+      ).join("");
+      $("scheduleFrom").value = design.from;
+      $("scheduleTo").value = design.to;
+      $("scheduleRow").style.display = design.mode === "schedule" ? "flex" : "none";
 
-        if(response.ok&&data.verified&&data.isOwner){
-          $("ownerPanel").classList.remove("hidden");
-          loadDashboard();
-        }
-      }catch{}
+      document.querySelectorAll("[data-theme]").forEach((b) => b.addEventListener("click", () => {
+        design.theme = b.dataset.theme; renderDesignControl(); setVars(design.theme);
+      }));
+      document.querySelectorAll("[data-tmode]").forEach((b) => b.addEventListener("click", () => {
+        design.mode = b.dataset.tmode; renderDesignControl();
+      }));
+    }
+    function saveDesign() {
+      design.from = Math.min(23, Math.max(0, Number($("scheduleFrom").value) || 0));
+      design.to = Math.min(23, Math.max(0, Number($("scheduleTo").value) || 0));
+      localStorage.setItem("pulse_theme", design.theme);
+      localStorage.setItem("pulse_theme_mode", design.mode);
+      localStorage.setItem("pulse_theme_from", String(design.from));
+      localStorage.setItem("pulse_theme_to", String(design.to));
+      applyDesign("tick");
     }
 
-    async function loadDashboard(){
-      try{
-        const response=await fetch("/api/pulse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData(),action:"dashboard"})});
-        const data=await response.json();
-        const m=data?.metrics;
-
-        if(!response.ok||!m)return;
-
-        $("serverStats").innerHTML=`<div class="stat"><b>${m.usersTotal??0}</b><small>${t("users")}</small></div><div class="stat"><b>${m.resultsTotal??0}</b><small>${t("results")}</small></div><div class="stat"><b>${m.eventsTotal??0}</b><small>${t("events")}</small></div><div class="stat"><b>${m.visionTotal??0}</b><small>Vision</small></div><div class="stat"><b>${m.quickTotal??0}</b><small>Quick</small></div><div class="stat"><b>${m.wins??0}</b><small>Win</small></div><div class="stat"><b>${m.losses??0}</b><small>Loss</small></div>`;
-      }catch{}
-    }
-
-    function renderThemes(){
-      const themes=[["obsidian","Obsidian Silver",""],["midnight","Midnight Blue","midnight"],["carbon","Carbon Green","carbon"],["black","Pure Black","black"],["launch","Pulse Launch","launch"]];
-
-      $("themeList").innerHTML=themes.map(([value,name,dot])=>`<button class="theme ${state.theme===value?"selected":""}" data-theme="${value}"><span class="theme-left"><i class="dot ${dot}"></i><b>${name}</b></span><span>${state.theme===value?"✓":""}</span></button>`).join("");
-
-      document.querySelectorAll("[data-theme]").forEach(x=>x.onclick=()=>{
-        state.theme=x.dataset.theme;
-        localStorage.setItem("pulse_theme",state.theme);
-        document.documentElement.dataset.theme=state.theme==="obsidian"||state.theme==="launch"?"":state.theme;
-        renderThemes();
-      });
-    }
-
-    function translate(){
-      const map={loaderText:"loader",brandText:"brand",navHistory:"history",navCreate:"create",navProfile:"profile",historyEyebrow:"signals",historyTitle:"historyTitle",historyText:"historyText",createEyebrow:"create",createTitle:"createTitle",createText:"createText",assetLabel:"asset",durationLabel:"duration",entryLabel:"entry",modeLabel:"mode",visionModeText:"visionMode",quickModeText:"quickMode",visionTitle:"visionTitle",visionText:"visionText",uploadTitle:"choose",uploadHint:"hint",removeImage:"remove",analyzeButton:"analyze",profileEyebrow:"profile",profileTitle:"profileTitle",profileText:"profileText",languageTitle:"language",languageSub:"languageSub",soundTitle:"sound",soundSub:"soundSub",hapticTitle:"haptic",hapticSub:"hapticSub",statsTitle:"stats",refreshStats:"refresh"};
-      Object.entries(map).forEach(([id,key])=>$(id).textContent=t(key));
-      $("assetSearch").placeholder=t("search");
-      $("languageSelect").value=state.language;
-      renderCreate();
+    /* ---------- Language application ---------- */
+    function applyLanguage() {
+      const map = {
+        loaderText: "loader", welcomeText: "welcomeText", brandText: "brand",
+        historyEyebrow: "historyEyebrow", historyTitle: "historyTitle", historyText: "historyText",
+        emptyTitle: "emptyTitle", emptyText: "emptyText", historyVision: "historyVision",
+        createEyebrow: "createEyebrow", createTitle: "createTitle", createText: "createText",
+        assetLabel: "assetLabel", durationLabel: "durationLabel", entryLabel: "entryLabel",
+        nearestButton: "nearest", laterButton: "later", modeLabel: "modeLabel",
+        visionModeText: "visionModeText", quickModeText: "quickModeText",
+        quickDurationLabel: "duration", quickEntryLabel: "entry", quickOutcomeLabel: "outcome", quickCountdownLabel: "countdown",
+        quickNotice: "quickNotice", quickAgain: "quickAgain", quickHistory: "quickHistory",
+        visionTitle: "visionTitle", visionText: "visionText", uploadTitle: "uploadTitle", uploadText: "uploadText",
+        analyzeButton: "analyze", procAssetLabel: "asset", procDurationLabel: "duration", analysisLabel: "result",
+        factDurationLabel: "duration", factEntryLabel: "entry", factOutcomeLabel: "outcome", factCountdownLabel: "countdown",
+        reasonsToggleText: "reasonsToggle", visionHistory: "visionHistory",
+        profileEyebrow: "profileEyebrow", profileTitle: "profileTitle", profileText: "profileText",
+        languageTitle: "languageTitle", languageText: "languageText",
+        soundTitle: "soundTitle", soundText: "soundText", hapticTitle: "hapticTitle", hapticText: "hapticText",
+        selectedAssetTitle: "selectedAssetTitle", selectedAssetText: "selectedAssetText",
+        statsTitle: "statsTitle", statAllLabel: "all", statWinLabel: "win", statLossLabel: "loss",
+        profileNotice: "profileNotice", navHistory: "navHistory", navCreate: "navCreate", navProfile: "navProfile",
+        pcTitle: "pcTitle", pcSubtitle: "pcSubtitle", pcUsersLabel: "pcUsers", pcResultsLabel: "pcResults",
+        pcEventsLabel: "pcEvents", pcTodayLabel: "pcToday", pcVerifiedLabel: "pcVerified", pcRefresh: "pcRefresh",
+        dcTitle: "dcTitle", dcSubtitle: "dcSubtitle", dcModeLabel: "dcModeLabel", dcFromLabel: "dcFrom", dcToLabel: "dcTo",
+        themePreview: "themePreview", themeApply: "themeApply"
+      };
+      Object.entries(map).forEach(([id, key]) => { if ($(id)) $(id).textContent = t(key); });
+      $("assetSearch").placeholder = t("search");
+      $("welcomeTitle").textContent = greeting();
+      $("languageSelect").value = state.language;
+      $("profileAsset").textContent = state.asset;
+      $("soundToggle").textContent = soundEnabled ? t("on") : t("off");
+      $("hapticToggle").textContent = hapticEnabled ? t("on") : t("off");
+      renderAssets($("assetSearch").value);
+      renderDurations();
       renderHistory();
       renderStats();
-      renderThemes();
+      renderDesignControl();
+      setMode(state.mode);
+      updateClock();
     }
 
-    $("assetSearch").oninput=renderCreate;
-    document.querySelectorAll(".nav").forEach(x=>x.onclick=()=>openTab(x.dataset.tab));
-    document.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>{state.mode=x.dataset.mode;renderCreate()});
-    $("createButton").onclick=()=>state.mode==="vision"?openTab("vision"):runQuick();
+    /* ---------- Feedback (sound + haptic) ---------- */
+    let soundEnabled = localStorage.getItem("pulse_sound") === "true";
+    let hapticEnabled = localStorage.getItem("pulse_haptic") !== "false";
+    function feedback() {
+      if (hapticEnabled && tg && tg.HapticFeedback) { try { tg.HapticFeedback.impactOccurred("light"); } catch (e) {} }
+      if (!soundEnabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.frequency.value = 430;
+        gain.gain.setValueAtTime(0.035, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.06);
+      } catch (e) {}
+    }
 
-    $("imageInput").onchange=e=>{
-      const file=e.target.files?.[0];
-      if(!file)return;
+    /* ---------- Event bindings ---------- */
+    document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+    document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+    document.querySelectorAll("[data-entry]").forEach((b) => b.addEventListener("click", () => {
+      state.entryMode = b.dataset.entry; saveState();
+      document.querySelectorAll("[data-entry]").forEach((i) => i.classList.toggle("active", i.dataset.entry === state.entryMode));
+    }));
+    $("assetSearch").addEventListener("input", (e) => renderAssets(e.target.value));
+    $("createAction").addEventListener("click", () => { state.mode === "vision" ? setTab("vision") : runQuick(); });
+    $("quickAgain").addEventListener("click", runQuick);
+    $("quickHistory").addEventListener("click", () => setTab("history"));
+    $("historyVision").addEventListener("click", () => setTab("vision"));
+    $("visionHistory").addEventListener("click", () => setTab("history"));
+    $("reasonsToggle").addEventListener("click", () => $("visionReasons").classList.toggle("collapsed"));
 
-      if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){
-        toast(t("badImage"));
-        e.target.value="";
-        return;
-      }
+    $("imageInput").addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) { setStatus(t("badImage"), true); return; }
+      if (file.size > 8 * 1024 * 1024) { setStatus(t("imageTooLarge"), true); return; }
+      try {
+        state.image = await compressImage(file);
+        $("previewImage").src = state.image;
+        $("previewWrap").classList.add("show");
+        $("analyzeButton").disabled = false;
+        setStatus("", false);
+      } catch (err) { setStatus(t("badImage"), true); }
+    });
+    $("removeImage").addEventListener("click", () => {
+      state.image = null; $("imageInput").value = ""; $("previewImage").src = "";
+      $("previewWrap").classList.remove("show"); $("visionResult").classList.remove("show");
+      $("analyzeButton").disabled = true; setStatus("", false);
+    });
+    $("analyzeButton").addEventListener("click", analyzeChart);
 
-      const reader=new FileReader();
-      reader.onload=()=>{
-        state.image=reader.result;
-        state.mimeType=file.type;
-        $("previewImage").src=reader.result;
-        $("uploadBox").classList.add("hidden");
-        $("previewBox").classList.remove("hidden");
-        $("analyzeButton").disabled=false;
-      };
-      reader.readAsDataURL(file);
-    };
+    $("languageSelect").addEventListener("change", (e) => { state.language = e.target.value; saveState(); applyLanguage(); });
+    $("soundToggle").addEventListener("click", function () {
+      soundEnabled = !soundEnabled; localStorage.setItem("pulse_sound", String(soundEnabled));
+      this.textContent = soundEnabled ? t("on") : t("off"); this.classList.toggle("on", soundEnabled);
+    });
+    $("hapticToggle").addEventListener("click", function () {
+      hapticEnabled = !hapticEnabled; localStorage.setItem("pulse_haptic", String(hapticEnabled));
+      this.textContent = hapticEnabled ? t("on") : t("off"); this.classList.toggle("on", hapticEnabled);
+    });
+    $("pcRefresh").addEventListener("click", loadDashboard);
+    $("themePreview").addEventListener("click", () => setVars(design.theme));
+    $("themeApply").addEventListener("click", saveDesign);
+    $("scheduleFrom").addEventListener("input", () => { design.from = Number($("scheduleFrom").value) || 0; });
+    $("scheduleTo").addEventListener("input", () => { design.to = Number($("scheduleTo").value) || 0; });
 
-    $("removeImage").onclick=()=>{
-      state.image=null;
-      state.mimeType=null;
-      $("imageInput").value="";
-      $("previewBox").classList.add("hidden");
-      $("uploadBox").classList.remove("hidden");
-      $("analyzeButton").disabled=true;
-    };
+    $("welcomeVision").addEventListener("click", () => { $("launch").classList.add("hide"); applyDesign("load"); setTab("vision"); });
+    $("welcomeQuick").addEventListener("click", () => { $("launch").classList.add("hide"); applyDesign("load"); setTab("create"); setMode("quick"); });
 
-    $("analyzeButton").onclick=analyze;
-    $("languageSelect").onchange=e=>{state.language=e.target.value;save();translate()};
-    $("soundSwitch").onclick=()=>{state.sound=!state.sound;localStorage.setItem("pulse_sound",state.sound);$("soundSwitch").classList.toggle("on",state.sound)};
-    $("hapticSwitch").onclick=()=>{state.haptic=!state.haptic;localStorage.setItem("pulse_haptic",state.haptic);$("hapticSwitch").classList.toggle("on",state.haptic);feedback()};
-    $("refreshStats").onclick=loadDashboard;
-    document.querySelectorAll("[data-close]").forEach(x=>x.onclick=()=>closeModal(x.dataset.close));
+    document.addEventListener("click", (e) => { if (e.target.closest("button")) feedback(); });
 
-    $("welcomeVision").onclick=()=>{$("welcome").classList.add("hidden");openTab("vision")};
-    $("welcomeQuick").onclick=()=>{$("welcome").classList.add("hidden");state.mode="quick";openTab("create")};
+    /* ---------- Init ---------- */
+    if (soundEnabled) $("soundToggle").classList.add("on");
+    if (hapticEnabled) $("hapticToggle").classList.add("on");
+    document.querySelectorAll("[data-entry]").forEach((b) => b.classList.toggle("active", b.dataset.entry === state.entryMode));
 
-    $("soundSwitch").classList.toggle("on",state.sound);
-    $("hapticSwitch").classList.toggle("on",state.haptic);
+    $("brandMark").innerHTML = logoSVG(false);
+    $("launchLogo").innerHTML = logoSVG(true);
 
-    const hour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Oral",hour:"2-digit",hour12:false}).format(new Date()));
-    const name=tg?.initDataUnsafe?.user?.first_name||"";
-    const greeting=state.language==="ru"?(hour<12?"Доброе утро":hour<18?"Добрый день":"Добрый вечер"):(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening");
+    if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
 
-    $("hello").textContent=name?`${greeting}, ${name}`:greeting;
-    $("welcomeText").textContent=state.language==="ru"?"Signal Pulse готов к работе.":"Signal Pulse is ready.";
+    applyDesign("launch");
+    applyLanguage();
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(tickCountdown, 1000);
+    checkOwner();
 
-    translate();
-    document.documentElement.dataset.theme=state.theme==="obsidian"||state.theme==="launch"?"":state.theme;
-
-    setInterval(()=>{$("clock").textContent=formatTime(new Date())},1000);
-    setInterval(updateCountdowns,1000);
-    owner();
-
-    setTimeout(()=>{
-      $("loader").classList.add("done");
-      setTimeout(()=>$("welcome").classList.remove("hidden"),350);
-    },1400);
-  </script>
-</body>
-</html>
+    // Launch sequence: 0–0.7s line draws, 0.7–1.2s arrow, then welcome
+    setTimeout(() => {
+      $("welcomeTitle").textContent = greeting();
+      $("loaderContent").classList.add("hide");
+      $("welcomeContent").classList.add("show");
+    }, 1400);
