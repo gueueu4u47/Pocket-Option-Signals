@@ -1907,6 +1907,98 @@
       $("loaderContent").classList.add("hide");
       $("welcomeContent").classList.add("show");
     }, 1400);
+  async function loadPulseControl() {
+  const initData = window.Telegram?.WebApp?.initData || "";
+
+  if (!initData) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/owner", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ initData })
+    });
+
+    const access = await response.json();
+
+    if (!response.ok || !access.verified || !access.isOwner) {
+      return;
+    }
+
+    const previousPanel = document.getElementById("pulseControl");
+    if (previousPanel) {
+      previousPanel.remove();
+    }
+
+    const visionCount = state.history.filter((item) => item.type === "vision").length;
+    const quickCount = state.history.filter((item) => item.type === "quick").length;
+    const winCount = state.history.filter((item) => item.outcome === "win").length;
+    const lossCount = state.history.filter((item) => item.outcome === "loss").length;
+
+    const panel = document.createElement("section");
+    panel.className = "card";
+    panel.id = "pulseControl";
+
+    panel.innerHTML = `
+      <p class="eyebrow">PULSE CONTROL</p>
+      <h3 style="margin:0;font-size:20px;">Панель владельца</h3>
+      <p class="section-text" style="margin-top:8px;">
+        Доступ подтверждён через Telegram. Этот блок виден только владельцу.
+      </p>
+
+      <div class="stats">
+        <div class="stat">
+          <b>${state.history.length}</b>
+          <small>Результаты</small>
+        </div>
+        <div class="stat">
+          <b>${visionCount}</b>
+          <small>Pulse Vision</small>
+        </div>
+        <div class="stat">
+          <b>${quickCount}</b>
+          <small>Pulse Quick</small>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <b>${winCount}</b>
+          <small>Win</small>
+        </div>
+        <div class="stat">
+          <b>${lossCount}</b>
+          <small>Loss</small>
+        </div>
+        <div class="stat">
+          <b>✓</b>
+          <small>Защита активна</small>
+        </div>
+      </div>
+
+      <div class="risk">
+        Сейчас показана статистика этого устройства. Общую статистику всех пользователей,
+        очередь, лимиты и управление доступом добавим после подключения базы данных.
+      </div>
+
+      <button class="secondary" id="refreshPulseControl">
+        Обновить показатели
+      </button>
+    `;
+
+    $("profileView").append(panel);
+
+    $("refreshPulseControl").addEventListener("click", loadPulseControl);
+  } catch (error) {
+    console.error("Pulse Control access check failed");
+  }
+}
+
+setTimeout(loadPulseControl, 500);
   </script>
 </body>
   </html>
