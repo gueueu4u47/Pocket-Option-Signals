@@ -1550,5 +1550,59 @@ document.addEventListener("pointerup",function(){
 }
 @keyframes navGlow{from{width:0;opacity:0}to{width:26px;opacity:1}}
   </style>
-</body>
+<script id="vibePolish">
+(function(){
+  function injectStyle(){
+    if(document.getElementById("polishStyle")) return;
+    var s=document.createElement("style"); s.id="polishStyle";
+    s.textContent=`
+.card,.result-card,.history-item,.mode-card,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.primary,.toggle,select,.hero,.upload-zone,.nav-item{
+  transition:transform .24s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease,border-color .25s ease,background-color .25s ease!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.mode-card:active,.asset-option:active,.choice:active,.seg-btn:active,.theme-chip:active,.outcome:active,.secondary:active,.primary:active,.history-item:active{
+  transform:scale(.97)!important;filter:brightness(1.12)!important;
+}
+.mode-card,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.primary,.card,.result-card,.history-item,.toggle{
+  overflow:hidden!important;position:relative!important;isolation:isolate;
+}
+.history-item,.asset-option,.choice,.seg-btn,.theme-chip,.outcome,.secondary,.toggle,select{
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:rgba(28,30,40,.55)!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  transform:translateZ(0);backface-visibility:hidden;
+}
+.card,.result-card,.mode-card,.hero,.upload-zone,.bottom-nav{
+  transform:translateZ(0);backface-visibility:hidden;
+}
+.history-item{animation:fadeUp .4s ease both!important;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+`;
+    document.head.appendChild(s);
+  }
+  var icons={
+    "История":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>',
+    "Создать":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>',
+    "Vision":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+    "Профиль":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'
+  };
+  function fixIcons(){
+    try{
+      document.querySelectorAll(".nav-item").forEach(function(el){
+        if(el.getAttribute("data-iconed")) return;
+        var t=(el.textContent||"").trim();
+        for(var k in icons){ if(t.indexOf(k)>-1){
+          var svg=el.querySelector("svg");
+          if(svg){ svg.outerHTML=icons[k]; el.setAttribute("data-iconed","1"); }
+          break;
+        }}
+      });
+    }catch(e){}
+  }
+  function run(){ injectStyle(); fixIcons(); }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",run);
+  else run();
+  setTimeout(run,800); setTimeout(run,2500);
+})();
+  </script></body>
 </html>
