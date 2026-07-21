@@ -139,36 +139,39 @@ Return JSON only, without Markdown:
   "risk": "This is image analysis, not a guarantee of any result."
 }`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro:generateContent?key=${apiKey}`,
+    const geminiBody = JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64Image } }
+          ]
+        }
+      ],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+    });
+    let response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: base64Image
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json"
-          }
-        })
+        body: geminiBody
       }
     );
 
-    const data = await response.json();
+    let data = await response.json();
+
+    if (response.status === 404) {
+      const fbUrl = response.url.replace("gemini-3-pro-preview", "gemini-3-flash-preview");
+      response = await fetch(fbUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: geminiBody
+      });
+      data = await response.json();
+    }
 
     if (!response.ok) {
       console.error("Gemini error:", data);
