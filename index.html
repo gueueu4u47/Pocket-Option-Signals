@@ -1054,6 +1054,7 @@
   }
 
   function checkOwner(){
+    initData = (TG && TG.initData) ? TG.initData : initData;
     if(!initData) return;
     fetch("/api/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:initData})})
       .then(function(r){ return r.json(); })
@@ -1145,6 +1146,7 @@
 
   /* ---------- Init ---------- */
   if(TG){ try{ TG.ready(); TG.expand(); }catch(e){} }
+  initData = (TG && TG.initData) ? TG.initData : initData;
   drawLogo($("brandMark"));
   setMode("vision");
   document.querySelectorAll("[data-entry]").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-entry")===state.entryMode); });
