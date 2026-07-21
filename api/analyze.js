@@ -151,7 +151,7 @@ Return JSON only, without Markdown:
       generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
     });
     let response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -164,7 +164,7 @@ Return JSON only, without Markdown:
     let data = await response.json();
 
     if (response.status === 404) {
-      const fbUrl = response.url.replace("gemini-3-pro-preview", "gemini-3-flash-preview");
+      const fbUrl = response.url.replace("gemini-3-flash-preview", "gemini-2.5-flash");
       response = await fetch(fbUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
