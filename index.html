@@ -920,16 +920,31 @@
       summary:data.summary||"", confidence:data.confidence||"" });
   }
 
+  function showAnalyzeDebug(msg){
+    try{
+      var d=document.getElementById("analyzeDebug");
+      if(!d){
+        d=document.createElement("div"); d.id="analyzeDebug";
+        d.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99999;background:#000;color:#ff5b5b;font:11px/1.45 monospace;padding:8px 10px;white-space:pre-wrap;max-height:48vh;overflow:auto;border-bottom:2px solid #ff5b5b;";
+        document.body.appendChild(d);
+      }
+      d.textContent="ANALYZE DEBUG\nimgLen:"+(state.image?state.image.length:0)+"  initDataLen:"+(initData?initData.length:0)+"\n"+msg;
+    }catch(e){}
+  }
+
   function analyze(){
     if(!state.image || state.analyzing) return;
     state.analyzing = true; $("analyzeBtn").disabled = true;
     startProcessing();
     (function(){
-      var attempt=0, done=false;
+      var attempt=0, done=false, lastErr="";
       function attemptFetch(){
         return fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData })})
-          .then(function(res){ return res.json().then(function(j){ return {ok:res.ok, data:j}; }); });
+          .then(function(res){ return res.text().then(function(tx){
+            var j=null; try{ j=JSON.parse(tx); }catch(e){}
+            return {ok:res.ok, status:res.status, data:j, raw:tx};
+          }); });
       }
       function run(){
         attemptFetch().then(function(r){
@@ -938,14 +953,21 @@
             setTimeout(function(){ showVisionResult(r.data); state.analyzing=false; $("analyzeBtn").disabled=false; }, 380);
             return;
           }
+          lastErr="attempt "+(attempt+1)+" -> HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,300));
+          showAnalyzeDebug(lastErr);
           if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); return; }
           fail();
-        }).catch(function(){ if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); } else { fail(); } });
+        }).catch(function(e){
+          lastErr="attempt "+(attempt+1)+" -> NETWORK/timeout -> "+(e&&e.message?e.message:String(e));
+          showAnalyzeDebug(lastErr);
+          if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); } else { fail(); }
+        });
       }
       function fail(){
         stopProcessing(false);
         state.analyzing=false; $("analyzeBtn").disabled=false;
         $("visionRisk").textContent = t("errFailed");
+        showAnalyzeDebug(lastErr);
       }
       run();
     })();
