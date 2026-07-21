@@ -188,6 +188,32 @@
   .reasons{margin:14px 0 0;padding-left:18px;color:var(--silver);font-size:13px;line-height:1.6;}
   .disclaimer{margin-top:14px;padding:12px;border-radius:12px;border:1px solid var(--line);
     background:var(--bg2);color:var(--muted);font-size:11px;line-height:1.5;}
+  .h-item{cursor:pointer;}
+  .err-note{margin-top:14px;padding:12px;border-radius:12px;border:1px solid var(--down);background:var(--down-soft);color:var(--down);font-size:12px;line-height:1.5;font-weight:600;}
+  .sheet-overlay{position:fixed;inset:0;z-index:130;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .sheet-overlay.show{display:flex;animation:sheetFade .25s ease;}
+  .sheet{position:relative;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;animation:sheetUp .34s cubic-bezier(.2,1.1,.4,1);}
+  .sheet-close{position:absolute;z-index:2;top:12px;right:12px;width:34px;height:34px;border:none;border-radius:50%;background:rgba(0,0,0,.42);color:#fff;font-size:20px;line-height:34px;cursor:pointer;}
+  .sheet-chart{position:relative;min-height:170px;padding:20px 18px 16px;background-size:cover;background-position:center;border-radius:22px 22px 0 0;overflow:hidden;}
+  .sheet-chart::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(10,10,10,.92));}
+  .sheet-chart.no-img{background:var(--card);}
+  .sheet-chart.no-img::before{background:none;}
+  .sc-in{position:relative;z-index:1;}
+  .sc-asset{color:var(--silver);font-size:11px;font-weight:800;letter-spacing:.08em;}
+  .sc-dir{margin:8px 0 2px;font-size:32px;font-weight:900;line-height:1;}
+  .sc-dir.up{color:var(--up);} .sc-dir.down{color:var(--down);} .sc-dir.none{color:var(--silver);}
+  .sc-conf{display:inline-block;margin-top:8px;padding:5px 11px;border-radius:99px;background:rgba(0,0,0,.4);color:var(--silver);font-size:11px;font-weight:800;}
+  .sheet-body{padding:16px 18px 26px;}
+  .sd-facts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .sd-fact{padding:11px;border-radius:11px;background:var(--card);border:1px solid var(--line);}
+  .sd-fact small{display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em;}
+  .sd-fact b{font-size:13px;}
+  .sd-block{margin-top:16px;}
+  .sd-block h4{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;}
+  .sd-block p{margin:0;color:var(--silver);font-size:13px;line-height:1.6;}
+  .sd-list{margin:0;padding-left:18px;color:var(--silver);font-size:13px;line-height:1.65;}
+  @keyframes sheetFade{from{opacity:0;}to{opacity:1;}}
+  @keyframes sheetUp{from{transform:translateY(34px);opacity:.5;}to{transform:translateY(0);opacity:1;}}
   .r-actions{display:grid;gap:8px;margin-top:14px;}
   .r-actions .secondary{margin-top:0;}
 
@@ -369,7 +395,7 @@
       <div class="mode-stack">
         <button class="btn mode-card selected" data-mode="vision">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
-          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
+          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженно��о графика</small></span>
         </button>
         <button class="btn mode-card" data-mode="quick">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L4 14 h7 l-1 8 9-12 h-7 z"/></svg></span>
@@ -439,7 +465,7 @@
         </div>
         <div class="countdown" id="visionCountdown">—</div>
         <ul class="reasons" id="visionReasons"></ul>
-        <div class="disclaimer" id="visionRisk">Это анализ изображения, а не гарантия результата.</div>
+        <div class="err-note" id="visionRisk" style="display:none"></div>
         <div class="r-actions">
           <button class="btn primary" id="visionAgain">Новый анализ</button>
           <button class="btn secondary" id="visionHistory">Открыть историю</button>
@@ -481,11 +507,17 @@
       <div class="stat"><b id="statLoss">0</b><small>Loss</small></div>
     </div>
 
-    <div class="disclaimer" id="profileNotice">Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.</div>
-
     <div id="ownerArea"></div>
   </section>
 </main>
+
+<div class="sheet-overlay" id="detailOverlay">
+  <div class="sheet" id="detailSheet">
+    <button class="sheet-close" id="detailClose" type="button">×</button>
+    <div class="sheet-chart" id="detailChart"><div class="sc-in" id="detailChartIn"></div></div>
+    <div class="sheet-body" id="detailBody"></div>
+  </div>
+</div>
 
 <nav class="nav">
   <button class="nav-item active" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg><span id="navHistory">История</span></button>
@@ -539,6 +571,7 @@
       statsTitle:"Личная статистика", statAll:"Всего",
       profileNotice:"Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
       quickNotice:"Режим работает без анализа загруженного графика.", visionRisk:"Это анализ изображения, а не гарантия результата.",
+      detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для этого результата недоступен.",
       win:"Win", loss:"Loss", skip:"Пропустить",
       errFailed:"Pulse Vision временно недоступен. Попробуйте позже.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Панель владельца", ownerSub:"Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.",
@@ -573,6 +606,7 @@
       statsTitle:"Personal statistics", statAll:"All",
       profileNotice:"Pulse Vision analyzes only visible elements of the uploaded chart and does not guarantee a direction or outcome.",
       quickNotice:"This mode works without uploaded-chart analysis.", visionRisk:"This is image analysis, not a guarantee of any result.",
+      detailWhy:"Why this signal", detailStrategy:"Strategy", detailTips:"Tips", detailSummary:"Summary", detailTimeframe:"Timeframe", detailNoData:"No detailed breakdown available for this result.",
       win:"Win", loss:"Loss", skip:"Skip",
       errFailed:"Pulse Vision is unavailable right now. Try again later.", errTooLarge:"The image is too large. Choose a file up to 8 MB.", errBadType:"Only PNG, JPG and WEBP are supported.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Owner panel", ownerSub:"Signal Pulse server statistics. Access verified via Telegram.",
@@ -626,7 +660,13 @@
     localStorage.setItem("pulse_entry_mode", state.entryMode);
     localStorage.setItem("pulse_sound", String(state.sound));
     localStorage.setItem("pulse_haptic", String(state.haptic));
-    localStorage.setItem("pulse_history", JSON.stringify(state.history));
+    try{ localStorage.setItem("pulse_history", JSON.stringify(state.history)); }
+    catch(e){
+      for(var i=state.history.length-1;i>4;i--){
+        if(state.history[i] && state.history[i].image){ state.history[i].image=null; }
+        try{ localStorage.setItem("pulse_history", JSON.stringify(state.history)); return; }catch(e2){}
+      }
+    }
   }
   function saveDesign(){
     localStorage.setItem("pulse_theme", state.theme);
@@ -788,10 +828,17 @@
       id: Date.now().toString()+Math.floor(Math.random()*1000),
       type: item.type, direction: item.direction, asset: item.asset, duration: item.duration,
       entry: item.entry, outcomeTime: item.outcomeTime, summary: item.summary||"", confidence: item.confidence||"",
+      reasons: Array.isArray(item.reasons)?item.reasons:[], strategy: item.strategy||"",
+      tips: Array.isArray(item.tips)?item.tips:[], timeframe: item.timeframe||"",
+      entryWindow: item.entryWindow||"", expiry: item.expiry||"", image: item.image||null,
       createdAt: new Date().toISOString(), outcome: "skip"
     };
     state.history.unshift(rec);
     state.history = state.history.slice(0,60);
+    var imgKept=0;
+    for(var i=0;i<state.history.length;i++){
+      if(state.history[i].image){ imgKept++; if(imgKept>10) state.history[i].image=null; }
+    }
     save(); renderHistory(); renderStats();
     syncResult(item, rec);
   }
@@ -804,7 +851,7 @@
       var typeLabel = it.type==="vision" ? "Pulse Vision" : "Pulse Quick";
       var created;
       try{ created = new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(it.createdAt)); }catch(e){ created=""; }
-      return '<article class="h-item">'
+      return '<article class="h-item" data-open="'+it.id+'">'
         +'<div class="h-head"><b>'+esc(typeLabel)+' · '+esc(it.asset)+'</b><span class="badge '+d.cls+'">'+d.text+'</span></div>'
         +'<div class="h-meta"><span>'+t("entry")+': '+esc(it.entry)+'</span><span>'+t("outcomeBy")+': '+esc(it.outcomeTime)+'</span><span>'+t("duration")+': '+esc(it.duration)+'</span><span>'+esc(created)+'</span></div>'
         +(it.summary?'<p class="h-sum">'+esc(it.summary)+'</p>':'')
@@ -815,10 +862,18 @@
         +'</div></article>';
     }).join("");
     document.querySelectorAll("[data-oc]").forEach(function(b){
-      b.addEventListener("click", function(){
+      b.addEventListener("click", function(ev){
+        ev.stopPropagation();
         var it = state.history.filter(function(x){ return x.id===b.getAttribute("data-id"); })[0];
         if(!it) return;
         it.outcome = b.getAttribute("data-oc"); save(); renderHistory(); renderStats(); pushOutcome(it);
+      });
+    });
+    document.querySelectorAll("[data-open]").forEach(function(a){
+      a.addEventListener("click", function(ev){
+        if(ev.target.closest && ev.target.closest("[data-oc]")) return;
+        var it = state.history.filter(function(x){ return x.id===a.getAttribute("data-open"); })[0];
+        if(it) openDetail(it);
       });
     });
   }
@@ -827,6 +882,32 @@
     state.history.forEach(function(x){ if(x.outcome==="win")win++; else if(x.outcome==="loss")loss++; });
     $("statAll").textContent = state.history.length; $("statWin").textContent = win; $("statLoss").textContent = loss;
   }
+
+  function openDetail(it){
+    var d = dirInfo(it.direction);
+    var chart = $("detailChart"), chartIn = $("detailChartIn"), body = $("detailBody");
+    if(it.image){ chart.classList.remove("no-img"); chart.style.backgroundImage = "url('"+it.image+"')"; }
+    else { chart.classList.add("no-img"); chart.style.backgroundImage = "none"; }
+    var typeLabel = it.type==="vision" ? "Pulse Vision" : "Pulse Quick";
+    var ct = confText(it.confidence);
+    chartIn.innerHTML = '<div class="sc-asset">'+esc(typeLabel)+' · '+esc(it.asset)+'</div>'
+      + '<div class="sc-dir '+d.cls+'">'+d.text+'</div>'
+      + (ct ? '<span class="sc-conf">'+t("confidence")+': '+esc(ct)+'</span>' : '');
+    var h = '<div class="sd-facts">'
+      + '<div class="sd-fact"><small>'+t("entry")+'</small><b>'+esc(it.entry||"—")+'</b></div>'
+      + '<div class="sd-fact"><small>'+t("outcomeBy")+'</small><b>'+esc(it.outcomeTime||"—")+'</b></div>'
+      + '<div class="sd-fact"><small>'+t("duration")+'</small><b>'+esc(it.duration||"—")+'</b></div>'
+      + '<div class="sd-fact"><small>'+t("detailTimeframe")+'</small><b>'+esc(it.timeframe||"—")+'</b></div>'
+      + '</div>';
+    if(it.summary){ h += '<div class="sd-block"><h4>'+t("detailSummary")+'</h4><p>'+esc(it.summary)+'</p></div>'; }
+    if(it.reasons && it.reasons.length){ h += '<div class="sd-block"><h4>'+t("detailWhy")+'</h4><ul class="sd-list">'+it.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("")+'</ul></div>'; }
+    if(it.strategy){ h += '<div class="sd-block"><h4>'+t("detailStrategy")+'</h4><p>'+esc(it.strategy)+'</p></div>'; }
+    if(it.tips && it.tips.length){ h += '<div class="sd-block"><h4>'+t("detailTips")+'</h4><ul class="sd-list">'+it.tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("")+'</ul></div>'; }
+    if(!it.summary && !(it.reasons&&it.reasons.length) && !it.strategy && !(it.tips&&it.tips.length)){ h += '<div class="sd-block"><p>'+t("detailNoData")+'</p></div>'; }
+    body.innerHTML = h;
+    $("detailOverlay").classList.add("show");
+  }
+  function closeDetail(){ $("detailOverlay").classList.remove("show"); }
 
   /* ---------- Server sync (save_result with ISO times) ---------- */
   function syncResult(item, rec){
@@ -912,12 +993,15 @@
     var cd = $("visionCountdown"); cd.setAttribute("data-entry",tm.entryMs); cd.setAttribute("data-outcome",tm.outcomeMs);
     var reasons = Array.isArray(data.reasons)?data.reasons:[];
     $("visionReasons").innerHTML = reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
-    $("visionRisk").textContent = data.risk || t("visionRisk");
+    var vr=$("visionRisk"); if(vr){ vr.style.display="none"; vr.textContent=""; }
     $("visionResult").classList.add("show");
     tickCountdowns();
     addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
       entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
-      summary:data.summary||"", confidence:data.confidence||"" });
+      summary:data.summary||"", confidence:data.confidence||"",
+      reasons:reasons, strategy:data.strategy||"", tips:Array.isArray(data.tips)?data.tips:[],
+      timeframe:data.timeframe||"", entryWindow:data.entryWindow||"", expiry:data.expiry||"",
+      image:state.image||null });
   }
 
   function analyze(){
@@ -952,7 +1036,7 @@
       function fail(){
         stopProcessing(false);
         state.analyzing=false; $("analyzeBtn").disabled=false;
-        $("visionRisk").textContent = t("errFailed");
+        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed"); vr.style.display="block"; }
       }
       run();
     })();
@@ -1136,6 +1220,8 @@
   $("quickHistory").addEventListener("click",function(){ setTab("history"); });
   $("visionAgain").addEventListener("click",function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; window.scrollTo({top:0,behavior:"smooth"}); });
   $("visionHistory").addEventListener("click",function(){ setTab("history"); });
+  $("detailClose").addEventListener("click", closeDetail);
+  $("detailOverlay").addEventListener("click", function(e){ if(e.target===this) closeDetail(); });
   $("imageInput").addEventListener("change", function(e){
     var file = e.target.files && e.target.files[0]; if(!file) return;
     if(["image/png","image/jpeg","image/webp"].indexOf(file.type)===-1){ alert(t("errBadType")); return; }
