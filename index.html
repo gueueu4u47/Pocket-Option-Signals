@@ -928,7 +928,7 @@
       var attempt=0, done=false;
       function attemptFetch(){
         return fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language })})
+          body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData })})
           .then(function(res){ return res.json().then(function(j){ return {ok:res.ok, data:j}; }); });
       }
       function run(){
