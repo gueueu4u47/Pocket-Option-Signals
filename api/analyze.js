@@ -104,39 +104,55 @@ module.exports = async (req, res) => {
       : image;
 
     const prompt = language === "ru"
-      ? `Ты анализируешь только загруженный пользователем скриншот торгового графика.
-Не утверждай, что результат гарантирован, и не обещай прибыль.
-Не выдумывай цену, индикаторы, пару или таймфрейм, если их не видно.
-Если на изображении недостаточно информации, выбери NO_SIGNAL.
+      ? `Ты — опытный трейдер-аналитик. Тебе дан ТОЛЬКО загруженный пользователем скриншот торгового графика. Разбирай именно то, что реально видно на этом изображении.
 
-Верни только JSON без Markdown в таком формате:
+Правила:
+- Не гарантируй результат и не обещай прибыль.
+- Не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно на скрине.
+- Если данных недостаточно для сигнала — верни "NO_SIGNAL".
+- Пиши живым, естественным языком. Никаких шаблонных, повторяющихся фраз — каждый разбор уникален и конкретен.
+- Опирайся на то, что видно: свечи, их тела и тени, локальные уровни поддержки и сопротивления, тренд, структуру, импульсы и откаты, объём (если он виден).
+- reasons — конкретные наблюдения по ЭТОМУ графику, а не общие слова.
+- strategy — понятная логика сделки: где вход, что подтверждает идею, где она отменяется (инвалидируется), как вести позицию.
+- tips — практичные советы именно под эту ситуацию.
+
+Верни только JSON без Markdown:
 {
   "direction": "BUY | SELL | NO_SIGNAL",
   "confidence": "низкая | средняя | высокая",
-  "entryWindow": "краткое время или условие входа",
-  "expiry": "предполагаемый интервал",
+  "entryWindow": "краткое условие или время входа",
+  "expiry": "предполагаемый интервал удержания",
   "asset": "распознанный актив или Не распознан",
   "timeframe": "распознанный таймфрейм или Не распознан",
-  "summary": "краткий анализ графика в 1–2 предложениях",
-  "reasons": ["наблюдение 1", "наблюдение 2"],
-  "risk": "Это анализ изображения, а не гарантия результата."
+  "summary": "1–2 живых предложения по сути графика",
+  "reasons": ["конкретное наблюдение 1", "конкретное наблюдение 2", "конкретное наблюдение 3"],
+  "strategy": "2–4 предложения: логика входа, подтверждение и точка отмены идеи",
+  "tips": ["практичный совет 1", "практичный совет 2"]
 }`
-      : `Analyze only the trading-chart screenshot uploaded by the user.
-Never guarantee a result or profit.
-Do not invent a price, indicators, asset, or timeframe if they are not visible.
-If the image has insufficient information, use NO_SIGNAL.
+      : `You are an experienced trading analyst. You are given ONLY the chart screenshot uploaded by the user. Analyze exactly what is actually visible in this image.
+
+Rules:
+- Never guarantee a result or promise profit.
+- Do not invent a price, indicators, asset, or timeframe if they are not visible.
+- If there is not enough information for a signal, return "NO_SIGNAL".
+- Write in a natural, human voice. No boilerplate or repeated phrasing — every breakdown is unique and specific.
+- Base it on what is visible: candles, their bodies and wicks, local support/resistance levels, trend, structure, impulses and pullbacks, volume (if visible).
+- reasons must be concrete observations about THIS chart, not generic statements.
+- strategy must clearly explain the trade logic: where to enter, what confirms the idea, where it is invalidated, how to manage the position.
+- tips must be practical and specific to this exact setup.
 
 Return JSON only, without Markdown:
 {
   "direction": "BUY | SELL | NO_SIGNAL",
   "confidence": "low | medium | high",
-  "entryWindow": "short entry timing or condition",
-  "expiry": "suggested interval",
+  "entryWindow": "short entry condition or timing",
+  "expiry": "suggested holding interval",
   "asset": "recognized asset or Not recognized",
   "timeframe": "recognized timeframe or Not recognized",
-  "summary": "brief chart analysis in 1–2 sentences",
-  "reasons": ["observation 1", "observation 2"],
-  "risk": "This is image analysis, not a guarantee of any result."
+  "summary": "1–2 lively sentences on the essence of the chart",
+  "reasons": ["concrete observation 1", "concrete observation 2", "concrete observation 3"],
+  "strategy": "2–4 sentences: entry logic, confirmation and the invalidation point",
+  "tips": ["practical tip 1", "practical tip 2"]
 }`;
 
     const geminiBody = JSON.stringify({
@@ -148,7 +164,7 @@ Return JSON only, without Markdown:
           ]
         }
       ],
-      generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+      generationConfig: { temperature: 0.6, responseMimeType: "application/json" }
     });
     let response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
