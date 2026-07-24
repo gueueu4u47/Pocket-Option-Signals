@@ -393,3 +393,4 @@ module.exports = async (req, res) => {
 
 // Vercel: даём функции время на несколько параллельных ИИ-запросов
 module.exports.config = { maxDuration: 60 };
+module.exports.maxDuration = 60;
