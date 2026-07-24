@@ -336,7 +336,11 @@ module.exports = async (req, res) => {
     );
 
     const verdicts = [];
+    const agentErrors = [];
     settled.forEach((s, i) => {
+      if (s.status === "rejected") {
+        agentErrors.push(AGENTS[i].key + ": " + String((s.reason && s.reason.message) || s.reason));
+      }
       if (s.status === "fulfilled" && s.value) {
         const v = s.value;
         verdicts.push({
@@ -356,6 +360,7 @@ module.exports = async (req, res) => {
       const fbPrompt = lang === "ru"
         ? "Ты — трейдер-аналитик. Проанализируй ТОЛЬКО загруженный скриншот графика (то, что реально видно). Не гарантируй результат, не выдумывай данные. Если данных мало — direction NO_SIGNAL. Верни JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}"
         : "You are a trading analyst. Analyze ONLY the uploaded chart screenshot (what is actually visible). Do not guarantee results or invent data. If insufficient, direction NO_SIGNAL. Return JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}";
+      let singleErr = "";
       try {
         const single = await callGemini(apiKey, [{ text: fbPrompt }, imagePart], 0.6, 24000);
         if (single && single.direction) {
@@ -363,8 +368,9 @@ module.exports = async (req, res) => {
           single.agents = [];
           return res.status(200).json(single);
         }
-      } catch (e) {}
-      return res.status(502).json({ error: "AI returned no analysis" });
+      } catch (e) { singleErr = String((e && e.message) || e); }
+      console.error("ANALYZE_FAIL agents=[" + agentErrors.join(" || ") + "] single=[" + singleErr + "]");
+      return res.status(502).json({ error: "AI failed: " + (agentErrors.join(" || ") + " | single: " + singleErr).slice(0, 300) });
     }
 
     // 2) Агрегатор сводит вердикты в 1 сигнал
