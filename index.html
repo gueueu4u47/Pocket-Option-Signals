@@ -487,7 +487,7 @@
         <select id="langSelect"><option value="ru">Русский</option><option value="en">English</option></select>
       </div>
       <div class="p-row">
-        <div><b id="soundTitle">Звук интерфейса</b><span id="soundHint">Тихий отклик при нажатии</span></div>
+        <div><b id="soundTitle">Звук интерфейса</b><span id="soundHint">Тихий откли�� при нажатии</span></div>
         <button class="toggle" id="soundToggle">Выкл</button>
       </div>
       <div class="p-row">
@@ -1038,7 +1038,7 @@
       function fail(){
         stopProcessing(false);
         state.analyzing=false; $("analyzeBtn").disabled=false;
-        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed"); vr.style.display="block"; }
+        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed") + " [" + lastErr + "]"; vr.style.display="block"; }
       }
       run();
     })();
@@ -1273,4 +1273,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>
