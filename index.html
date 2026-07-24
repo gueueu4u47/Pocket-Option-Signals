@@ -395,7 +395,7 @@
       <div class="mode-stack">
         <button class="btn mode-card selected" data-mode="vision">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
-          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженно��о графика</small></span>
+          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
         </button>
         <button class="btn mode-card" data-mode="quick">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L4 14 h7 l-1 8 9-12 h-7 z"/></svg></span>
@@ -651,7 +651,7 @@
   var $ = function(id){ return document.getElementById(id); };
   var t = function(k){ return (T[state.language] && T[state.language][k]) || k; };
 
-  function esc(v){ return String(v==null?"":v).replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#039;"}[c];}); }
+  function esc(v){ return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];}); }
 
   function save(){
     localStorage.setItem("pulse_language", state.language);
@@ -936,11 +936,13 @@
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max=1600, w=img.width, h=img.height;
+          var max=2200, w=img.width, h=img.height;
           if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
           var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
-          cv.getContext("2d").drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",0.8));
+          var ctx=cv.getContext("2d");
+          try{ ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; }catch(e){}
+          ctx.drawImage(img,0,0,w,h);
+          resolve(cv.toDataURL("image/jpeg",0.92));
         };
         img.onerror = reject; img.src = reader.result;
       };
