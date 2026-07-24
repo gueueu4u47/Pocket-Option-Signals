@@ -65,17 +65,19 @@ function parseJsonLoose(text) {
   return JSON.parse(clean);
 }
 
-async function callGemini(apiKey, parts, temperature) {
+async function callGemini(apiKey, parts, temperature, timeoutMs) {
   const body = JSON.stringify({
     contents: [{ parts }],
     generationConfig: { temperature, responseMimeType: "application/json" }
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body }
+        { method: "POST", headers: { "Content-Type": "application/json" }, body, signal: ctrl.signal }
       );
       const data = await resp.json().catch(() => null);
       if (!resp.ok) {
@@ -89,7 +91,10 @@ async function callGemini(apiKey, parts, temperature) {
       return parseJsonLoose(text);
     } catch (e) {
       lastErr = (e && e.message) || String(e);
+      if (e && e.name === "AbortError") break;
       continue;
+    } finally {
+      clearTimeout(to);
     }
   }
   throw new Error(lastErr);
@@ -326,7 +331,7 @@ module.exports = async (req, res) => {
     // 1) Параллельно запускаем всех агентов по одному и тому же графику
     const settled = await Promise.allSettled(
       AGENTS.map((agent) =>
-        callGemini(apiKey, [{ text: agentPrompt(agent, lang) }, imagePart], 0.5)
+        callGemini(apiKey, [{ text: agentPrompt(agent, lang) }, imagePart], 0.5, 24000)
       )
     );
 
@@ -352,7 +357,7 @@ module.exports = async (req, res) => {
         ? "Ты — трейдер-аналитик. Проанализируй ТОЛЬКО загруженный скриншот графика (то, что реально видно). Не гарантируй результат, не выдумывай данные. Если данных мало — direction NO_SIGNAL. Верни JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}"
         : "You are a trading analyst. Analyze ONLY the uploaded chart screenshot (what is actually visible). Do not guarantee results or invent data. If insufficient, direction NO_SIGNAL. Return JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}";
       try {
-        const single = await callGemini(apiKey, [{ text: fbPrompt }, imagePart], 0.6);
+        const single = await callGemini(apiKey, [{ text: fbPrompt }, imagePart], 0.6, 24000);
         if (single && single.direction) {
           supaLogAnalyze(user.id);
           single.agents = [];
@@ -365,7 +370,7 @@ module.exports = async (req, res) => {
     // 2) Агрегатор сводит вердикты в 1 сигнал
     let final = null;
     try {
-      final = await callGemini(apiKey, [{ text: aggregatorPrompt(verdicts, lang) }], 0.5);
+      final = await callGemini(apiKey, [{ text: aggregatorPrompt(verdicts, lang) }], 0.5, 18000);
     } catch (e) {
       final = null;
     }
