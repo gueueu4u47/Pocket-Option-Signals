@@ -54,7 +54,7 @@ function rateLimit(key, limit, windowMs) {
 }
 
 /* ---------- Gemini helpers ---------- */
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
 
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
