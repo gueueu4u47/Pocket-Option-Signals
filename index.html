@@ -1022,25 +1022,28 @@
     (function(){
       var settled=false;
       var controller = ("AbortController" in window) ? new AbortController() : null;
-      function finishWith(data, done){
+      function showDiag(msg){
+        var vr=$("visionRisk"); if(vr){ vr.textContent = "DEBUG: " + msg; vr.style.display="block"; }
+      }
+      function finishWith(data, done, diag){
         if(settled) return; settled=true;
         stopProcessing(done);
-        setTimeout(function(){ showVisionResult(data); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
+        setTimeout(function(){ showVisionResult(data); if(diag) showDiag(diag); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
       }
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
-        finishWith(genVisionResult(), false);
-      }, 9500);
+        finishWith(genVisionResult(), false, "timeout > 9.5s (ИИ не успел)");
+      }, 42000);
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
         signal: controller?controller.signal:undefined })
-        .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, data:j}; }); })
+        .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
         .then(function(r){
           clearTimeout(capTimer);
           if(r.ok && r.data && r.data.direction){ finishWith(r.data, true); }
-          else { finishWith(genVisionResult(), true); }
+          else { finishWith(genVisionResult(), true, "HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,200))); }
         })
-        .catch(function(){ clearTimeout(capTimer); finishWith(genVisionResult(), true); });
+        .catch(function(e){ clearTimeout(capTimer); finishWith(genVisionResult(), true, "NETWORK/ABORT -> "+(e&&e.message?e.message:String(e))); });
     })();
   }
 
