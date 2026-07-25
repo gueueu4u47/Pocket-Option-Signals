@@ -67,6 +67,8 @@ function repairJson(s) {
     if (c === "\"") inStr = !inStr;
   }
   if (inStr) str += "\"";
+  str = str.replace(/:\s*([}\],])/g, ":null$1");
+  str = str.replace(/,\s*([}\]])/g, "$1");
   str = str.replace(/,\s*$/, "");
   const oc = (str.match(/{/g) || []).length, cc = (str.match(/}/g) || []).length;
   const os = (str.match(/\[/g) || []).length, cs = (str.match(/]/g) || []).length;
