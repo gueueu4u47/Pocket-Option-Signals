@@ -1,11 +1,15 @@
 const crypto = require("crypto");
 
 /* ============================================================
-   Signal Pulse — /api/analyze  (МУЛЬТИ-АГЕНТНЫЙ АНАЛИЗ)
-   Несколько специализированных ИИ-агентов анализируют ОДИН
-   загруженный скриншот графика с разных сторон, затем
-   агент-агрегатор сводит их вердикты в 1 финальный сигнал.
-   Выходной JSON идентичен прежнему — фронтенд менять НЕ нужно.
+   Signal Pulse — /api/analyze
+   Анализ ОДНОГО загруженного скриншота графика.
+
+   Главное отличие от прежней версии:
+   - Никогда не отдаёт 502 во фронт.
+   - reasons (почему ВВЕРХ / ВНИЗ / НЕТ СИГНАЛА) не может прийти пустым:
+     сначала берём из JSON модели, затем спасаем из summary/strategy,
+     затем из сырого текста, и только потом честный NO_SIGNAL с объяснением.
+   - Повтор запроса с упрощённым промптом, если модель вернула мусор.
    ============================================================ */
 
 function validateTelegramInitData(initData, botToken) {
@@ -53,9 +57,34 @@ function rateLimit(key, limit, windowMs) {
   return true;
 }
 
-/* ---------- Gemini helpers ---------- */
+/* ---------- Экономия: кэш одинаковых скриншотов ---------- */
+const CACHE = new Map();
+const CACHE_TTL = Number(process.env.ANALYZE_CACHE_TTL_MS || 900000); // 15 мин
+function imageKey(base64, lang) {
+  return crypto.createHash("sha1").update(String(lang) + "|" + String(base64)).digest("hex");
+}
+function cacheGet(key) {
+  const hit = CACHE.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.t > CACHE_TTL) { CACHE.delete(key); return null; }
+  return hit.payload;
+}
+function cacheSet(key, payload) {
+  CACHE.set(key, { t: Date.now(), payload });
+  if (CACHE.size > 400) {
+    const now = Date.now();
+    for (const [k, v] of CACHE) { if (now - v.t > CACHE_TTL) CACHE.delete(k); }
+    while (CACHE.size > 400) CACHE.delete(CACHE.keys().next().value);
+  }
+}
+
+/* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
+// Дешёвая модель первой, дорогая — только как резерв
+const MODELS = String(process.env.AI_MODELS || "gemini-2.0-flash-lite,gemini-2.0-flash")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 function repairJson(s) {
   let str = String(s);
@@ -84,200 +113,106 @@ function parseJsonLoose(text) {
   if (first > -1 && last > -1 && last > first) clean = clean.slice(first, last + 1);
   else if (first > -1) clean = clean.slice(first);
   try { return JSON.parse(clean); }
-  catch (e) { return JSON.parse(repairJson(clean)); }
+  catch (e) { try { return JSON.parse(repairJson(clean)); } catch (e2) { return null; } }
 }
 
-async function callGemini(apiKey, parts, temperature, timeoutMs) {
-  const content = parts.map((p) => {
-    if (p && p.text) return { type: "text", text: p.text };
-    if (p && p.inline_data) return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
-    return { type: "text", text: "" };
+function cleanList(v, max) {
+  const arr = Array.isArray(v) ? v : (v ? [v] : []);
+  const out = [];
+  arr.forEach((x) => {
+    const s = String(x == null ? "" : x).replace(/^[\s\-*•\d.)]+/, "").trim();
+    if (s && s.length > 3 && out.indexOf(s) === -1) out.push(s);
   });
-  let lastErr = "unknown";
-  for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1000, response_format: { type: "json_object" } });
-    const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
-    try {
-      const resp = await fetch(AI_BASE + "/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-        body,
-        signal: ctrl.signal
-      });
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        lastErr = (data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status);
-        continue;
-      }
-      const text = String(
-        (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
-      ).trim();
-      if (!text) { lastErr = "empty response"; continue; }
-      let parsed = null;
-      try { parsed = parseJsonLoose(text); } catch (pe) { lastErr = "parse: " + ((pe && pe.message) || pe); continue; }
-      if (!parsed || !parsed.direction) { lastErr = "no direction"; continue; }
-      const goodReasons = Array.isArray(parsed.reasons) ? parsed.reasons.filter(function (x) { return String(x || "").trim(); }) : [];
-      if (goodReasons.length === 0) { lastErr = "empty reasons"; continue; }
-      parsed.reasons = goodReasons;
-      return parsed;
-    } catch (e) {
-      lastErr = (e && e.message) || String(e);
-      continue;
-    } finally {
-      clearTimeout(to);
-    }
+  return out.slice(0, max || 4);
+}
+
+/* Спасаем причины из чего угодно, что вернула модель */
+function salvageReasons(parsed, rawText, lang) {
+  let reasons = cleanList(parsed && parsed.reasons, 4);
+  if (reasons.length) return reasons;
+
+  // 1. из summary / strategy / note
+  const textBlocks = [parsed && parsed.summary, parsed && parsed.strategy, parsed && parsed.note]
+    .filter(Boolean)
+    .join(" ");
+  if (textBlocks) {
+    reasons = cleanList(String(textBlocks).split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 12), 3);
+    if (reasons.length) return reasons;
   }
-  throw new Error(lastErr);
+
+  // 2. из сырого ответа модели
+  const lines = String(rawText || "")
+    .replace(/```[a-z]*/gi, "")
+    .split(/\n|(?<=[.!?])\s+/)
+    .map((l) => l.replace(/^[\s\-*•\d.)"]+/, "").replace(/["{},]+$/, "").trim())
+    .filter((l) => l.length > 14 && l.indexOf(":") === -1);
+  reasons = cleanList(lines, 3);
+  if (reasons.length) return reasons;
+
+  return [];
 }
 
-/* ---------- Определения агентов ---------- */
-const AGENTS = [
-  {
-    key: "trend",
-    ru: { role: "Тренд и структура рынка", focus: "общий тренд, фаза рынка, структура (последовательность максимумов и минимумов), направление доминирующей силы" },
-    en: { role: "Trend & market structure", focus: "overall trend, market phase, structure (sequence of highs and lows), direction of the dominant force" }
-  },
-  {
-    key: "price",
-    ru: { role: "Прайс-экшн и свечи", focus: "свечи (тела и тени), свечные паттерны, импульсы и откаты, краткосрочный моментум и тайминг входа" },
-    en: { role: "Price action & candles", focus: "candles (bodies and wicks), candlestick patterns, impulses and pullbacks, short-term momentum and entry timing" }
-  },
-  {
-    key: "levels",
-    ru: { role: "Уровни, риск и тайминг", focus: "ключевые уровни поддержки и сопротивления, близость цены к ним, зоны реакции, волатильность и точка отмены идеи (инвалидация)" },
-    en: { role: "Levels, risk & timing", focus: "key support/resistance levels, price proximity to them, reaction zones, volatility and the invalidation point" }
-  }
-];
-
-function agentPrompt(agent, language) {
-  const a = language === "ru" ? agent.ru : agent.en;
-  if (language === "ru") {
-    return `Ты — узкоспециализированный трейдер-аналитик. Твоя специализация: ${a.role}.
-Тебе дан ТОЛЬКО загруженный пользователем скриншот торгового графика. Анализируй строго то, что реально видно на изображении.
-Твоя зона ответственности: ${a.focus}.
-
-Правила:
-- Не гарантируй результат и не обещай прибыль.
-- Не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно.
-- Если по твоей части данных недостаточно — vote = "NO_SIGNAL".
-- observations — конкретные наблюдения именно по ЭТОМУ графику в рамках твоей специализации.
-
-Верни ТОЛЬКО JSON без markdown:
-{"vote":"BUY | SELL | NO_SIGNAL","confidence":"низкая | средняя | высокая","asset":"распознанный актив или Не распознан","timeframe":"распознанный таймфрейм или Не распознан","observations":["наблюдение 1","наблюдение 2"],"note":"1-2 предложения вывода по твоей части"}`;
-  }
-  return `You are a narrowly specialized trading analyst. Your specialization: ${a.role}.
-You are given ONLY the chart screenshot uploaded by the user. Analyze strictly what is actually visible in the image.
-Your area of responsibility: ${a.focus}.
-
-Rules:
-- Never guarantee a result or promise profit.
-- Do not invent price, indicators, asset, or timeframe if not visible.
-- If your part lacks enough data, vote = "NO_SIGNAL".
-- observations must be concrete points about THIS chart within your specialization.
-
-Return JSON only, no markdown:
-{"vote":"BUY | SELL | NO_SIGNAL","confidence":"low | medium | high","asset":"recognized asset or Not recognized","timeframe":"recognized timeframe or Not recognized","observations":["observation 1","observation 2"],"note":"1-2 sentence conclusion for your part"}`;
+function noDataReasons(lang) {
+  return lang === "ru"
+    ? [
+        "На загруженном изображении не удалось разобрать структуру графика.",
+        "Нет подтверждённого направления — вход по этому скриншоту не оправдан.",
+        "Сделай скриншот крупнее: свечи, шкала времени и уровни цены целиком."
+      ]
+    : [
+        "The chart structure could not be read from the uploaded image.",
+        "No confirmed direction — entering on this screenshot is not justified.",
+        "Take a larger screenshot: candles, time axis and price levels in full."
+      ];
 }
 
-function aggregatorPrompt(verdicts, language) {
-  const json = JSON.stringify(verdicts, null, 2);
-  if (language === "ru") {
-    return `Ты — старший трейдер, который сводит м��е��ия ��оманды аналитиков в ОДИН итоговый сигнал.
-Ниже — вердикты нескольких агентов (каждый анализировал один и тот же график со своей специализации).
-Взвесь их: учитывай согласие и противоречия. Чем сильнее согласие агентов — тем выше уверенность. При явном конфликте будь осторожен (возможен NO_SIGNAL).
-Не выдумывай данные сверх того, что дали агенты и что видно на графике. Пиши живым, естественным языком, без шаблонных фраз.
-
-Верни ТОЛЬКО JSON без markdown:
-{
-  "direction": "BUY | SELL | NO_SIGNAL",
-  "confidence": "низкая | средняя | высокая",
-  "entryWindow": "краткое условие или время входа",
-  "expiry": "предполагаемый интервал удержания",
-  "asset": "актив или Не распознан",
-  "timeframe": "таймфрейм или Не распознан",
-  "summary": "1-2 живых предложения: итог по графику и почему такой сигнал",
-  "reasons": ["конкретная причина 1", "причина 2", "причина 3"],
-  "strategy": "2-4 предложения: логика входа, подтверждение и точка отмены идеи",
-  "tips": ["практичный совет 1", "совет 2"]
-}
-
-Вердикты агентов:
-${json}`;
-  }
-  return `You are a senior trader consolidating your analyst team's opinions into ONE final signal.
-Below are verdicts from several agents (each analyzed the same chart from its specialization).
-Weigh them: account for agreement and conflicts. The stronger the agreement, the higher the confidence. On clear conflict be cautious (NO_SIGNAL is possible).
-Do not invent data beyond what the agents provided and what is visible. Write in a natural, human voice, no boilerplate.
-
-Return JSON only, no markdown:
-{
-  "direction": "BUY | SELL | NO_SIGNAL",
-  "confidence": "low | medium | high",
-  "entryWindow": "short entry condition or timing",
-  "expiry": "suggested holding interval",
-  "asset": "asset or Not recognized",
-  "timeframe": "timeframe or Not recognized",
-  "summary": "1-2 lively sentences: chart takeaway and why this signal",
-  "reasons": ["concrete reason 1", "reason 2", "reason 3"],
-  "strategy": "2-4 sentences: entry logic, confirmation and invalidation point",
-  "tips": ["practical tip 1", "tip 2"]
-}
-
-Agent verdicts:
-${json}`;
-}
-
-/* ---------- Детерминированный агрегатор (fallback, без ИИ) ---------- */
-function normVote(v) {
-  const s = String(v || "").toUpperCase();
-  if (s === "BUY" || s === "UP") return "BUY";
-  if (s === "SELL" || s === "DOWN") return "SELL";
+function normDirection(d) {
+  const s = String(d || "").toUpperCase().trim();
+  if (["BUY", "UP", "CALL", "ВВЕРХ", "LONG"].indexOf(s) > -1) return "BUY";
+  if (["SELL", "DOWN", "PUT", "ВНИЗ", "SHORT"].indexOf(s) > -1) return "SELL";
   return "NO_SIGNAL";
 }
-function mostCommon(arr) {
-  const m = {};
-  let best = null, bestN = 0;
-  arr.filter(Boolean).forEach((x) => { m[x] = (m[x] || 0) + 1; if (m[x] > bestN) { bestN = m[x]; best = x; } });
-  return best;
-}
-function fallbackAggregate(verdicts, language) {
-  const ru = language === "ru";
-  const votes = verdicts.map((v) => normVote(v.vote));
-  const buy = votes.filter((v) => v === "BUY").length;
-  const sell = votes.filter((v) => v === "SELL").length;
-  const total = verdicts.length || 1;
-  let direction = "NO_SIGNAL";
-  if (buy > sell) direction = "BUY";
-  else if (sell > buy) direction = "SELL";
-  const agree = Math.max(buy, sell);
-  const ratio = agree / total;
-  let confidence = ru ? "низкая" : "low";
-  if (direction !== "NO_SIGNAL" && ratio >= 0.99) confidence = ru ? "высокая" : "high";
-  else if (direction !== "NO_SIGNAL" && ratio >= 0.6) confidence = ru ? "средняя" : "medium";
-  const reasons = verdicts.map((v) => v.note).filter(Boolean).slice(0, 4);
-  const consensus = ru
-    ? `Консенсус агентов: ${buy} за рост, ${sell} за снижение из ${total}.`
-    : `Agent consensus: ${buy} up, ${sell} down of ${total}.`;
-  reasons.unshift(consensus);
-  return {
-    direction,
-    confidence,
-    entryWindow: ru ? "по подтверждению на графике" : "on chart confirmation",
-    expiry: "",
-    asset: mostCommon(verdicts.map((v) => v.asset).filter((a) => a && String(a).toLowerCase().indexOf("не распознан") === -1 && String(a).toLowerCase().indexOf("not recognized") === -1)) || (ru ? "Не распознан" : "Not recognized"),
-    timeframe: mostCommon(verdicts.map((v) => v.timeframe).filter((a) => a && String(a).toLowerCase().indexOf("не распознан") === -1 && String(a).toLowerCase().indexOf("not recognized") === -1)) || (ru ? "Не распознан" : "Not recognized"),
-    summary: ru
-      ? "Итог собран из мнений нескольких агентов по видимой части графика."
-      : "Result assembled from several agents' views of the visible chart.",
-    reasons: reasons.slice(0, 5),
-    strategy: ru
-      ? "Входи только при совпадении с направлением большинства агентов и подтверждении ценой; отменяй идею при пробое ближайшего значимого уровня против сигнала."
-      : "Enter only when price confirms the majority direction; invalidate the idea if the nearest key level breaks against the signal.",
-    tips: ru
-      ? ["Не входи против сильного противоречия между агентами.", "Фиксируй риск на сделку заранее."]
-      : ["Avoid entering against strong disagreement between agents.", "Set your per-trade risk in advance."]
+
+async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
+  const content = parts.map((p) => {
+    if (p && p.text) return { type: "text", text: p.text };
+    if (p && p.inline_data) {
+      return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
+    }
+    return { type: "text", text: "" };
+  });
+  const payload = {
+    model,
+    messages: [{ role: "user", content }],
+    temperature,
+    max_tokens: Number(process.env.AI_MAX_TOKENS || 600)
   };
+  if (forceJson) payload.response_format = { type: "json_object" };
+
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
+  try {
+    const resp = await fetch(AI_BASE + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) {
+      const msg = (data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status);
+      return { ok: false, error: String(msg) };
+    }
+    const text = String(
+      (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
+    ).trim();
+    if (!text) return { ok: false, error: "empty response" };
+    return { ok: true, text, parsed: parseJsonLoose(text) };
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || String(e) };
+  } finally {
+    clearTimeout(to);
+  }
 }
 
 /* ---------- Supabase (дневной лимит, best-effort / fail-open) ---------- */
@@ -299,6 +234,14 @@ async function supaLogAnalyze(userId) {
     body: JSON.stringify({ telegram_id: userId, event_type: "vision_analyze", details: {} })
   }).catch(() => {});
 }
+async function globalAnalyzeCount() {
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const rows = await supaGet(
+    `/pulse_events?select=id&event_type=eq.vision_analyze&created_at=gte.${start.toISOString()}`
+  );
+  return Array.isArray(rows) ? rows.length : 0;
+}
 async function dailyAnalyzeCount(userId) {
   const start = new Date();
   start.setUTCHours(0, 0, 0, 0);
@@ -308,10 +251,36 @@ async function dailyAnalyzeCount(userId) {
   return Array.isArray(rows) ? rows.length : 0;
 }
 
-/* ============================================================ */
-const PROMPT_RU = `Ты — опытный трейдер-аналитик. Тебе дан ТОЛЬКО загруженный скриншот графика. Анализируй строго то, что реально видно: тренд, свечи/прайс-экшн, ключевые уровни. Правила: не гарантируй результат и не обещай прибыль; не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно; если данных мало — direction NO_SIGNAL. Пиши живым понятным языком, кратко. В reasons — короткие причины по графику (простые факты, БЕЗ нумерации и БЕЗ голосований), максимум 3. tips — максимум 2. Верни ТОЛЬКО JSON без markdown: {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","entryWindow":"условие/время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 живых предложения","reasons":["причина","причина"],"strategy":"2-3 предложения: вход, подтверждение, отмена","tips":["совет","совет"]}`;
-const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles/price action, key levels. Rules: never guarantee a result or promise profit; do not invent price, indicators, asset, or timeframe if not visible; if insufficient data, direction NO_SIGNAL. Write in a natural, clear voice, concise. In reasons - short chart-based reasons (plain facts, NO numbering and NO voting), max 3. tips - max 2. Return JSON only, no markdown: {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","entryWindow":"entry condition/timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 lively sentences","reasons":["reason","reason"],"strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["tip","tip"]}`;
+/* ---------- Промпты ---------- */
+const PROMPT_RU = `Ты — опытный трейдер-аналитик. Тебе дан ТОЛЬКО загруженный скриншот графика. Анализируй строго то, что реально видно: тренд, свечи и прайс-экшн, ключевые уровни.
+Правила:
+- Не гарантируй результат и не обещай прибыль.
+- Не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно.
+- Если данных мало — direction "NO_SIGNAL", и в reasons объясни, чего именно не хватает.
+- reasons ОБЯЗАТЕЛЬНО непустой: 2-3 коротких конкретных факта по этому графику, простым языком, без нумерации и без слова "голосование". Именно reasons отвечает на вопрос "почему вверх, вниз или пропустить".
+- tips — максимум 2.
+Верни ТОЛЬКО JSON без markdown:
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","entryWindow":"условие или время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 живых предложения","reasons":["причина","причина"],"strategy":"2-3 предложения: вход, подтверждение, отмена идеи","tips":["совет","совет"]}`;
 
+const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles and price action, key levels.
+Rules:
+- Never guarantee a result or promise profit.
+- Do not invent price, indicators, asset or timeframe if not visible.
+- If data is insufficient, direction "NO_SIGNAL", and in reasons explain exactly what is missing.
+- reasons MUST be non-empty: 2-3 short concrete facts about this chart, plain language, no numbering. reasons is what answers "why up, down or skip".
+- tips — max 2.
+Return JSON only, no markdown:
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","entryWindow":"entry condition or timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 lively sentences","reasons":["reason","reason"],"strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["tip","tip"]}`;
+
+const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
+reasons обязателен и не может быть пустым.`;
+
+const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, no markdown, no text around it:
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
+reasons is required and cannot be empty.`;
+
+/* ============================================================ */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Vary", "Origin");
@@ -322,30 +291,44 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST request" });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY is not configured" });
+  const body0 = typeof req.body === "string" ? (JSON.parse(req.body || "{}") || {}) : (req.body || {});
+  const lang0 = body0.language === "en" ? "en" : "ru";
+
+  // Даже без ключа не роняем фронт 500-кой — отдаём честный NO_SIGNAL
+  if (!apiKey) {
+    return res.status(200).json({
+      direction: "NO_SIGNAL",
+      confidence: lang0 === "ru" ? "низкая" : "low",
+      asset: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      timeframe: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      summary: lang0 === "ru" ? "Анализ временно недоступен." : "Analysis is temporarily unavailable.",
+      reasons: noDataReasons(lang0),
+      strategy: "",
+      tips: [],
+      degraded: true,
+      diag: "missing api key"
+    });
+  }
 
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
-    const { image, mimeType = "image/jpeg", language = "ru", initData } = body;
+    const { image, mimeType = "image/jpeg", language = "ru", initData } = body0;
     const lang = language === "en" ? "en" : "ru";
 
     const user = validateTelegramInitData(initData, botToken);
     if (!user || !user.id) return res.status(401).json({ error: "Telegram verification failed" });
     const isOwner = String(user.id) === String(process.env.OWNER_TELEGRAM_ID || "");
 
-    // Лимит в минуту (каждый анализ = несколько запросов к ИИ)
     if (!isOwner && !rateLimit("analyze:" + user.id, 5, 60000)) {
       return res.status(429).json({ error: "Too many requests. Please slow down." });
     }
 
-    if (!["image/png", "image/jpeg", "image/webp"].includes(String(mimeType))) {
+    if (["image/png", "image/jpeg", "image/webp"].indexOf(String(mimeType)) === -1) {
       return res.status(400).json({ error: "Unsupported image type" });
     }
     if (!image || typeof image !== "string") return res.status(400).json({ error: "Image is required" });
     if (image.length > 12000000) return res.status(413).json({ error: "Image is too large" });
 
-    // Дневной лимит (fail-open: при ошибке Supabase анализ не блокируется)
     const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 5);
     try {
       const used = await dailyAnalyzeCount(user.id);
@@ -356,32 +339,135 @@ module.exports = async (req, res) => {
             : `Daily analysis limit reached (${DAILY_LIMIT}). Come back tomorrow.`
         });
       }
-    } catch (e) {
-      // fail-open
+    } catch (e) { /* fail-open */ }
+
+    const base64Image = image.indexOf(",") > -1 ? image.split(",").pop() : image;
+
+    // Экономия 1: пауза между анализами одного человека
+    const COOLDOWN_SEC = Number(process.env.ANALYZE_COOLDOWN_SEC || 25);
+    if (!isOwner && COOLDOWN_SEC > 0 && !rateLimit("cooldown:" + user.id, 1, COOLDOWN_SEC * 1000)) {
+      return res.status(429).json({
+        error: lang === "ru"
+          ? `Подожди ${COOLDOWN_SEC} секунд перед следующим анализом.`
+          : `Wait ${COOLDOWN_SEC} seconds before the next analysis.`
+      });
     }
 
-    const base64Image = image.includes(",") ? image.split(",").pop() : image;
+    // Экономия 2: тот же скриншот — ответ из кэша, без затрат на ИИ
+    const cacheKey = imageKey(base64Image, lang);
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      supaLogAnalyze(user.id);
+      return res.status(200).json(Object.assign({}, cached, { cached: true }));
+    }
+
+    // Экономия 3: общий дневной потолок по всем пользователям
+    const GLOBAL_LIMIT = Number(process.env.DAILY_GLOBAL_ANALYZE_LIMIT || 0);
+    if (!isOwner && GLOBAL_LIMIT > 0) {
+      try {
+        const usedAll = await globalAnalyzeCount();
+        if (usedAll >= GLOBAL_LIMIT) {
+          return res.status(200).json({
+            direction: "NO_SIGNAL",
+            confidence: lang === "ru" ? "низкая" : "low",
+            asset: lang === "ru" ? "Не распознан" : "Not recognized",
+            timeframe: "",
+            summary: lang === "ru"
+              ? "На сегодня достигнут общий лимит анализов."
+              : "The overall daily analysis limit has been reached.",
+            reasons: lang === "ru"
+              ? ["Сегодняшний объём анализов исчерпан.", "Возвращайся завтра — лимит обновится."]
+              : ["Today's analysis volume is used up.", "Come back tomorrow when the limit resets."],
+            strategy: "", tips: [], degraded: true, limited: true
+          });
+        }
+      } catch (e) { /* fail-open */ }
+    }
+
     const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
+    const mainPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
+    const retryPrompt = lang === "ru" ? RETRY_RU : RETRY_EN;
 
-    // Единый комплексный запрос: модель = 3 спеца + старший трейдер, один запрос (быстро/дешево, в лимите 60с)
-    const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
-    let final = null, singleErr = "";
-    try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 16000);
-    } catch (e) { singleErr = String((e && e.message) || e); }
-    if (!final || !final.direction) {
-      console.error("ANALYZE_FAIL single=[" + singleErr + "]");
-      return res.status(502).json({ error: "AI failed: " + String(singleErr || "no analysis").slice(0, 300) });
+    let best = null;
+    let bestReasons = [];
+    let rawSeen = "";
+    const diag = [];
+
+    // Проход 1: основной промпт по всем моделям
+    for (const model of MODELS) {
+      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, 18000, true);
+      if (!r.ok) { diag.push(model + ": " + r.error); continue; }
+      rawSeen = r.text;
+      const parsed = r.parsed || {};
+      const reasons = salvageReasons(parsed, r.text, lang);
+      if (parsed.direction && reasons.length) { best = parsed; bestReasons = reasons; break; }
+      if (parsed.direction && !best) { best = parsed; bestReasons = reasons; }
+      diag.push(model + ": weak answer");
     }
-    final.agents = [];
+
+    // Проход 2: ОДИН короткий повтор на самой дешёвой модели
+    if (!best || !bestReasons.length) {
+      for (const model of MODELS.slice(0, 1)) {
+        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, 14000, false);
+        if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
+        rawSeen = rawSeen || r.text;
+        const parsed = r.parsed || {};
+        const reasons = salvageReasons(parsed, r.text, lang);
+        if (reasons.length) {
+          best = Object.assign({}, best || {}, parsed);
+          bestReasons = reasons;
+          break;
+        }
+        diag.push("retry " + model + ": no reasons");
+      }
+    }
+
+    const degraded = !best || !bestReasons.length;
+    const direction = normDirection(best && best.direction);
+    const finalDirection = degraded ? "NO_SIGNAL" : direction;
+    const reasonsOut = bestReasons.length ? bestReasons : noDataReasons(lang);
+
+    const payload = {
+      direction: finalDirection,
+      confidence: (best && best.confidence) || (finalDirection === "NO_SIGNAL" ? (lang === "ru" ? "низкая" : "low") : (lang === "ru" ? "средняя" : "medium")),
+      entryWindow: (best && best.entryWindow) || "",
+      expiry: (best && best.expiry) || "",
+      asset: (best && best.asset) || (lang === "ru" ? "Не распознан" : "Not recognized"),
+      timeframe: (best && best.timeframe) || (lang === "ru" ? "Не распознан" : "Not recognized"),
+      summary: (best && best.summary) || (lang === "ru"
+        ? "Разбор построен только по видимой части графика."
+        : "The breakdown is based only on the visible part of the chart."),
+      reasons: reasonsOut,
+      strategy: (best && best.strategy) || "",
+      tips: cleanList(best && best.tips, 2),
+      agents: [],
+      degraded: degraded
+    };
+
+    if (degraded) {
+      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 200));
+      if (isOwner) payload.diag = diag.join(" | ").slice(0, 300);
+    }
+
+    if (!degraded) cacheSet(cacheKey, payload);
     supaLogAnalyze(user.id);
-    return res.status(200).json(final);
+    return res.status(200).json(payload);
   } catch (error) {
     console.error("Analyze error:", error);
-    return res.status(500).json({ error: "Unable to analyze the image" });
+    // Фронт всегда получает готовую карточку с объяснением, а не пустой экран
+    return res.status(200).json({
+      direction: "NO_SIGNAL",
+      confidence: lang0 === "ru" ? "низкая" : "low",
+      asset: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      timeframe: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      summary: lang0 === "ru" ? "Сервис анализа не ответил." : "The analysis service did not respond.",
+      reasons: noDataReasons(lang0),
+      strategy: "",
+      tips: [],
+      degraded: true
+    });
   }
 };
 
-// Vercel: даём функции время на несколько параллельных ИИ-запросов
 module.exports.config = { maxDuration: 60 };
 module.exports.maxDuration = 60;
