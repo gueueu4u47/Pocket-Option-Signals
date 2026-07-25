@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash"];
+const GEMINI_MODELS = ["gemini-2.5-flash"];
 
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -341,7 +341,7 @@ module.exports = async (req, res) => {
     const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 9000);
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 40000);
     } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
       console.error("ANALYZE_FAIL single=[" + singleErr + "]");
