@@ -394,7 +394,7 @@
       <div class="mode-stack">
         <button class="btn mode-card selected" data-mode="vision">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
-          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруженного графика</small></span>
+          <span><b>Pulse Vision</b><small id="visionModeText">Анализ загруж��нного графика</small></span>
         </button>
         <button class="btn mode-card" data-mode="quick">
           <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L4 14 h7 l-1 8 9-12 h-7 z"/></svg></span>
@@ -463,7 +463,10 @@
           <div class="fact"><small id="vL4">ДО РЕЗУЛЬТАТА</small><b id="visionOutcome">—</b></div>
         </div>
         <div class="countdown" id="visionCountdown">—</div>
-        <ul class="reasons" id="visionReasons"></ul>
+        <div class="sd-block" id="visionSummaryWrap" style="display:none"><h4 id="visionSummaryTitle">Кратко</h4><p id="visionSummary"></p></div>
+        <div class="sd-block" id="visionReasonsWrap" style="display:none"><h4 id="visionReasonsTitle">Почему такой сигнал</h4><ul class="reasons" id="visionReasons"></ul></div>
+        <div class="sd-block" id="visionStrategyWrap" style="display:none"><h4 id="visionStrategyTitle">Стратегия</h4><p id="visionStrategy"></p></div>
+        <div class="sd-block" id="visionTipsWrap" style="display:none"><h4 id="visionTipsTitle">Советы</h4><ul class="sd-list" id="visionTips"></ul></div>
         <div class="err-note" id="visionRisk" style="display:none"></div>
         <div class="r-actions">
           <button class="btn primary" id="visionAgain">Новый анализ</button>
@@ -941,13 +944,13 @@
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max=1000, w=img.width, h=img.height;
+          var max=760, w=img.width, h=img.height;
           if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
           var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           var ctx=cv.getContext("2d");
           try{ ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; }catch(e){}
           ctx.drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",0.8));
+          resolve(cv.toDataURL("image/jpeg",0.62));
         };
         img.onerror = reject; img.src = reader.result;
       };
@@ -999,7 +1002,23 @@
     $("visionOutcome").textContent = tm.outcomeText;
     var cd = $("visionCountdown"); cd.setAttribute("data-entry",tm.entryMs); cd.setAttribute("data-outcome",tm.outcomeMs);
     var reasons = Array.isArray(data.reasons)?data.reasons:[];
+    $("visionReasonsTitle").textContent = t("detailWhy");
     $("visionReasons").innerHTML = reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
+    $("visionReasonsWrap").style.display = reasons.length ? "block" : "none";
+
+    $("visionSummaryTitle").textContent = t("detailSummary");
+    $("visionSummary").textContent = data.summary || "";
+    $("visionSummaryWrap").style.display = data.summary ? "block" : "none";
+
+    $("visionStrategyTitle").textContent = t("detailStrategy");
+    $("visionStrategy").textContent = data.strategy || "";
+    $("visionStrategyWrap").style.display = data.strategy ? "block" : "none";
+
+    var tips = Array.isArray(data.tips)?data.tips:[];
+    $("visionTipsTitle").textContent = t("detailTips");
+    $("visionTips").innerHTML = tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
+    $("visionTipsWrap").style.display = tips.length ? "block" : "none";
+
     var vr=$("visionRisk"); if(vr){ vr.style.display="none"; vr.textContent=""; }
     $("visionResult").classList.add("show");
     tickCountdowns();
@@ -1011,9 +1030,23 @@
       image:state.image||null });
   }
 
-  function genVisionResult(){
-    var pool=["UP","DOWN"]; var dir=pool[Math.floor(Math.random()*pool.length)];
-    return { direction:dir, confidence:"", asset:state.asset, timeframe:"", summary:"", reasons:[], strategy:"", tips:[], entryWindow:"", expiry:"" };
+  function fallbackVisionResult(){
+    var ru = state.language === "ru";
+    return {
+      direction: "NO_SIGNAL",
+      confidence: ru ? "низкая" : "low",
+      asset: state.asset,
+      timeframe: "",
+      summary: ru ? "Разбор не получен, направление не подтверждено." : "No breakdown received, direction is not confirmed.",
+      reasons: ru
+        ? ["Анализ графика не завершился — сервис не ответил вовремя.",
+           "Без подтверждения по графику вход не оправдан.",
+           "Повтори анализ через минуту или загрузи более чёткий скриншот."]
+        : ["Chart analysis did not complete — the service did not respond in time.",
+           "Without chart confirmation an entry is not justified.",
+           "Retry in a minute or upload a clearer screenshot."],
+      strategy: "", tips: [], entryWindow: "", expiry: ""
+    };
   }
   function analyze(){
     if(!state.image || state.analyzing) return;
@@ -1023,7 +1056,8 @@
       var settled=false;
       var controller = ("AbortController" in window) ? new AbortController() : null;
       function showDiag(msg){
-        var vr=$("visionRisk"); if(vr){ vr.textContent = "DEBUG: " + msg; vr.style.display="block"; }
+        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed"); vr.style.display="block"; }
+        if(window.console && console.warn) console.warn("[Pulse Vision]", msg);
       }
       function finishWith(data, done, diag){
         if(settled) return; settled=true;
@@ -1032,7 +1066,7 @@
       }
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
-        finishWith(genVisionResult(), false, "timeout > 9.5s (ИИ не успел)");
+        finishWith(fallbackVisionResult(), false, "timeout 50s");
       }, 50000);
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
@@ -1040,10 +1074,13 @@
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
         .then(function(r){
           clearTimeout(capTimer);
-          if(r.ok && r.data && r.data.direction){ finishWith(r.data, true); }
-          else { finishWith(genVisionResult(), true, "HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,200))); }
+          if(r.ok && r.data && r.data.direction){
+            finishWith(r.data, true, r.data.degraded ? "degraded" : null);
+          } else {
+            finishWith(fallbackVisionResult(), true, "HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,200)));
+          }
         })
-        .catch(function(e){ clearTimeout(capTimer); finishWith(genVisionResult(), true, "NETWORK/ABORT -> "+(e&&e.message?e.message:String(e))); });
+        .catch(function(e){ clearTimeout(capTimer); finishWith(fallbackVisionResult(), true, "NETWORK/ABORT -> "+(e&&e.message?e.message:String(e))); });
     })();
   }
 
