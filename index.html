@@ -334,8 +334,7 @@
     <h1 class="launch-title" id="welcomeTitle">Signal Pulse</h1>
     <p class="launch-sub" id="welcomeSub">Личный помощник для работы с графиком.</p>
     <div class="welcome">
-      <button class="btn primary" id="wVision">Pulse Vision</button>
-      <button class="btn secondary" id="wQuick">Pulse Quick</button>
+      <button class="btn primary" id="wStart">Start</button>
     </div>
   </div>
 </div>
@@ -548,7 +547,7 @@
   var T = {
     ru:{
       brand:"Личный помощник для работы с графиком", welcomeSub:"Signal Pulse готов к работе.",
-      btnVision:"Pulse Vision", btnQuick:"Pulse Quick",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Начать",
       navHistory:"История", navCreate:"Создать", navVision:"Vision", navProfile:"Профиль",
       historyEyebrow:"ИСТОРИЯ", historyTitle:"История результатов", historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",
       emptyTitle:"История пока пуста", emptyText:"Загрузи график в Pulse Vision или создай быстрый результат.", goVision:"Перейти к Pulse Vision",
@@ -583,7 +582,7 @@
     },
     en:{
       brand:"Personal chart assistant", welcomeSub:"Signal Pulse is ready.",
-      btnVision:"Pulse Vision", btnQuick:"Pulse Quick",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Start",
       navHistory:"History", navCreate:"Create", navVision:"Vision", navProfile:"Profile",
       historyEyebrow:"HISTORY", historyTitle:"Result history", historyText:"Pulse Vision and Pulse Quick results appear here.",
       emptyTitle:"No history yet", emptyText:"Upload a chart in Pulse Vision or create a quick result.", goVision:"Open Pulse Vision",
@@ -708,6 +707,12 @@
     if(state.tab === "vision") ctx = "vision";
     else if(state.tab === "create" && state.mode === "quick") ctx = "quick";
     applyTheme(resolveTheme(ctx));
+  }
+  function loadGlobalDesign(){
+    fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get"})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d && d.theme && THEMES[d.theme]){ state.theme=d.theme; if(d.mode) state.themeMode=d.mode; saveDesign(); refreshTheme(); if(state.isOwner) buildOwnerArea(); } })
+      .catch(function(){});
   }
 
   /* ---------- Time ---------- */
@@ -1122,6 +1127,7 @@
       if(sf) state.schedFrom=sf.value||state.schedFrom;
       if(st) state.schedTo=st.value||state.schedTo;
       saveDesign(); refreshTheme();
+      fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set",initData:initData,theme:state.theme,mode:state.themeMode})}).catch(function(){});
       var btn=$("designSave"), old=t("saveDesign"); btn.textContent=t("savedDesign");
       setTimeout(function(){ btn.textContent=old; },1500);
     });
@@ -1165,7 +1171,7 @@
 
   function applyLanguage(){
     var map={
-      brandText:"brand", welcomeSub:"welcomeSub", wVision:"btnVision", wQuick:"btnQuick",
+      brandText:"brand", welcomeSub:"welcomeSub", wStart:"btnStart",
       navHistory:"navHistory", navCreate:"navCreate", navVision:"navVision", navProfile:"navProfile",
       historyEyebrow:"historyEyebrow", historyTitle:"historyTitle", historyText:"historyText",
       emptyTitle:"emptyTitle", emptyText:"emptyText", emptyGoVision:"goVision",
@@ -1191,7 +1197,7 @@
     $("createAction").textContent = state.mode==="vision"?t("actionVision"):t("actionQuick");
     $("quickAgain").textContent=t("newQuick"); $("quickHistory").textContent=t("openHistory");
     $("visionAgain").textContent=t("newAnalysis"); $("visionHistory").textContent=t("openHistory");
-    $("welcomeSub").textContent=t("welcomeSub"); $("wVision").textContent=t("btnVision"); $("wQuick").textContent=t("btnQuick");
+    $("welcomeSub").textContent=t("welcomeSub"); if($("wStart")) $("wStart").textContent=t("btnStart");
     renderAssets($("assetSearch").value); renderDurations(); renderHistory(); renderStats();
     if(state.isOwner) buildOwnerArea();
   }
@@ -1235,8 +1241,7 @@
   $("langSelect").addEventListener("change",function(e){ state.language=e.target.value; save(); applyLanguage(); $("welcomeTitle").textContent=greeting(); });
   $("soundToggle").addEventListener("click",function(){ state.sound=!state.sound; save(); this.textContent=state.sound?t("on"):t("off"); this.classList.toggle("on", state.sound); });
   $("hapticToggle").addEventListener("click",function(){ state.haptic=!state.haptic; save(); this.textContent=state.haptic?t("on"):t("off"); this.classList.toggle("on", state.haptic); });
-  $("wVision").addEventListener("click",function(){ setMode("vision"); closeLaunch("vision"); });
-  $("wQuick").addEventListener("click",function(){ setMode("quick"); closeLaunch("create"); });
+  $("wStart").addEventListener("click",function(){ closeLaunch("history"); });
   document.addEventListener("click",function(e){ if(e.target.closest("button")) feedback(); });
 
   /* ---------- Init ---------- */
@@ -1249,6 +1254,7 @@
   setTab("history");
   tickClock(); setInterval(tickClock,1000); setInterval(tickCountdowns,1000);
   checkOwner();
+  loadGlobalDesign();
   initLaunch();
 })();
 </script>
@@ -1273,4 +1279,4 @@
 })();
 </script>
 </body>
-</html>
+  </html>
