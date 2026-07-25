@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-3-flash-preview"];
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
 
 function repairJson(s) {
   let str = String(s);
@@ -117,7 +117,6 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
       return parseJsonLoose(text);
     } catch (e) {
       lastErr = (e && e.message) || String(e);
-      if (e && e.name === "AbortError") break;
       continue;
     } finally {
       clearTimeout(to);
@@ -362,7 +361,7 @@ module.exports = async (req, res) => {
     const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 25000);
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 12000);
     } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
       console.error("ANALYZE_FAIL single=[" + singleErr + "]");
