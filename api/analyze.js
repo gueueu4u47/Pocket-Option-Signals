@@ -57,13 +57,32 @@ function rateLimit(key, limit, windowMs) {
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
 const GEMINI_MODELS = ["gemini-2.5-flash"];
 
+function repairJson(s) {
+  let str = String(s);
+  let inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (esc) { esc = false; continue; }
+    if (c === "\\") { esc = true; continue; }
+    if (c === "\"") inStr = !inStr;
+  }
+  if (inStr) str += "\"";
+  str = str.replace(/,\s*$/, "");
+  const oc = (str.match(/{/g) || []).length, cc = (str.match(/}/g) || []).length;
+  const os = (str.match(/\[/g) || []).length, cs = (str.match(/]/g) || []).length;
+  for (let i = 0; i < os - cs; i++) str += "]";
+  for (let i = 0; i < oc - cc; i++) str += "}";
+  return str;
+}
+
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-  // Вырезаем на всякий случай всё до первой { и после последней }
   const first = clean.indexOf("{");
   const last = clean.lastIndexOf("}");
   if (first > -1 && last > -1 && last > first) clean = clean.slice(first, last + 1);
-  return JSON.parse(clean);
+  else if (first > -1) clean = clean.slice(first);
+  try { return JSON.parse(clean); }
+  catch (e) { return JSON.parse(repairJson(clean)); }
 }
 
 async function callGemini(apiKey, parts, temperature, timeoutMs) {
@@ -74,7 +93,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 800 });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 2500 });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
