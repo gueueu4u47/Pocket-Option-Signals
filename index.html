@@ -1033,7 +1033,7 @@
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
         finishWith(genVisionResult(), false, "timeout > 9.5s (ИИ не успел)");
-      }, 20000);
+      }, 28000);
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
         signal: controller?controller.signal:undefined })
