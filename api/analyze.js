@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-3.1-flash-lite"];
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3-pro-preview"];
 
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -67,38 +67,42 @@ function parseJsonLoose(text) {
 }
 
 async function callGemini(apiKey, parts, temperature, timeoutMs) {
-  // parts (Google-формат) -> OpenAI-совместимый content
   const content = parts.map((p) => {
     if (p && p.text) return { type: "text", text: p.text };
     if (p && p.inline_data) return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
     return { type: "text", text: "" };
   });
-  const body = JSON.stringify({
-    model: GEMINI_MODELS[0],
-    messages: [{ role: "user", content }],
-    temperature
-  });
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
-  try {
-    const resp = await fetch(AI_BASE + "/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-      body,
-      signal: ctrl.signal
-    });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) {
-      throw new Error((data && data.error && data.error.message) || ("HTTP " + resp.status));
+  let lastErr = "unknown";
+  for (const model of GEMINI_MODELS) {
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature });
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
+    try {
+      const resp = await fetch(AI_BASE + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+        body,
+        signal: ctrl.signal
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        lastErr = (data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status);
+        continue;
+      }
+      const text = String(
+        (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
+      ).trim();
+      if (!text) { lastErr = "empty response"; continue; }
+      return parseJsonLoose(text);
+    } catch (e) {
+      lastErr = (e && e.message) || String(e);
+      if (e && e.name === "AbortError") break;
+      continue;
+    } finally {
+      clearTimeout(to);
     }
-    const text = String(
-      (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
-    ).trim();
-    if (!text) throw new Error("empty response");
-    return parseJsonLoose(text);
-  } finally {
-    clearTimeout(to);
   }
+  throw new Error(lastErr);
 }
 
 /* ---------- Определения агентов ---------- */
