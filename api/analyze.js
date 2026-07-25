@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3-pro-preview"];
+const GEMINI_MODELS = ["gemini-2.5-flash"];
 
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -74,7 +74,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 900 });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
@@ -157,7 +157,7 @@ Return JSON only, no markdown:
 function aggregatorPrompt(verdicts, language) {
   const json = JSON.stringify(verdicts, null, 2);
   if (language === "ru") {
-    return `Ты — старший трейдер, который сводит мнения команды аналитиков в ОДИН итоговый сигнал.
+    return `Ты — старший трейдер, который сводит м��е��ия ��оманды аналитиков в ОДИН итоговый сигнал.
 Ниже — вердикты нескольких агентов (каждый анализировал один и тот же график со своей специализации).
 Взвесь их: учитывай согласие и противоречия. Чем сильнее согласие агентов — тем выше уверенность. При явном конфликте будь осторожен (возможен NO_SIGNAL).
 Не выдумывай данные сверх того, что дали агенты и что видно на графике. Пиши живым, естественным языком, без шаблонных фраз.
@@ -283,6 +283,9 @@ async function dailyAnalyzeCount(userId) {
 }
 
 /* ============================================================ */
+const PROMPT_RU = `Ты — опытный трейдер-аналитик. Тебе дан ТОЛЬКО загруженный скриншот графика. Анализируй строго то, что реально видно: тренд, свечи/прайс-экшн, ключевые уровни. Правила: не гарантируй результат и не обещай прибыль; не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно; если данных мало — direction NO_SIGNAL. Пиши живым понятным языком, кратко. В reasons — короткие причины по графику (простые факты, БЕЗ нумерации и БЕЗ голосований), максимум 3. tips — максимум 2. Верни ТОЛЬКО JSON без markdown: {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","entryWindow":"условие/время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 живых предложения","reasons":["причина","причина"],"strategy":"2-3 предложения: вход, подтверждение, отмена","tips":["совет","совет"]}`;
+const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles/price action, key levels. Rules: never guarantee a result or promise profit; do not invent price, indicators, asset, or timeframe if not visible; if insufficient data, direction NO_SIGNAL. Write in a natural, clear voice, concise. In reasons - short chart-based reasons (plain facts, NO numbering and NO voting), max 3. tips - max 2. Return JSON only, no markdown: {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","entryWindow":"entry condition/timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 lively sentences","reasons":["reason","reason"],"strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["tip","tip"]}`;
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Vary", "Origin");
@@ -316,7 +319,7 @@ module.exports = async (req, res) => {
     if (image.length > 12000000) return res.status(413).json({ error: "Image is too large" });
 
     // Дневной лимит (fail-open: при ошибке Supabase анализ не блокируется)
-    const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 30);
+    const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 5);
     try {
       const used = await dailyAnalyzeCount(user.id);
       if (DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
@@ -333,68 +336,18 @@ module.exports = async (req, res) => {
     const base64Image = image.includes(",") ? image.split(",").pop() : image;
     const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
 
-    // 1) Параллельно запускаем всех агентов по одному и тому же графику
-    const settled = await Promise.allSettled(
-      AGENTS.map((agent) =>
-        callGemini(apiKey, [{ text: agentPrompt(agent, lang) }, imagePart], 0.5, 24000)
-      )
-    );
-
-    const verdicts = [];
-    const agentErrors = [];
-    settled.forEach((s, i) => {
-      if (s.status === "rejected") {
-        agentErrors.push(AGENTS[i].key + ": " + String((s.reason && s.reason.message) || s.reason));
-      }
-      if (s.status === "fulfilled" && s.value) {
-        const v = s.value;
-        verdicts.push({
-          agent: (lang === "ru" ? AGENTS[i].ru.role : AGENTS[i].en.role),
-          vote: v.vote,
-          confidence: v.confidence,
-          asset: v.asset,
-          timeframe: v.timeframe,
-          observations: Array.isArray(v.observations) ? v.observations : [],
-          note: v.note || ""
-        });
-      }
-    });
-
-    // Если ни один агент не ответил — один запасной прямой анализ
-    if (verdicts.length === 0) {
-      const fbPrompt = lang === "ru"
-        ? "Ты — трейдер-аналитик. Проанализируй ТОЛЬКО загруженный скриншот графика (то, что реально видно). Не гарантируй результат, не выдумывай данные. Если данных мало — direction NO_SIGNAL. Верни JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}"
-        : "You are a trading analyst. Analyze ONLY the uploaded chart screenshot (what is actually visible). Do not guarantee results or invent data. If insufficient, direction NO_SIGNAL. Return JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"entryWindow\":\"\",\"expiry\":\"\",\"asset\":\"\",\"timeframe\":\"\",\"summary\":\"\",\"reasons\":[],\"strategy\":\"\",\"tips\":[]}";
-      let singleErr = "";
-      try {
-        const single = await callGemini(apiKey, [{ text: fbPrompt }, imagePart], 0.6, 24000);
-        if (single && single.direction) {
-          supaLogAnalyze(user.id);
-          single.agents = [];
-          return res.status(200).json(single);
-        }
-      } catch (e) { singleErr = String((e && e.message) || e); }
-      console.error("ANALYZE_FAIL agents=[" + agentErrors.join(" || ") + "] single=[" + singleErr + "]");
-      return res.status(502).json({ error: "AI failed: " + (agentErrors.join(" || ") + " | single: " + singleErr).slice(0, 300) });
-    }
-
-    // 2) Агрегатор сводит вердикты в 1 сигнал
-    let final = null;
+    // Единый комплексный запрос: модель = 3 спеца + старший трейдер, один запрос (быстро/дешево, в лимите 60с)
+    const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
+    let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: aggregatorPrompt(verdicts, lang) }], 0.5, 18000);
-    } catch (e) {
-      final = null;
-    }
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 30000);
+    } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
-      final = fallbackAggregate(verdicts, lang); // детерминированный агрегатор по голосам
+      console.error("ANALYZE_FAIL single=[" + singleErr + "]");
+      return res.status(502).json({ error: "AI failed: " + String(singleErr || "no analysis").slice(0, 300) });
     }
-
-    // Прикладываем разбор агентов (фронтенд может не использовать — не мешает)
-    final.agents = verdicts.map((v) => ({
-      agent: v.agent, vote: normVote(v.vote), confidence: v.confidence, note: v.note
-    }));
-
-    supaLogAnalyze(user.id); // счётчик дневного лимита (best-effort)
+    final.agents = [];
+    supaLogAnalyze(user.id);
     return res.status(200).json(final);
   } catch (error) {
     console.error("Analyze error:", error);
