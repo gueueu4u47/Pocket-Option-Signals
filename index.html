@@ -941,13 +941,13 @@
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max=1400, w=img.width, h=img.height;
+          var max=1000, w=img.width, h=img.height;
           if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
           var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           var ctx=cv.getContext("2d");
           try{ ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; }catch(e){}
           ctx.drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",0.85));
+          resolve(cv.toDataURL("image/jpeg",0.8));
         };
         img.onerror = reject; img.src = reader.result;
       };
@@ -1279,4 +1279,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>
