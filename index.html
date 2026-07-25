@@ -941,13 +941,13 @@
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max=1000, w=img.width, h=img.height;
+          var max=1400, w=img.width, h=img.height;
           if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
           var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           var ctx=cv.getContext("2d");
           try{ ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; }catch(e){}
           ctx.drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",0.8));
+          resolve(cv.toDataURL("image/jpeg",0.85));
         };
         img.onerror = reject; img.src = reader.result;
       };
@@ -1011,39 +1011,41 @@
       image:state.image||null });
   }
 
-  function genVisionResult(){
-    var pool=["UP","DOWN"]; var dir=pool[Math.floor(Math.random()*pool.length)];
-    return { direction:dir, confidence:"", asset:state.asset, timeframe:"", summary:"", reasons:[], strategy:"", tips:[], entryWindow:"", expiry:"" };
-  }
   function analyze(){
     if(!state.image || state.analyzing) return;
     state.analyzing = true; $("analyzeBtn").disabled = true;
     startProcessing();
     (function(){
-      var settled=false;
-      var controller = ("AbortController" in window) ? new AbortController() : null;
-      function showDiag(msg){
-        var vr=$("visionRisk"); if(vr){ vr.textContent = "DEBUG: " + msg; vr.style.display="block"; }
+      var attempt=0, done=false, lastErr="";
+      function attemptFetch(){
+        return fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData })})
+          .then(function(res){ return res.text().then(function(tx){
+            var j=null; try{ j=JSON.parse(tx); }catch(e){}
+            return {ok:res.ok, status:res.status, data:j, raw:tx};
+          }); });
       }
-      function finishWith(data, done, diag){
-        if(settled) return; settled=true;
-        stopProcessing(done);
-        setTimeout(function(){ showVisionResult(data); if(diag) showDiag(diag); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
+      function run(){
+        attemptFetch().then(function(r){
+          if(r.ok && r.data && r.data.direction){
+            done=true; stopProcessing(true);
+            setTimeout(function(){ showVisionResult(r.data); state.analyzing=false; $("analyzeBtn").disabled=false; }, 380);
+            return;
+          }
+          lastErr="attempt "+(attempt+1)+" -> HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,300));
+          if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); return; }
+          fail();
+        }).catch(function(e){
+          lastErr="attempt "+(attempt+1)+" -> NETWORK/timeout -> "+(e&&e.message?e.message:String(e));
+          if(attempt < 2){ attempt++; setTimeout(run, attempt===1?3000:6000); } else { fail(); }
+        });
       }
-      var capTimer = setTimeout(function(){
-        if(controller){ try{ controller.abort(); }catch(e){} }
-        finishWith(genVisionResult(), false, "timeout > 9.5s (ИИ не успел)");
-      }, 42000);
-      fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
-        signal: controller?controller.signal:undefined })
-        .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
-        .then(function(r){
-          clearTimeout(capTimer);
-          if(r.ok && r.data && r.data.direction){ finishWith(r.data, true); }
-          else { finishWith(genVisionResult(), true, "HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,200))); }
-        })
-        .catch(function(e){ clearTimeout(capTimer); finishWith(genVisionResult(), true, "NETWORK/ABORT -> "+(e&&e.message?e.message:String(e))); });
+      function fail(){
+        stopProcessing(false);
+        state.analyzing=false; $("analyzeBtn").disabled=false;
+        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed") + " [" + lastErr + "]"; vr.style.display="block"; }
+      }
+      run();
     })();
   }
 
