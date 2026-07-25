@@ -54,7 +54,8 @@ function rateLimit(key, limit, windowMs) {
 }
 
 /* ---------- Gemini helpers ---------- */
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
+const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
+const GEMINI_MODELS = ["gemini-3.1-flash-lite"];
 
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -66,38 +67,38 @@ function parseJsonLoose(text) {
 }
 
 async function callGemini(apiKey, parts, temperature, timeoutMs) {
-  const body = JSON.stringify({
-    contents: [{ parts }],
-    generationConfig: { temperature, responseMimeType: "application/json" }
+  // parts (Google-формат) -> OpenAI-совместимый content
+  const content = parts.map((p) => {
+    if (p && p.text) return { type: "text", text: p.text };
+    if (p && p.inline_data) return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
+    return { type: "text", text: "" };
   });
-  let lastErr = "unknown";
-  for (const model of GEMINI_MODELS) {
-    const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
-    try {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body, signal: ctrl.signal }
-      );
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        lastErr = (data && data.error && data.error.message) || ("HTTP " + resp.status);
-        if ([404, 429, 500, 503].includes(resp.status)) continue; // пробуем запасную модель
-        throw new Error(lastErr);
-      }
-      const text = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
-        .map((p) => p.text || "").join("").trim();
-      if (!text) { lastErr = "empty response"; continue; }
-      return parseJsonLoose(text);
-    } catch (e) {
-      lastErr = (e && e.message) || String(e);
-      if (e && e.name === "AbortError") break;
-      continue;
-    } finally {
-      clearTimeout(to);
+  const body = JSON.stringify({
+    model: GEMINI_MODELS[0],
+    messages: [{ role: "user", content }],
+    temperature
+  });
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
+  try {
+    const resp = await fetch(AI_BASE + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+      body,
+      signal: ctrl.signal
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) {
+      throw new Error((data && data.error && data.error.message) || ("HTTP " + resp.status));
     }
+    const text = String(
+      (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
+    ).trim();
+    if (!text) throw new Error("empty response");
+    return parseJsonLoose(text);
+  } finally {
+    clearTimeout(to);
   }
-  throw new Error(lastErr);
 }
 
 /* ---------- Определения агентов ---------- */
