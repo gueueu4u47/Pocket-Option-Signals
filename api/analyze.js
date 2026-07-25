@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
 
 function repairJson(s) {
   let str = String(s);
@@ -95,7 +95,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1600, response_format: { type: "json_object" } });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1000, response_format: { type: "json_object" } });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
@@ -367,7 +367,7 @@ module.exports = async (req, res) => {
     const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 12000);
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 16000);
     } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
       console.error("ANALYZE_FAIL single=[" + singleErr + "]");
