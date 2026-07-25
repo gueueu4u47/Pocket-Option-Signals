@@ -95,7 +95,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1200 });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1200, response_format: { type: "json_object" } });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
