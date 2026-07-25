@@ -340,7 +340,7 @@ module.exports = async (req, res) => {
     const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 15000);
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 9000);
     } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
       console.error("ANALYZE_FAIL single=[" + singleErr + "]");
