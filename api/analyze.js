@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash"];
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-3-flash-preview"];
 
 function repairJson(s) {
   let str = String(s);
