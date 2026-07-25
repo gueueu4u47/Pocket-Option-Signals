@@ -55,7 +55,7 @@ function rateLimit(key, limit, windowMs) {
 
 /* ---------- Gemini helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash", "gemini-2.0-flash", "gemini-3-flash-preview"];
 
 function repairJson(s) {
   let str = String(s);
@@ -95,7 +95,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1200, response_format: { type: "json_object" } });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 1600, response_format: { type: "json_object" } });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
@@ -114,7 +114,13 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
         (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
       ).trim();
       if (!text) { lastErr = "empty response"; continue; }
-      return parseJsonLoose(text);
+      let parsed = null;
+      try { parsed = parseJsonLoose(text); } catch (pe) { lastErr = "parse: " + ((pe && pe.message) || pe); continue; }
+      if (!parsed || !parsed.direction) { lastErr = "no direction"; continue; }
+      const goodReasons = Array.isArray(parsed.reasons) ? parsed.reasons.filter(function (x) { return String(x || "").trim(); }) : [];
+      if (goodReasons.length === 0) { lastErr = "empty reasons"; continue; }
+      parsed.reasons = goodReasons;
+      return parsed;
     } catch (e) {
       lastErr = (e && e.message) || String(e);
       continue;
