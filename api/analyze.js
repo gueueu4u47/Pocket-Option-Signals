@@ -74,7 +74,7 @@ async function callGemini(apiKey, parts, temperature, timeoutMs) {
   });
   let lastErr = "unknown";
   for (const model of GEMINI_MODELS) {
-    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 900 });
+    const body = JSON.stringify({ model, messages: [{ role: "user", content }], temperature, max_tokens: 800 });
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), timeoutMs || 22000);
     try {
@@ -306,9 +306,10 @@ module.exports = async (req, res) => {
 
     const user = validateTelegramInitData(initData, botToken);
     if (!user || !user.id) return res.status(401).json({ error: "Telegram verification failed" });
+    const isOwner = String(user.id) === String(process.env.OWNER_TELEGRAM_ID || "");
 
     // Лимит в минуту (каждый анализ = несколько запросов к ИИ)
-    if (!rateLimit("analyze:" + user.id, 5, 60000)) {
+    if (!isOwner && !rateLimit("analyze:" + user.id, 5, 60000)) {
       return res.status(429).json({ error: "Too many requests. Please slow down." });
     }
 
@@ -322,7 +323,7 @@ module.exports = async (req, res) => {
     const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 5);
     try {
       const used = await dailyAnalyzeCount(user.id);
-      if (DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
+      if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
         return res.status(429).json({
           error: lang === "ru"
             ? `Дневной лимит анализов исчерпан (${DAILY_LIMIT}). Возвращайтесь завтра.`
@@ -340,7 +341,7 @@ module.exports = async (req, res) => {
     const prompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     let final = null, singleErr = "";
     try {
-      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 30000);
+      final = await callGemini(apiKey, [{ text: prompt }, imagePart], 0.5, 48000);
     } catch (e) { singleErr = String((e && e.message) || e); }
     if (!final || !final.direction) {
       console.error("ANALYZE_FAIL single=[" + singleErr + "]");
