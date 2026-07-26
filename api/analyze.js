@@ -389,7 +389,7 @@ const PROMPT_RU = `Ты — опытный трейдер-аналитик. Те
 - reasons ОБЯЗАТЕЛЬНО непустой: 2-3 коротких конкретных факта по этому графику, простым языком, без нумерации и без слова "голосование". Именно reasons отвечает на вопрос "почему вверх, вниз или пропустить".
 - tips — максимум 2.
 Верни ТОЛЬКО JSON без markdown:
-{"direction":"BUY|SELL|NO_SIGNAL","reasons":["причина","причина"],"confidence":"низкая|средняя|высокая","summary":"1-2 живых предложения","strategy":"2-3 предложения: вход, подтверждение, отмена идеи","entryWindow":"условие ил�� время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","tips":["совет","совет"]}
+{"direction":"BUY|SELL|NO_SIGNAL","reasons":["причина","причина"],"confidence":"низкая|средняя|высокая","summary":"1-2 живых предложения","strategy":"2-3 предложения: вход, подтверждение, отмена идеи","entryWindow":"условие или время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","tips":["совет","совет"]}
 Важно: соблюдай именно этот порядок ключей и пиши коротко.`;
 
 const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles and price action, key levels.
@@ -405,7 +405,7 @@ Important: keep exactly this key order and be concise.`;
 
 const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
-reasons ����бязателен и не может быть пустым.`;
+reasons обязателен и не может быть пустым.`;
 
 const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, no markdown, no text around it:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
@@ -511,10 +511,10 @@ module.exports = async (req, res) => {
       if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
         return softCard(res, lang,
           lang === "ru"
-            ? `На сегодня анализы закончил��сь (${DAILY_LIMIT} в день).`
+            ? `На сегодня анализы закончились (${DAILY_LIMIT} в день).`
             : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
           lang === "ru"
-            ? ["Лими���� обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
+            ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
             : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
       }
     } catch (e) { /* fail-open */ }
@@ -639,9 +639,7 @@ module.exports = async (req, res) => {
       expiry: (best && best.expiry) || "",
       asset: (best && best.asset) || (lang === "ru" ? "Не распознан" : "Not recognized"),
       timeframe: (best && best.timeframe) || (lang === "ru" ? "Не распознан" : "Not recognized"),
-      summary: (best && best.summary) || (lang === "ru"
-        ? "Разбор построен только по видимой части графика."
-        : "The breakdown is based only on the visible part of the chart."),
+      summary: (best && best.summary) || "",
       reasons: reasonsOut,
       strategy: (best && best.strategy) || "",
       tips: cleanList(best && best.tips, 2),
