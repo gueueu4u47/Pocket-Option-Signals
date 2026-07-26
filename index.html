@@ -1220,7 +1220,7 @@
         moderate: [
           "Инициатива у покупателя, но предложение сохраняет присутствие.",
           "Спрос впереди, но движение развивается с сопротивлением.",
-          "Покупатель ведёт, преимущество умеренное и требует подтверждения.",
+          "Покупатель ведёт, преимущест��о умеренное и требует подтверждения.",
           "Перевес на стороне спроса, но контроль не абсолютный.",
           "Импульс вверх присутствует, продавец из рынка не вышел.",
           "Инициатива смещена к покупателю, борьба за уровень продолжается."
@@ -1740,9 +1740,15 @@
               "Retry in a minute or pick another pair."]
       }
     };
+    var notes = {
+      flat: { ru: "Рынок стоит — вход не рекомендуется", en: "The market is flat — entry is not advised" },
+      closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "The market is closed — entry is not advised" },
+      nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
+    };
     return {
       direction: "NO_SIGNAL",
       confidence: ru ? "низкая" : "low",
+      note: (notes[reasonKey] || notes.nodata)[ru ? "ru" : "en"],
       summary: "",
       reasons: map[reasonKey][ru ? "ru" : "en"],
       strategy: ru
@@ -1776,7 +1782,9 @@
     } else {
       flatLimit = 0.005;
     }
-    if(absPct < flatLimit) return quickNoSignal("flat");
+    // При закрытой сессии цена заморожена, и отказ надо объяснять закрытием рынка,
+    // а не равновесием сторон — иначе выглядит как поломка приложения.
+    if(absPct < flatLimit) return quickNoSignal(stale ? "closed" : "flat");
 
     var up = pct > 0;
     var strength = strengthBand(absPct);
@@ -1816,6 +1824,7 @@
     return {
       direction: up ? "UP" : "DOWN",
       confidence: conf,
+      note: "",
       summary: "",
       reasons: reasons,
       strategy: quickStrategy(up, strength, seed * 13 + 0.2, ru),
@@ -1860,26 +1869,19 @@
     } else {
       cd.removeAttribute("data-entry");
       cd.removeAttribute("data-outcome");
-      cd.textContent = ru ? "Вход не рекомендуется" : "Entry is not advised";
+      /* единственная строка пояснения: без неё отказ выглядит как ошибка приложения */
+      cd.textContent = an.note ? an.note : (ru ? "Вход не рекомендуется" : "Entry is not advised");
     }
 
-    $("quickSummaryTitle").textContent = t("detailSummary");
-    $("quickSummary").textContent = an.summary || "";
-    $("quickSummaryWrap").style.display = an.summary ? "block" : "none";
-
-    var reasons = Array.isArray(an.reasons) ? an.reasons : [];
-    $("quickReasonsTitle").textContent = t("detailWhy");
-    $("quickReasons").innerHTML = reasons.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickReasonsWrap").style.display = reasons.length ? "block" : "none";
-
-    $("quickStrategyTitle").textContent = t("detailStrategy");
-    $("quickStrategy").textContent = an.strategy || "";
-    $("quickStrategyWrap").style.display = an.strategy ? "block" : "none";
-
-    var tips = Array.isArray(an.tips) ? an.tips : [];
-    $("quickTipsTitle").textContent = t("detailTips");
-    $("quickTips").innerHTML = tips.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickTipsWrap").style.display = tips.length ? "block" : "none";
+    /* В Quick оставлен только сам сигнал: разбор, стратегия и советы не выводятся. */
+    $("quickSummary").textContent = "";
+    $("quickSummaryWrap").style.display = "none";
+    $("quickReasons").innerHTML = "";
+    $("quickReasonsWrap").style.display = "none";
+    $("quickStrategy").textContent = "";
+    $("quickStrategyWrap").style.display = "none";
+    $("quickTips").innerHTML = "";
+    $("quickTipsWrap").style.display = "none";
 
     $("quickResult").classList.add("show");
     tickCountdowns();
@@ -1888,8 +1890,8 @@
       type: "quick", direction: an.direction, asset: label, duration: tm.durationText,
       entry: live ? tm.entryText : "—", outcomeTime: live ? tm.outcomeText : "—",
       entryISO: live ? tm.entryISO : null, outcomeISO: live ? tm.outcomeISO : null,
-      summary: an.summary || "", confidence: an.confidence || "", reasons: reasons,
-      strategy: an.strategy || "", tips: tips, timeframe: tm.durationText
+      summary: "", confidence: an.confidence || "", reasons: [],
+      strategy: "", tips: [], timeframe: tm.durationText
     });
   }
 
@@ -1898,7 +1900,8 @@
     $("createAction").disabled = true;
     $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    Promise.all([fetchQuote(), wait(2200)]).then(function(res){
+    // обработка держится дольше: мгновенный ответ выглядит несерьёзно
+    Promise.all([fetchQuote(), wait(4600)]).then(function(res){
       var q = res[0];
       stopQuickProcessing();
       var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
@@ -1909,7 +1912,7 @@
         $("createAction").disabled = false;
         $("createAction").textContent = t("actionQuick");
         $("quickResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 340);
+      }, 600);
     });
   }
 
