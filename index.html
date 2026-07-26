@@ -606,7 +606,7 @@
       errFailed:"Pulse Vision временно недоступен. Попробуйте позже.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Панель владельца", ownerSub:"Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.",
       mUsers:"Пользователи", mResults:"Результаты", mEvents:"События", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Сегодня", refresh:"Обновить показатели",
-      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Оформление", designSub:"Тема и режим показа сохраняются на этом устройстве.",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Оформление", designSub:"Тема и режим показа применяются ко всем пользователям приложения.",
       modeAlways:"Постоянно", modeNow:"Сейчас", modeSchedule:"Расписание", modeLaunch:"Запуск", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"С (Asia/Oral)", schedTo:"До (Asia/Oral)", saveDesign:"Сохранить оформление", savedDesign:"Сохранено",
       greetMorning:"Доброе утро", greetDay:"Добрый день", greetEvening:"Добрый вечер"
@@ -642,7 +642,7 @@
       errFailed:"Pulse Vision is unavailable right now. Try again later.", errTooLarge:"The image is too large. Choose a file up to 8 MB.", errBadType:"Only PNG, JPG and WEBP are supported.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Owner panel", ownerSub:"Signal Pulse server statistics. Access verified via Telegram.",
       mUsers:"Users", mResults:"Results", mEvents:"Events", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Today", refresh:"Refresh metrics",
-      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Appearance", designSub:"Theme and display mode are stored on this device.",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Appearance", designSub:"Theme and display mode apply to all users of the app.",
       modeAlways:"Always", modeNow:"Now", modeSchedule:"Schedule", modeLaunch:"Launch", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"From (Asia/Oral)", schedTo:"To (Asia/Oral)", saveDesign:"Save appearance", savedDesign:"Saved",
       greetMorning:"Good morning", greetDay:"Good afternoon", greetEvening:"Good evening"
@@ -740,11 +740,29 @@
     else if(state.tab === "create" && state.mode === "quick") ctx = "quick";
     applyTheme(resolveTheme(ctx));
   }
-  function loadGlobalDesign(){
-    fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get"})})
+  function loadGlobalDesign(silent){
+    return fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get"})})
       .then(function(r){ return r.json(); })
-      .then(function(d){ if(d && d.theme && THEMES[d.theme]){ state.theme=d.theme; if(d.mode) state.themeMode=d.mode; saveDesign(); refreshTheme(); if(state.isOwner) buildOwnerArea(); } })
+      .then(function(d){
+        if(!d || !d.theme || !THEMES[d.theme]) return;
+        var changed = (d.theme !== state.theme) || (d.mode && d.mode !== state.themeMode);
+        if(!changed) return;
+        /* владелец сам задаёт оформление — не перебиваем его панель фоновой синхронизацией */
+        if(silent && state.isOwner) return;
+        state.theme = d.theme;
+        if(d.mode) state.themeMode = d.mode;
+        saveDesign(); refreshTheme();
+        if(state.isOwner && !silent) buildOwnerArea();
+      })
       .catch(function(){});
+  }
+
+  /* Telegram держит окно приложения живым, поэтому одной проверки при старте мало:
+     без этого тема у людей менялась только после полного закрытия и повторного открытия. */
+  function startGlobalDesignSync(){
+    setInterval(function(){ if(!document.hidden) loadGlobalDesign(true); }, 60000);
+    document.addEventListener("visibilitychange", function(){ if(!document.hidden) loadGlobalDesign(true); });
+    window.addEventListener("focus", function(){ loadGlobalDesign(true); });
   }
 
   /* ---------- Time ---------- */
@@ -1155,9 +1173,16 @@
   /* ---------- Pulse Quick: сигнал по котировке ---------- */
   var QUICK_FLAT_PCT = 0.03;
 
+  var quickSpin = Number(localStorage.getItem("pulse_quick_spin") || 0);
+  if(!isFinite(quickSpin)) quickSpin = 0;
+  function bumpSpin(){
+    quickSpin = (quickSpin + 1) % 997;
+    try{ localStorage.setItem("pulse_quick_spin", String(quickSpin)); }catch(e){}
+  }
+
   function qNum(v){ var n = Number(v); return isFinite(n) ? n : null; }
   function pickBy(seed, arr){
-    var s = Math.abs(Math.round(Number(seed || 0) * 100000));
+    var s = Math.abs(Math.round(Number(seed || 0) * 100000)) + quickSpin * 13;
     return arr[s % arr.length];
   }
   function strengthBand(absPct){
@@ -1180,232 +1205,511 @@
     return "normal";
   }
 
-  function factBias(up, band, seed, ru){
-    var sets = {
-      ru: {
-        strong: up
-          ? ["Покупатель ведёт движение с явным перевесом.",
-             "Инициатива на стороне покупателя, сопротивления почти нет.",
-             "Спрос перебивает предложение без заметной борьбы."]
-          : ["Продавец ведёт движение с явным перевесом.",
-             "Инициатива на стороне продавца, покупатель не отвечает.",
-             "Предложение перебивает спрос без заметной борьбы."],
-        moderate: up
-          ? ["Покупатель сильнее, но вторая сторона из рынка не ушла.",
-             "Перевес на стороне покупателя, но движение идёт с сопротивлением.",
-             "Спрос впереди, преимущество умеренное."]
-          : ["Продавец сильнее, но покупатель из рынка не ушёл.",
-             "Перевес на стороне продавца, но движение идёт с сопротивлением.",
-             "Предложение впереди, преимущество умеренное."],
-        weak: up
-          ? ["Перевес покупателя есть, но он едва заметен.",
-             "Инициатива слегка у покупателя, борьба почти равная.",
-             "Спрос чуть впереди — основание шаткое."]
-          : ["Перевес продавца есть, но он едва заметен.",
-             "Инициатива слегка у продавца, борьба почти равная.",
-             "Предложение чуть впереди — основание шаткое."]
+  /* ----- инициатива сторон ----- */
+  var BIAS = {
+    ru: {
+      up: {
+        strong: [
+          "Инициатива на стороне спроса, предложение сопротивления не оказывает.",
+          "Покупатель удерживает контроль над движением — откаты выкупаются.",
+          "Спрос доминирует: импульс развивается без противодействия.",
+          "Перевес выражен, инициатива закреплена за покупателем.",
+          "Давление идёт со стороны спроса, продавец инициативу не перехватывает.",
+          "Контроль за покупателем — движение развивается по инициативе спроса."
+        ],
+        moderate: [
+          "Инициатива у покупателя, но предложение сохраняет присутствие.",
+          "Спрос впереди, но движение развивается с сопротивлением.",
+          "Покупатель ведёт, преимущество умеренное и требует подтверждения.",
+          "Перевес на стороне спроса, но контроль не абсолютный.",
+          "Импульс вверх присутствует, продавец из рынка не вышел.",
+          "Инициатива смещена к покупателю, борьба за уровень продолжается."
+        ],
+        weak: [
+          "Перевес спроса минимален, рынок близок к равновесию.",
+          "Инициатива формальная: спрос впереди на грани шума.",
+          "Преимущество покупателя амплитудой движения не подтверждено.",
+          "Спрос доминирует номинально, основание для импульса слабое.",
+          "Смещение вверх есть, но контроль ни за одной стороной не закреплён.",
+          "Покупатель впереди условно — баланс сил почти ровный."
+        ]
       },
-      en: {
-        strong: up
-          ? ["Buyers lead the move with a clear edge.",
-             "Initiative sits with buyers, resistance is barely there.",
-             "Demand overrides supply without a visible fight."]
-          : ["Sellers lead the move with a clear edge.",
-             "Initiative sits with sellers, buyers are not answering.",
-             "Supply overrides demand without a visible fight."],
-        moderate: up
-          ? ["Buyers are stronger, but the other side has not left the market.",
-             "The edge is with buyers, though the move meets resistance.",
-             "Demand is ahead, the advantage is moderate."]
-          : ["Sellers are stronger, but buyers have not left the market.",
-             "The edge is with sellers, though the move meets resistance.",
-             "Supply is ahead, the advantage is moderate."],
-        weak: up
-          ? ["There is a buyer edge, but it is barely visible.",
-             "Initiative leans to buyers, the fight is nearly even.",
-             "Demand is slightly ahead — the base is shaky."]
-          : ["There is a seller edge, but it is barely visible.",
-             "Initiative leans to sellers, the fight is nearly even.",
-             "Supply is slightly ahead — the base is shaky."]
+      down: {
+        strong: [
+          "Инициатива на стороне предложения, спрос сопротивления не оказывает.",
+          "Продавец удерживает контроль над движением — отскоки гаснут.",
+          "Предложение доминирует: импульс развивается без противодействия.",
+          "Перевес выражен, инициатива закреплена за продавцом.",
+          "Давление идёт со стороны предложения, покупатель не отвечает.",
+          "Контроль за продавцом — движение развивается по инициативе предложения."
+        ],
+        moderate: [
+          "Инициатива у продавца, но спрос сохраняет присутствие.",
+          "Предложение впереди, но движение развивается с сопротивлением.",
+          "Продавец ведёт, преимущество умеренное и требует подтверждения.",
+          "Перевес на стороне предложения, но контроль не абсолютный.",
+          "Импульс вниз присутствует, покупатель из рынка не вышел.",
+          "Инициатива смещена к продавцу, борьба за уровень продолжается."
+        ],
+        weak: [
+          "Перевес предложения минимален, рынок близок к равновесию.",
+          "Инициатива формальная: предложение впереди на грани шума.",
+          "Преимущество продавца амплитудой движения не подтверждено.",
+          "Предложение доминирует номинально, основание для импульса слабое.",
+          "Смещение вниз есть, но контроль ни за одной стороной не закреплён.",
+          "Продавец впереди условно — баланс сил почти ровный."
+        ]
       }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+    },
+    en: {
+      up: {
+        strong: [
+          "Initiative sits with demand, supply offers no resistance.",
+          "Buyers keep control of the move — pullbacks are absorbed.",
+          "Demand dominates: the impulse develops unopposed.",
+          "The edge is clear, initiative is locked with the buyer.",
+          "Pressure comes from the demand side, sellers do not take over.",
+          "Control stays with buyers — the move runs on demand initiative."
+        ],
+        moderate: [
+          "Initiative is with buyers, but supply keeps a presence.",
+          "Demand is ahead, yet the move develops against resistance.",
+          "Buyers lead, the advantage is moderate and needs confirmation.",
+          "The edge is on the demand side, but control is not absolute.",
+          "Upside impulse is present, sellers have not left the market.",
+          "Initiative leans to buyers, the fight for the level continues."
+        ],
+        weak: [
+          "The demand edge is minimal, the market is close to equilibrium.",
+          "Initiative is nominal: demand leads at the edge of noise.",
+          "The buyer advantage is not confirmed by the amplitude of the move.",
+          "Demand dominates only nominally, the basis for impulse is weak.",
+          "There is an upside skew, but neither side has locked control.",
+          "Buyers lead conditionally — the balance of forces is nearly even."
+        ]
+      },
+      down: {
+        strong: [
+          "Initiative sits with supply, demand offers no resistance.",
+          "Sellers keep control of the move — bounces fade.",
+          "Supply dominates: the impulse develops unopposed.",
+          "The edge is clear, initiative is locked with the seller.",
+          "Pressure comes from the supply side, buyers do not answer.",
+          "Control stays with sellers — the move runs on supply initiative."
+        ],
+        moderate: [
+          "Initiative is with sellers, but demand keeps a presence.",
+          "Supply is ahead, yet the move develops against resistance.",
+          "Sellers lead, the advantage is moderate and needs confirmation.",
+          "The edge is on the supply side, but control is not absolute.",
+          "Downside impulse is present, buyers have not left the market.",
+          "Initiative leans to sellers, the fight for the level continues."
+        ],
+        weak: [
+          "The supply edge is minimal, the market is close to equilibrium.",
+          "Initiative is nominal: supply leads at the edge of noise.",
+          "The seller advantage is not confirmed by the amplitude of the move.",
+          "Supply dominates only nominally, the basis for impulse is weak.",
+          "There is a downside skew, but neither side has locked control.",
+          "Sellers lead conditionally — the balance of forces is nearly even."
+        ]
+      }
+    }
+  };
+  function factBias(up, band, seed, ru){
+    return pickBy(seed, BIAS[ru ? "ru" : "en"][up ? "up" : "down"][band]);
   }
 
+  /* ----- положение в диапазоне ----- */
+  var POSITION = {
+    ru: {
+      atTop: [
+        "Цена тестирует верхнюю границу дневного диапазона.",
+        "Работа идёт у экстремума сессии — уровень под давлением.",
+        "Котировка прижата к максимуму дня, запас хода вверх ограничен.",
+        "Тест верхнего экстремума: зона сопротивления активна.",
+        "Цена работает у вершины сессии, реакция на уровень решает продолжение.",
+        "Верхняя граница диапазона отрабатывается прямо сейчас."
+      ],
+      upper: [
+        "Цена удерживается в верхней половине дневного диапазона.",
+        "Основной объём торгов проходит выше середины диапазона.",
+        "Котировка закрепилась над медианой сессии.",
+        "Работа идёт в верхней зоне диапазона, давление продаж ограничено.",
+        "Цена держится ближе к верхней границе сессии.",
+        "Диапазон отрабатывается сверху, инициатива у покупателя."
+      ],
+      middle: [
+        "Цена в медианной зоне диапазона, направленного смещения нет.",
+        "Торги проходят по центру сессии — границы не отработаны.",
+        "Котировка в равновесии между границами диапазона.",
+        "Цена в центре диапазона: ни одна сторона не удерживает территорию.",
+        "Диапазон не пробит ни в одну сторону, цена по середине.",
+        "Рынок в балансе: цена равноудалена от экстремумов сессии."
+      ],
+      lower: [
+        "Цена удерживается в нижней половине дневного диапазона.",
+        "Основной объём торгов проходит ниже середины диапазона.",
+        "Котировка закрепилась под медианой сессии.",
+        "Работа идёт в нижней зоне диапазона, спрос слабый.",
+        "Цена держится ближе к нижней границе сессии.",
+        "Диапазон отрабатывается снизу, инициатива у продавца."
+      ],
+      atBottom: [
+        "Цена тестирует нижнюю границу дневного диапазона.",
+        "Работа идёт у нижнего экстремума сессии — уровень под давлением.",
+        "Котировка прижата к минимуму дня, запас хода вниз ограничен.",
+        "Тест нижнего экстремума: зона поддержки активна.",
+        "Цена работает у дна сессии, реакция на уровень решает продолжение.",
+        "Нижняя граница диапазона отрабатывается прямо сейчас."
+      ]
+    },
+    en: {
+      atTop: [
+        "Price is testing the upper boundary of the daily range.",
+        "Work is happening at the session extreme — the level is under pressure.",
+        "The quote is pinned to the day's high, upside room is limited.",
+        "Test of the upper extreme: the resistance zone is active.",
+        "Price works at the session top, the reaction to the level decides continuation.",
+        "The upper range boundary is being worked right now."
+      ],
+      upper: [
+        "Price holds in the upper half of the daily range.",
+        "The bulk of trading passes above the range median.",
+        "The quote has settled above the session median.",
+        "Work is in the upper range zone, selling pressure is limited.",
+        "Price holds closer to the session's upper boundary.",
+        "The range is worked from above, initiative is with buyers."
+      ],
+      middle: [
+        "Price is in the median zone of the range, with no directional skew.",
+        "Trading passes through the session center — boundaries are untested.",
+        "The quote is balanced between the range boundaries.",
+        "Price sits mid range: neither side holds ground.",
+        "The range is unbroken in either direction, price is in the middle.",
+        "The market is in balance: price is equidistant from session extremes."
+      ],
+      lower: [
+        "Price holds in the lower half of the daily range.",
+        "The bulk of trading passes below the range median.",
+        "The quote has settled below the session median.",
+        "Work is in the lower range zone, demand is weak.",
+        "Price holds closer to the session's lower boundary.",
+        "The range is worked from below, initiative is with sellers."
+      ],
+      atBottom: [
+        "Price is testing the lower boundary of the daily range.",
+        "Work is happening at the lower session extreme — the level is under pressure.",
+        "The quote is pinned to the day's low, downside room is limited.",
+        "Test of the lower extreme: the support zone is active.",
+        "Price works at the session bottom, the reaction to the level decides continuation.",
+        "The lower range boundary is being worked right now."
+      ]
+    }
+  };
   function factPosition(band, seed, ru){
     if(!band) return null;
-    var sets = {
-      ru: {
-        atTop: ["Цена подошла к максимуму сессии — уровень тестируется.",
-                "Работа идёт у вершины дня, запаса хода вверх почти не осталось.",
-                "Цена давит в верхнюю границу дневного диапазона."],
-        upper: ["Цена работает в верхней части дневного диапазона.",
-                "Основная торговля дня идёт выше середины диапазона.",
-                "Цена держится ближе к верхней границе сессии."],
-        middle: ["Цена в середине дневного диапазона, смещения нет.",
-                 "Торговля идёт по центру диапазона — ни одна сторона не забрала территорию.",
-                 "Цена держится равноудалённо от границ сессии."],
-        lower: ["Цена работает в нижней части дневного диапазона.",
-                "Основная торговля дня идёт ниже середины диапазона.",
-                "Цена держится ближе к нижней границе сессии."],
-        atBottom: ["Цена прижимается к минимуму сессии — уровень тестируется.",
-                   "Работа идёт у дна дня, запаса хода вниз почти не осталось.",
-                   "Цена давит в нижнюю границу дневного диапазона."]
-      },
-      en: {
-        atTop: ["Price reached the session high — the level is being tested.",
-                "Trading sits at the top of the day, little room left above.",
-                "Price is pressing into the upper edge of the daily range."],
-        upper: ["Price works in the upper part of the daily range.",
-                "Most of the session trades above the mid range.",
-                "Price holds closer to the session high."],
-        middle: ["Price sits mid range with no clear shift.",
-                 "Trading runs through the center of the range — neither side took ground.",
-                 "Price holds equally far from both session edges."],
-        lower: ["Price works in the lower part of the daily range.",
-                "Most of the session trades below the mid range.",
-                "Price holds closer to the session low."],
-        atBottom: ["Price is pressed to the session low — the level is being tested.",
-                   "Trading sits at the bottom of the day, little room left below.",
-                   "Price is pressing into the lower edge of the daily range."]
-      }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+    return pickBy(seed, POSITION[ru ? "ru" : "en"][band]);
   }
 
+  /* ----- согласованность инициативы и структуры ----- */
+  var ALIGN = {
+    ru: {
+      agree: [
+        "Инициатива и положение цены согласованы — структура непротиворечива.",
+        "Направление подтверждается расположением цены в диапазоне.",
+        "Сторона с перевесом удерживает и территорию внутри сессии.",
+        "Импульс и позиция цены совпадают — сигнал подтверждён структурно.",
+        "Контроль подтверждён дважды: инициативой и положением в диапазоне.",
+        "Структура согласована: перевес совпадает с зоной работы цены."
+      ],
+      clash: [
+        "Инициатива и положение цены расходятся — движение только формируется.",
+        "Направление идёт против зоны работы цены, основание слабее.",
+        "Сторона с перевесом территорию внутри сессии ещё не забрала.",
+        "Импульс не подтверждён позицией цены в диапазоне.",
+        "Структура противоречива: перевес есть, закрепления нет.",
+        "Сигнал опережает структуру — подтверждения по диапазону нет."
+      ]
+    },
+    en: {
+      agree: [
+        "Initiative and price position agree — the structure is consistent.",
+        "Direction is confirmed by where price sits in the range.",
+        "The leading side also holds ground within the session.",
+        "Impulse and price position match — the signal is structurally confirmed.",
+        "Control is confirmed twice: by initiative and by range position.",
+        "The structure agrees: the edge matches the zone price works in."
+      ],
+      clash: [
+        "Initiative and price position diverge — the move is only forming.",
+        "Direction runs against the zone price works in, the basis is weaker.",
+        "The leading side has not taken ground within the session yet.",
+        "The impulse is not confirmed by price position in the range.",
+        "The structure is contradictory: there is an edge but no consolidation.",
+        "The signal runs ahead of structure — no range confirmation."
+      ]
+    }
+  };
   function factAlignment(up, posBand, seed, ru){
     if(!posBand || posBand === "middle") return null;
     var withMove = up ? (posBand === "upper" || posBand === "atTop") : (posBand === "lower" || posBand === "atBottom");
-    var sets = {
-      ru: {
-        agree: ["Перевес и положение цены совпадают — движение не спорит с собой.",
-                "Направление подтверждается тем, где цена держится в диапазоне.",
-                "Сторона с перевесом держит и территорию внутри дня."],
-        clash: ["Перевес и положение цены расходятся — движение только формируется.",
-                "Направление идёт против того, где цена сидит в диапазоне — основание слабее.",
-                "Сторона с перевесом ещё не забрала территорию внутри дня."]
-      },
-      en: {
-        agree: ["Edge and price position agree — the move does not contradict itself.",
-                "Direction is backed by where price holds inside the range.",
-                "The leading side also holds ground within the day."],
-        clash: ["Edge and price position disagree — the move is only forming.",
-                "Direction runs against where price sits in the range — the base is weaker.",
-                "The leading side has not taken ground within the day yet."]
-      }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][withMove ? "agree" : "clash"]);
+    return pickBy(seed, ALIGN[ru ? "ru" : "en"][withMove ? "agree" : "clash"]);
   }
 
+  /* ----- волатильность ----- */
+  var ACTIVITY = {
+    ru: {
+      tight: [
+        "Диапазон сжат, волатильность подавлена.",
+        "Рынок в консолидации — амплитуда минимальная.",
+        "Ликвидность вялая, импульс гаснет внутри диапазона.",
+        "Волатильность низкая: цена не выходит из поджатия.",
+        "Рынок в фазе накопления, направленной амплитуды нет.",
+        "Диапазон узкий — цена работает внутри поджатия."
+      ],
+      normal: [
+        "Волатильность в норме для инструмента.",
+        "Амплитуда соответствует обычному режи��у пары.",
+        "Рынок работает в штатном темпе, выбросов нет.",
+        "Диапазон дня в пределах средних значений.",
+        "Волатильность ровная — режим торговли рабочий.",
+        "Активность стандартная для текущей сессии."
+      ],
+      wide: [
+        "Волатильность повышена, в движении много шума.",
+        "Диапазон расширен — цена идёт импульсами.",
+        "Амплитуда высокая, риск ложных проколов вырос.",
+        "Рынок разогнан: движения резкие, откаты глубокие.",
+        "Волатильность выше нормы, вход требует запаса.",
+        "Диапазон широкий — цена может сходить против позиции и вернуться."
+      ]
+    },
+    en: {
+      tight: [
+        "The range is compressed, volatility is suppressed.",
+        "The market is consolidating — amplitude is minimal.",
+        "Liquidity is sluggish, the impulse fades inside the range.",
+        "Volatility is low: price does not leave the squeeze.",
+        "The market is in accumulation, there is no directional amplitude.",
+        "The range is narrow — price works inside the squeeze."
+      ],
+      normal: [
+        "Volatility is normal for this instrument.",
+        "Amplitude matches the pair's usual regime.",
+        "The market runs at a standard pace, with no spikes.",
+        "The daily range is within average values.",
+        "Volatility is steady — the trading regime is workable.",
+        "Activity is standard for the current session."
+      ],
+      wide: [
+        "Volatility is elevated, there is a lot of noise in the move.",
+        "The range is expanded — price travels in impulses.",
+        "Amplitude is high, the risk of false breaks has grown.",
+        "The market is stretched: moves are sharp, pullbacks are deep.",
+        "Volatility is above normal, an entry needs a buffer.",
+        "The range is wide — price can run against the position and return."
+      ]
+    }
+  };
   function factActivity(band, seed, ru){
     if(!band) return null;
-    var sets = {
-      ru: {
-        tight: ["Движение зажато, амплитуды в паре почти нет.",
-                "Рынок вялый — ход узкий, импульс гаснет быстро.",
-                "Активность низкая, цена топчется в коридоре."],
-        normal: ["Амплитуда обычная для этой пары.",
-                 "Активность ровная, без выбросов.",
-                 "Рынок идёт в рабочем темпе."],
-        wide: ["Размах широкий — шума в движении много.",
-               "Активность повышенная, цена ходит резко.",
-               "Рынок разогнан, движение рваное."]
-      },
-      en: {
-        tight: ["The move is compressed, there is almost no amplitude in the pair.",
-                "The market is sluggish — narrow travel, impulse fades fast.",
-                "Activity is low, price grinds inside a corridor."],
-        normal: ["Amplitude is usual for this pair.",
-                 "Activity is steady, with no spikes.",
-                 "The market moves at a working pace."],
-        wide: ["The swing is wide — plenty of noise in the move.",
-               "Activity is elevated, price travels sharply.",
-               "The market is stretched, the move is choppy."]
-      }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+    return pickBy(seed, ACTIVITY[ru ? "ru" : "en"][band]);
   }
 
+  /* ----- отношение к прошлому закрытию ----- */
+  var VSPREV = {
+    ru: {
+      above: [
+        "Торги проходят выше прошлого закрытия — фон сессии за покупателем.",
+        "Цена удерживается над уровнем предыдущего закрытия.",
+        "Сессия отрабатывается вверх от закрытия прошлого дня.",
+        "Уровень предыдущего закрытия выступает поддержкой.",
+        "Котировка закрепилась выше закрытия прошлой сессии.",
+        "Фон дня на стороне спроса: цена над прошлым закрытием."
+      ],
+      below: [
+        "Торги проходят ниже прошлого закрытия — фон сессии за продавцом.",
+        "Цена удерживается под уровнем предыдущего закрытия.",
+        "Сессия отрабатывается вниз от закрытия прошлого дня.",
+        "Уровень предыдущего закрытия выступает сопротивлением.",
+        "Котировка закрепилась ниже закрытия прошлой сессии.",
+        "Фон дня на стороне предложения: цена под прошлым закрытием."
+      ]
+    },
+    en: {
+      above: [
+        "Trading passes above the previous close — the session backdrop favors buyers.",
+        "Price holds above the previous closing level.",
+        "The session works upward from the prior day's close.",
+        "The previous close acts as support.",
+        "The quote has settled above the prior session's close.",
+        "The daily backdrop is with demand: price is above the previous close."
+      ],
+      below: [
+        "Trading passes below the previous close — the session backdrop favors sellers.",
+        "Price holds below the previous closing level.",
+        "The session works downward from the prior day's close.",
+        "The previous close acts as resistance.",
+        "The quote has settled below the prior session's close.",
+        "The daily backdrop is with supply: price is below the previous close."
+      ]
+    }
+  };
   function factVsPrev(close, prev, seed, ru){
     if(close === null || prev === null || !prev) return null;
-    var above = close > prev;
-    var sets = {
-      ru: {
-        above: ["Торги идут выше прошлого закрытия — фон дня за покупателем.",
-                "Цена держится выше уровня предыдущего закрытия.",
-                "Открытие отработано вверх от вчерашнего закрытия."],
-        below: ["Торги идут ниже прошлого закрытия — фон дня за продавцом.",
-                "Цена держится ниже уровня предыдущего закрытия.",
-                "Открытие отработано вниз от вчерашнего закрытия."]
-      },
-      en: {
-        above: ["Trading runs above the previous close — the daily backdrop favors buyers.",
-                "Price holds above the previous closing level.",
-                "The session works upward from yesterday's close."],
-        below: ["Trading runs below the previous close — the daily backdrop favors sellers.",
-                "Price holds below the previous closing level.",
-                "The session works downward from yesterday's close."]
-      }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][above ? "above" : "below"]);
+    return pickBy(seed, VSPREV[ru ? "ru" : "en"][close > prev ? "above" : "below"]);
   }
 
-  function quickStrategy(up, strength, seed, ru){
-    var sets = {
-      ru: {
-        strong: ["Сторона с перевесом выражена ясно: один вход строго на выбранную длительность, без усреднения и без доборов. Если цена ушла до точки входа — пропускай и жди следующий сигнал.",
-                 "Перевес читается уверенно: бери один вход в сторону сигнала и не трогай его до конца времени. Серийные входы на одном сигнале — уже азарт, а не работа."],
-        moderate: ["Перевес есть, но спорный: дождись выхода цены из текущего диапазона в сторону сигнала, только потом входи. Сумму держи обычную.",
-                   "Сигнал рабочий, но без запаса: один вход, без доборов, и готовность к тому, что вторая сторона вернётся в рынок."],
-        weak: ["Перевес слабый — разумно взять меньший объём или вообще пропустить и дождаться более ясного движения.",
-               "Преимущество на грани шума: лучше уменьшить объём, а при сомнении — остаться вне рынка."]
-      },
-      en: {
-        strong: ["The leading side is clear: one entry strictly for the chosen duration, no averaging and no add-ons. If price runs away before the entry point, skip it and wait for the next signal.",
-                 "The edge reads confidently: take one entry in the signal direction and leave it until time is up. Stacking entries on one signal is gambling, not work."],
-        moderate: ["There is an edge but it is contested: wait for price to leave the current range in the signal direction, then enter. Keep your usual size.",
-                   "The signal is workable but has no cushion: one entry, no add-ons, and be ready for the other side to come back."],
-        weak: ["The edge is weak — it is reasonable to take a smaller size or skip and wait for a cleaner move.",
-               "The advantage is close to noise: reduce size, and when in doubt stay out of the market."]
-      }
-    };
-    return pickBy(seed, sets[ru ? "ru" : "en"][strength]);
-  }
-
-  function quickTips(strength, actBand, seed, ru){
-    var out = [];
-    if(ru){
-      out.push(pickBy(seed, [
-        "Не повышай сумму после серии сделок — перевес меняется быстрее, чем кажется.",
-        "Объём держи одинаковым: рост ставки после выигрыша съедает весь плюс.",
-        "Не отыгрывайся сразу после минуса — это решение не по рынку."
-      ]));
-      out.push(pickBy(seed * 3 + 1, [
-        "Отмечай итог в истории — так видно, на каких парах твой процент выше.",
-        "Смотри статистику по итогам, а не по ощущениям от последней сделки.",
-        "Фиксируй результат сразу: без учёта любая стратегия превращается в угадывание."
-      ]));
-      if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
-      else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
-      else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
-    } else {
-      out.push(pickBy(seed, [
-        "Do not raise your size after a streak — the edge shifts faster than it feels.",
-        "Keep size constant: raising the stake after a win eats the whole profit.",
-        "Do not chase a loss immediately — that decision is not based on the market."
-      ]));
-      out.push(pickBy(seed * 3 + 1, [
-        "Mark the outcome in history — it shows which pairs actually work for you.",
-        "Judge by recorded results, not by the feeling from the last trade.",
-        "Log the result right away: without records any strategy turns into guessing."
-      ]));
-      if(actBand === "tight") out.push("The market is compressed — in this state skipping an entry often pays better than taking it.");
-      else if(actBand === "wide") out.push("The swing is wide: price can run against you and come back — short expiries are riskier here.");
-      else if(strength === "weak") out.push("The edge is weak — skipping and waiting for a clearer move is a valid choice.");
-      else out.push("Compare the signal with your broker's chart before entering — the final call is yours.");
+  /* ----- стратегия ----- */
+  var STRATEGY = {
+    ru: {
+      strong: [
+        "Инициатива выражена: один вход в сторону сигнала на выбранной длительности, без усреднения и доборов. Ушла цена до точки входа — пропуск и ждёшь следующий сетап.",
+        "Перевес читается уверенно: работаешь по инициативе, одна позиция, без перезахода внутри времени. Серийные входы на одном сигнале — азарт, а не система.",
+        "Структура на стороне сигнала: вход фиксированным объёмом, выход по истечении времени. Решение принято до входа, а не во время его.",
+        "Контроль за одной стороной — берёшь одну сделку и держишь до конца срока. Добор по ходу ломает расчёт риска."
+      ],
+      moderate: [
+        "Перевес есть, но спорный: ждёшь выход цены из текущего диапазона в сторону сигнала и только потом входишь. Объём — штатный.",
+        "Сетап рабочий, но без запаса: одна позиция, без доборов, с готовностью к возврату второй стороны.",
+        "Инициатива смещена, но не закреплена: вход только по своей точке, без погони за ценой.",
+        "Преимущество умеренное: работаешь обычным объёмом и не добавляешь риск внутри сделки."
+      ],
+      weak: [
+        "Перевес на грани шума: разумно сократить объём или остаться вне рынка до ясного сетапа.",
+        "Основание слабое: либо минимальный объём, либо пропуск — оба решения рабочие.",
+        "Рынок близок к равновесию: при сомнении пропуск стоит дешевле входа.",
+        "Контроль ни за кем: если работаешь — только уменьшенным объёмом и без повторных попыток."
+      ]
+    },
+    en: {
+      strong: [
+        "Initiative is clear: one entry in the signal direction on the chosen duration, no averaging and no add-ons. If price runs past the entry point, skip and wait for the next setup.",
+        "The edge reads confidently: work with the initiative, one position, no reversals inside the expiry. Stacking entries on one signal is gambling, not a system.",
+        "Structure is on the signal's side: enter with fixed size, exit on expiry. The decision is made before the entry, not during it.",
+        "Control is with one side — take a single trade and hold it to expiry. Adding on the way breaks the risk math."
+      ],
+      moderate: [
+        "There is an edge but it is contested: wait for price to leave the current range in the signal direction, then enter. Keep standard size.",
+        "The setup is workable but has no cushion: one position, no add-ons, ready for the other side to return.",
+        "Initiative is skewed but not locked: enter only at your point, without chasing price.",
+        "The advantage is moderate: use usual size and do not add risk inside the trade."
+      ],
+      weak: [
+        "The edge is at the noise level: reduce size or stay out until a clean setup appears.",
+        "The basis is weak: either minimal size or a skip — both are valid decisions.",
+        "The market is close to equilibrium: when in doubt, skipping costs less than entering.",
+        "Nobody holds control: if you work it, only with reduced size and no repeat attempts."
+      ]
     }
-    return out;
+  };
+  function quickStrategy(up, strength, seed, ru){
+    return pickBy(seed, STRATEGY[ru ? "ru" : "en"][strength]);
+  }
+
+  /* ----- советы ----- */
+  var TIPS_RISK = {
+    ru: [
+      "Объём держи постоянным: повышение ставки после серии съедает весь набранный результат.",
+      "Риск на сделку фиксируется заранее и не пересматривается по ходу сессии.",
+      "Отыгрыш сразу после минуса — решение не по рынку, а по эмоции.",
+      "Серия входов подряд по одному сигналу увеличивает риск, а не точность.",
+      "Дневной лимит сделок ставится до торговли, а не после первого минуса.",
+      "После двух подряд неудачных входов пауза даёт больше, чем третий вход."
+    ],
+    en: [
+      "Keep size constant: raising the stake after a streak eats the whole result.",
+      "Risk per trade is fixed in advance and not revised during the session.",
+      "Chasing a loss immediately is an emotional decision, not a market one.",
+      "A run of entries on one signal increases risk, not accuracy.",
+      "A daily trade limit is set before trading, not after the first loss.",
+      "After two failed entries in a row, a pause pays more than a third attempt."
+    ]
+  };
+  var TIPS_LOG = {
+    ru: [
+      "Фиксируй итог в истории — статистика показывает, какие пары тебе действительно дают результат.",
+      "Решения строй по записанной статистике, а не по ощущению от последней сделки.",
+      "Без учёта результатов любая система превращается в угадывание.",
+      "Отметка итога сразу после сделки даёт честную выборку, а не выборочную память.",
+      "Сравнивай результат по режимам волатильности — там видна твоя сильная сторона.",
+      "История сделок важнее отдельного сигнала: она показывает систему, а не случай."
+    ],
+    en: [
+      "Log the outcome in history — statistics show which pairs actually pay you.",
+      "Base decisions on recorded statistics, not on the feeling from the last trade.",
+      "Without recorded results any system turns into guessing.",
+      "Marking the result right after the trade gives an honest sample, not selective memory.",
+      "Compare results across volatility regimes — that is where your strength shows.",
+      "Trade history matters more than any single signal: it shows the system, not the accident."
+    ]
+  };
+  var TIPS_CTX = {
+    ru: {
+      tight: [
+        "В консолидации пропуск входа часто выгоднее самого входа.",
+        "При подавленной волатильности шум съедает весь перевес.",
+        "В узком диапазоне логичнее ждать выхода из поджатия, а не работать внутри него.",
+        "Фаза накопления редко даёт чистое направление — терпение здесь часть стратегии."
+      ],
+      wide: [
+        "На расширенном диапазоне короткие сроки рискованнее: цена успевает сходить против позиции.",
+        "При высокой волатильности ложные проколы границ — норма, а не исключение.",
+        "Широкий размах требует запаса по времени, иначе шум закроет сделку раньше структуры.",
+        "Разогнанный рынок наказывает за увеличение объёма быстрее спокойного."
+      ],
+      weak: [
+        "При слабом перевесе пропуск — тоже решение, и часто лучшее из доступных.",
+        "Без ясной инициативы разумно дождаться сетапа понятнее.",
+        "Равновесие сторон — самая дорогая зона для частых входов.",
+        "Слабый сигнал лучше отрабатывать меньшим объёмом, чем проверять его серией сделок."
+      ],
+      base: [
+        "Сверь сигнал с графиком у брокера до входа — последнее слово за тобой.",
+        "Решение принимается до входа: срок, объём и точка фиксируются заранее.",
+        "Сигнал — это гипотеза по текущему состоянию пары, а не обещание исхода.",
+        "Один сигнал ничего не доказывает — результат виден только на серии сделок."
+      ]
+    },
+    en: {
+      tight: [
+        "In consolidation, skipping an entry often pays better than taking it.",
+        "With suppressed volatility, noise eats the whole edge.",
+        "In a narrow range it is more logical to wait for the squeeze to resolve than to work inside it.",
+        "An accumulation phase rarely gives clean direction — patience is part of the strategy here."
+      ],
+      wide: [
+        "With an expanded range, short expiries are riskier: price has time to run against the position.",
+        "At high volatility, false breaks of boundaries are the norm, not the exception.",
+        "A wide swing needs a time buffer, otherwise noise closes the trade before structure does.",
+        "A stretched market punishes size increases faster than a calm one."
+      ],
+      weak: [
+        "With a weak edge a skip is also a decision, and often the best available one.",
+        "Without clear initiative it is reasonable to wait for a cleaner setup.",
+        "Equilibrium between sides is the most expensive zone for frequent entries.",
+        "A weak signal is better worked with smaller size than tested with a series of trades."
+      ],
+      base: [
+        "Compare the signal with your broker's chart before entering — the final call is yours.",
+        "The decision is made before the entry: expiry, size and point are fixed in advance.",
+        "A signal is a hypothesis about the pair's current state, not a promise of an outcome.",
+        "One signal proves nothing — the result shows up only across a series of trades."
+      ]
+    }
+  };
+  function quickTips(strength, actBand, seed, ru){
+    var lang = ru ? "ru" : "en";
+    var ctxKey = actBand === "tight" ? "tight"
+      : actBand === "wide" ? "wide"
+      : strength === "weak" ? "weak"
+      : "base";
+    return [
+      pickBy(seed, TIPS_RISK[lang]),
+      pickBy(seed * 3 + 1, TIPS_LOG[lang]),
+      pickBy(seed * 7 + 2, TIPS_CTX[lang][ctxKey])
+    ];
   }
 
   function quickNoSignal(reasonKey){
@@ -1449,6 +1753,7 @@
   }
 
   function buildQuickFromQuote(q){
+    bumpSpin();
     var ru = state.language === "ru";
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
@@ -1663,9 +1968,24 @@
       if(sf) state.schedFrom=sf.value||state.schedFrom;
       if(st) state.schedTo=st.value||state.schedTo;
       saveDesign(); refreshTheme();
-      fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set",initData:initData,theme:state.theme,mode:state.themeMode})}).catch(function(){});
-      var btn=$("designSave"), old=t("saveDesign"); btn.textContent=t("savedDesign");
-      setTimeout(function(){ btn.textContent=old; },1500);
+      var btn=$("designSave"), old=t("saveDesign"), ru=(state.language==="ru");
+      btn.textContent = ru ? "Сохраняю…" : "Saving…";
+      /* раньше ответ сервера не проверялся: кнопка писала «Сохранено» даже когда глобальная запись падала */
+      fetch("/api/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set",initData:initData,theme:state.theme,mode:state.themeMode})})
+        .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ return { ok:r.ok, status:r.status, d:d }; }); })
+        .then(function(res){
+          if(res.ok && res.d && res.d.ok){
+            btn.textContent = ru ? "Сохранено для всех" : "Saved for everyone";
+          } else {
+            var code = (res.d && (res.d.error || res.d.detail)) || res.status;
+            btn.textContent = (ru ? "Только на этом устройстве: " : "This device only: ") + String(code).slice(0, 24);
+          }
+          setTimeout(function(){ btn.textContent=old; },2600);
+        })
+        .catch(function(){
+          btn.textContent = ru ? "Сеть недоступна" : "Network error";
+          setTimeout(function(){ btn.textContent=old; },2600);
+        });
     });
     $("ownerRefresh").addEventListener("click", loadDashboard);
     loadDashboard();
@@ -1791,6 +2111,7 @@
   tickClock(); setInterval(tickClock,1000); setInterval(tickCountdowns,1000);
   checkOwner();
   loadGlobalDesign();
+  startGlobalDesignSync();
   initLaunch();
 })();
 </script>
