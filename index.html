@@ -1152,98 +1152,459 @@
     setQRing(100);
     setTimeout(function(){ $("quickProcessing").classList.remove("show"); }, 320);
   }
-  function pickSome(arr, n){
-    var copy = arr.slice(), out = [];
-    while(copy.length && out.length < n){ out.push(copy.splice(Math.floor(Math.random()*copy.length),1)[0]); }
+  /* ---------- Pulse Quick: сигнал по котировке ---------- */
+  var QUICK_FLAT_PCT = 0.03;
+
+  function qNum(v){ var n = Number(v); return isFinite(n) ? n : null; }
+  function pickBy(seed, arr){
+    var s = Math.abs(Math.round(Number(seed || 0) * 100000));
+    return arr[s % arr.length];
+  }
+  function strengthBand(absPct){
+    if(absPct >= 0.20) return "strong";
+    if(absPct >= 0.08) return "moderate";
+    return "weak";
+  }
+  function positionBand(pos){
+    if(pos === null) return null;
+    if(pos >= 0.88) return "atTop";
+    if(pos >= 0.62) return "upper";
+    if(pos > 0.38) return "middle";
+    if(pos > 0.12) return "lower";
+    return "atBottom";
+  }
+  function activityBand(rangePct){
+    if(rangePct === null) return null;
+    if(rangePct < 0.08) return "tight";
+    if(rangePct > 0.60) return "wide";
+    return "normal";
+  }
+
+  function factBias(up, band, seed, ru){
+    var sets = {
+      ru: {
+        strong: up
+          ? ["Покупатель ведёт движение с явным перевесом.",
+             "Инициатива на стороне покупателя, сопротивления почти нет.",
+             "Спрос перебивает предложение без заметной борьбы."]
+          : ["Продавец ведёт движение с явным перевесом.",
+             "Инициатива на стороне продавца, покупатель не отвечает.",
+             "Предложение перебивает спрос без заметной борьбы."],
+        moderate: up
+          ? ["Покупатель сильнее, но вторая сторона из рынка не ушла.",
+             "Перевес на стороне покупателя, но движение идёт с сопротивлением.",
+             "Спрос впереди, преимущество умеренное."]
+          : ["Продавец сильнее, но покупатель из рынка не ушёл.",
+             "Перевес на стороне продавца, но движение идёт с сопротивлением.",
+             "Предложение впереди, преимущество умеренное."],
+        weak: up
+          ? ["Перевес покупателя есть, но он едва заметен.",
+             "Инициатива слегка у покупателя, борьба почти равная.",
+             "Спрос чуть впереди — основание шаткое."]
+          : ["Перевес продавца есть, но он едва заметен.",
+             "Инициатива слегка у продавца, борьба почти равная.",
+             "Предложение чуть впереди — основание шаткое."]
+      },
+      en: {
+        strong: up
+          ? ["Buyers lead the move with a clear edge.",
+             "Initiative sits with buyers, resistance is barely there.",
+             "Demand overrides supply without a visible fight."]
+          : ["Sellers lead the move with a clear edge.",
+             "Initiative sits with sellers, buyers are not answering.",
+             "Supply overrides demand without a visible fight."],
+        moderate: up
+          ? ["Buyers are stronger, but the other side has not left the market.",
+             "The edge is with buyers, though the move meets resistance.",
+             "Demand is ahead, the advantage is moderate."]
+          : ["Sellers are stronger, but buyers have not left the market.",
+             "The edge is with sellers, though the move meets resistance.",
+             "Supply is ahead, the advantage is moderate."],
+        weak: up
+          ? ["There is a buyer edge, but it is barely visible.",
+             "Initiative leans to buyers, the fight is nearly even.",
+             "Demand is slightly ahead — the base is shaky."]
+          : ["There is a seller edge, but it is barely visible.",
+             "Initiative leans to sellers, the fight is nearly even.",
+             "Supply is slightly ahead — the base is shaky."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+  }
+
+  function factPosition(band, seed, ru){
+    if(!band) return null;
+    var sets = {
+      ru: {
+        atTop: ["Цена подошла к максимуму сессии — уровень тестируется.",
+                "Работа идёт у вершины дня, запаса хода вверх почти не осталось.",
+                "Цена давит в верхнюю границу дневного диапазона."],
+        upper: ["Цена работает в верхней части дневного диапазона.",
+                "Основная торговля дня идёт выше середины диапазона.",
+                "Цена держится ближе к верхней границе сессии."],
+        middle: ["Цена в середине дневного диапазона, смещения нет.",
+                 "Торговля идёт по центру диапазона — ни одна сторона не забрала территорию.",
+                 "Цена держится равноудалённо от границ сессии."],
+        lower: ["Цена работает в нижней части дневного диапазона.",
+                "Основная торговля дня идёт ниже середины диапазона.",
+                "Цена держится ближе к нижней границе сессии."],
+        atBottom: ["Цена прижимается к минимуму сессии — уровень тестируется.",
+                   "Работа идёт у дна дня, запаса хода вниз почти не осталось.",
+                   "Цена давит в нижнюю границу дневного диапазона."]
+      },
+      en: {
+        atTop: ["Price reached the session high — the level is being tested.",
+                "Trading sits at the top of the day, little room left above.",
+                "Price is pressing into the upper edge of the daily range."],
+        upper: ["Price works in the upper part of the daily range.",
+                "Most of the session trades above the mid range.",
+                "Price holds closer to the session high."],
+        middle: ["Price sits mid range with no clear shift.",
+                 "Trading runs through the center of the range — neither side took ground.",
+                 "Price holds equally far from both session edges."],
+        lower: ["Price works in the lower part of the daily range.",
+                "Most of the session trades below the mid range.",
+                "Price holds closer to the session low."],
+        atBottom: ["Price is pressed to the session low — the level is being tested.",
+                   "Trading sits at the bottom of the day, little room left below.",
+                   "Price is pressing into the lower edge of the daily range."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+  }
+
+  function factAlignment(up, posBand, seed, ru){
+    if(!posBand || posBand === "middle") return null;
+    var withMove = up ? (posBand === "upper" || posBand === "atTop") : (posBand === "lower" || posBand === "atBottom");
+    var sets = {
+      ru: {
+        agree: ["Перевес и положение цены совпадают — движение не спорит с собой.",
+                "Направление подтверждается тем, где цена держится в диапазоне.",
+                "Сторона с перевесом держит и территорию внутри дня."],
+        clash: ["Перевес и положение цены расходятся — движение только формируется.",
+                "Направление идёт против того, где цена сидит в диапазоне — основание слабее.",
+                "Сторона с перевесом ещё не забрала территорию внутри дня."]
+      },
+      en: {
+        agree: ["Edge and price position agree — the move does not contradict itself.",
+                "Direction is backed by where price holds inside the range.",
+                "The leading side also holds ground within the day."],
+        clash: ["Edge and price position disagree — the move is only forming.",
+                "Direction runs against where price sits in the range — the base is weaker.",
+                "The leading side has not taken ground within the day yet."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][withMove ? "agree" : "clash"]);
+  }
+
+  function factActivity(band, seed, ru){
+    if(!band) return null;
+    var sets = {
+      ru: {
+        tight: ["Движение зажато, амплитуды в паре почти нет.",
+                "Рынок вялый — ход узкий, импульс гаснет быстро.",
+                "Активность низкая, цена топчется в коридоре."],
+        normal: ["Амплитуда обычная для этой пары.",
+                 "Активность ровная, без выбросов.",
+                 "Рынок идёт в рабочем темпе."],
+        wide: ["Размах широкий — шума в движении много.",
+               "Активность повышенная, цена ходит резко.",
+               "Рынок разогнан, движение рваное."]
+      },
+      en: {
+        tight: ["The move is compressed, there is almost no amplitude in the pair.",
+                "The market is sluggish — narrow travel, impulse fades fast.",
+                "Activity is low, price grinds inside a corridor."],
+        normal: ["Amplitude is usual for this pair.",
+                 "Activity is steady, with no spikes.",
+                 "The market moves at a working pace."],
+        wide: ["The swing is wide — plenty of noise in the move.",
+               "Activity is elevated, price travels sharply.",
+               "The market is stretched, the move is choppy."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][band]);
+  }
+
+  function factVsPrev(close, prev, seed, ru){
+    if(close === null || prev === null || !prev) return null;
+    var above = close > prev;
+    var sets = {
+      ru: {
+        above: ["Торги идут выше прошлого закрытия — фон дня за покупателем.",
+                "Цена держится выше уровня предыдущего закрытия.",
+                "Открытие отработано вверх от вчерашнего закрытия."],
+        below: ["Торги идут ниже прошлого закрытия — фон дня за продавцом.",
+                "Цена держится ниже уровня предыдущего закрытия.",
+                "Открытие отработано вниз от вчерашнего закрытия."]
+      },
+      en: {
+        above: ["Trading runs above the previous close — the daily backdrop favors buyers.",
+                "Price holds above the previous closing level.",
+                "The session works upward from yesterday's close."],
+        below: ["Trading runs below the previous close — the daily backdrop favors sellers.",
+                "Price holds below the previous closing level.",
+                "The session works downward from yesterday's close."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][above ? "above" : "below"]);
+  }
+
+  function quickStrategy(up, strength, seed, ru){
+    var sets = {
+      ru: {
+        strong: ["Сторона с перевесом выражена ясно: один вход строго на выбранную длительность, без усреднения и без доборов. Если цена ушла до точки входа — пропускай и жди следующий сигнал.",
+                 "Перевес читается уверенно: бери один вход в сторону сигнала и не трогай его до конца времени. Серийные входы на одном сигнале — уже азарт, а не работа."],
+        moderate: ["Перевес есть, но спорный: дождись выхода цены из текущего диапазона в сторону сигнала, только потом входи. Сумму держи обычную.",
+                   "Сигнал рабочий, но без запаса: один вход, без доборов, и готовность к тому, что вторая сторона вернётся в рынок."],
+        weak: ["Перевес слабый — разумно взять меньший объём или вообще пропустить и дождаться более ясного движения.",
+               "Преимущество на грани шума: лучше уменьшить объём, а при сомнении — остаться вне рынка."]
+      },
+      en: {
+        strong: ["The leading side is clear: one entry strictly for the chosen duration, no averaging and no add-ons. If price runs away before the entry point, skip it and wait for the next signal.",
+                 "The edge reads confidently: take one entry in the signal direction and leave it until time is up. Stacking entries on one signal is gambling, not work."],
+        moderate: ["There is an edge but it is contested: wait for price to leave the current range in the signal direction, then enter. Keep your usual size.",
+                   "The signal is workable but has no cushion: one entry, no add-ons, and be ready for the other side to come back."],
+        weak: ["The edge is weak — it is reasonable to take a smaller size or skip and wait for a cleaner move.",
+               "The advantage is close to noise: reduce size, and when in doubt stay out of the market."]
+      }
+    };
+    return pickBy(seed, sets[ru ? "ru" : "en"][strength]);
+  }
+
+  function quickTips(strength, actBand, seed, ru){
+    var out = [];
+    if(ru){
+      out.push(pickBy(seed, [
+        "Не повышай сумму после серии сделок — перевес меняется быстрее, чем кажется.",
+        "Объём держи одинаковым: рост ставки после выигрыша съедает весь плюс.",
+        "Не отыгрывайся сразу после минуса — это решение не по рынку."
+      ]));
+      out.push(pickBy(seed * 3 + 1, [
+        "Отмечай итог в истории — так видно, на каких парах твой процент выше.",
+        "Смотри статистику по итогам, а не по ощущениям от последней сделки.",
+        "Фиксируй результат сразу: без учёта любая стратегия превращается в угадывание."
+      ]));
+      if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
+      else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
+      else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
+    } else {
+      out.push(pickBy(seed, [
+        "Do not raise your size after a streak — the edge shifts faster than it feels.",
+        "Keep size constant: raising the stake after a win eats the whole profit.",
+        "Do not chase a loss immediately — that decision is not based on the market."
+      ]));
+      out.push(pickBy(seed * 3 + 1, [
+        "Mark the outcome in history — it shows which pairs actually work for you.",
+        "Judge by recorded results, not by the feeling from the last trade.",
+        "Log the result right away: without records any strategy turns into guessing."
+      ]));
+      if(actBand === "tight") out.push("The market is compressed — in this state skipping an entry often pays better than taking it.");
+      else if(actBand === "wide") out.push("The swing is wide: price can run against you and come back — short expiries are riskier here.");
+      else if(strength === "weak") out.push("The edge is weak — skipping and waiting for a clearer move is a valid choice.");
+      else out.push("Compare the signal with your broker's chart before entering — the final call is yours.");
+    }
     return out;
   }
-  function buildQuickAnalysis(dirRaw, tm){
+
+  function quickNoSignal(reasonKey){
     var ru = state.language === "ru";
-    var up = dirRaw === "UP";
-    var a = state.asset, dur = tm.durationText;
-    var poolRu = up
-      ? ["Последнее движение " + a + " идёт с перевесом покупателя.",
-         "Откаты выкупаются быстрее, чем успевает развиться продажа.",
-         "Цена держится выше ближайшей поддержки — давление вниз слабое.",
-         "Активность в паре выросла, импульс направлен вверх.",
-         "Каждый новый минимум выше предыдущего."]
-      : ["Последнее движение " + a + " идёт с перевесом продавца.",
-         "Отскоки гаснут быстро — покупатель не удерживает уровень.",
-         "Цена прижимается к поддержке, давление сверху сохраняется.",
-         "Активность в паре выросла, импульс направлен вниз.",
-         "Каждый новый максимум ниже предыдущего."];
-    var poolEn = up
-      ? ["Recent " + a + " movement is dominated by buyers.",
-         "Pullbacks are bought back faster than sellers can push.",
-         "Price holds above the nearest support — downward pressure is weak.",
-         "Activity in the pair increased, the impulse points up.",
-         "Each new low sits higher than the previous one."]
-      : ["Recent " + a + " movement is dominated by sellers.",
-         "Bounces fade quickly — buyers cannot hold the level.",
-         "Price is pressed against support, pressure from above remains.",
-         "Activity in the pair increased, the impulse points down.",
-         "Each new high sits below the previous one."];
-    var conf = Math.random() < 0.7 ? (ru ? "средняя" : "medium") : (ru ? "высокая" : "high");
+    var map = {
+      flat: {
+        ru: ["Стороны в тупике: ни покупатель, ни продавец не держат инициативу.",
+              "Движение вялое, перевеса ни в одну сторону нет.",
+              "В таком рынке вход — это монетка, а не работа по сигналу."],
+        en: ["The sides are deadlocked: neither buyers nor sellers hold the initiative.",
+              "The move is sluggish, there is no edge either way.",
+              "In this market an entry is a coin flip, not signal work."]
+      },
+      closed: {
+        ru: ["Рынок по этой паре закрыт, свежего движения нет.",
+              "Последние данные устарели — судить о перевесе не по чему.",
+              "Дождись открытия сессии: сигнал по замороженной цене смысла не имеет."],
+        en: ["The market for this pair is closed, there is no fresh movement.",
+              "The latest data is stale — there is nothing to judge the edge from.",
+              "Wait for the session to open: a signal on a frozen price is meaningless."]
+      },
+      nodata: {
+        ru: ["Данные по паре не пришли — судить о движении не по чему.",
+              "Без котировки сигнал был бы выдумкой, а не анализом.",
+              "Повтори через минуту или выбери другую пару."],
+        en: ["No data arrived for this pair — there is nothing to judge the move from.",
+              "Without a quote the signal would be invention, not analysis.",
+              "Retry in a minute or pick another pair."]
+      }
+    };
     return {
-      confidence: conf,
-      summary: ru
-        ? "Сигнал по " + a + " на " + dur + ": в движении преобладает " + (up ? "покупатель" : "продавец" ) + ", вход по ближайшей точке."
-        : "Signal on " + a + " for " + dur + ": " + (up ? "buyers" : "sellers") + " dominate the move, entry at the nearest point.",
-      reasons: pickSome(ru ? poolRu : poolEn, 3),
+      direction: "NO_SIGNAL",
+      confidence: ru ? "низкая" : "low",
+      summary: "",
+      reasons: map[reasonKey][ru ? "ru" : "en"],
       strategy: ru
-        ? "Работай строго на " + dur + ", один вход без усреднения. Если цена ушла до точки входа — пропусти и жди следующий сигнал."
-        : "Stick to " + dur + " exactly, one entry without averaging. If price runs away before the entry point, skip it and wait for the next signal.",
-      tips: ru
-        ? ["Не увеличивай сумму после серии сделок — импульс меняется быстро.",
-           "Отмечай итог в истории: так видно, на каких парах твой процент выше.",
-           "Если цена стоит в узком коридоре — лучше пропустить вход."]
-        : ["Do not raise the stake after a streak — the impulse changes fast.",
-           "Mark the outcome in history: it shows which pairs work better for you.",
-           "If price sits in a tight range, skipping the entry is the better call."]
+        ? "Оставайся вне рынка и запроси сигнал заново, когда движение оживёт."
+        : "Stay out of the market and request the signal again once the move wakes up.",
+      tips: []
     };
   }
+
+  function buildQuickFromQuote(q){
+    var ru = state.language === "ru";
+    var close = qNum(q.close != null ? q.close : q.price);
+    var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
+    var pct = qNum(q.percent_change);
+    if(pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
+    if(close === null || pct === null) return quickNoSignal("nodata");
+
+    var stale = q.is_market_open === false;
+    var absPct = Math.abs(pct);
+    var pos = (high !== null && low !== null && high > low) ? (close - low) / (high - low) : null;
+    var posB = positionBand(pos);
+    var rangePct = (high !== null && low !== null && close) ? ((high - low) / close) * 100 : null;
+    var actB = activityBand(rangePct);
+
+    // Порог тишины считается от самой пары: у привязанных и зажатых пар
+    // обычный ход в разы меньше, и единый порог глушил бы их всегда.
+    var flatLimit = QUICK_FLAT_PCT;
+    if(rangePct !== null && rangePct > 0){
+      flatLimit = Math.min(QUICK_FLAT_PCT, Math.max(0.003, rangePct * 0.12));
+    } else {
+      flatLimit = 0.005;
+    }
+    if(absPct < flatLimit) return quickNoSignal("flat");
+
+    var up = pct > 0;
+    var strength = strengthBand(absPct);
+    // У зажатой пары небольшой ход не должен читаться как сильный перевес
+    if(rangePct !== null && rangePct < 0.08 && strength === "strong") strength = "moderate";
+
+    var seed = absPct + (pos === null ? 0 : pos) + (rangePct === null ? 0 : rangePct);
+    var reasons = [];
+    var candidates = [
+      factBias(up, strength, seed, ru),
+      factPosition(posB, seed * 2 + 0.7, ru),
+      factAlignment(up, posB, seed * 5 + 0.3, ru),
+      factActivity(actB, seed * 7 + 0.9, ru),
+      factVsPrev(close, prev, seed * 11 + 0.5, ru)
+    ];
+    for(var i = 0; i < candidates.length && reasons.length < 3; i++){
+      if(candidates[i]) reasons.push(candidates[i]);
+    }
+    // Если котировка собрана окольным путём — говорим об этом прямо
+    if(q.derived === "cross" || reasons.length < 2){
+      reasons.push(ru
+        ? "Данных по паре немного — вывод построен на перевесе сторон, без разбора диапазона."
+        : "Data on this pair is limited — the read is based on the leading side, without range detail.");
+    }
+    if(stale){
+      reasons.unshift(ru
+        ? "Сессия по паре закрыта: перевес взят с последнего движения, свежего подтверждения нет."
+        : "The session for this pair is closed: the edge comes from the last move, with no fresh confirmation.");
+    }
+    reasons = reasons.slice(0, 3);
+
+    var conf = stale ? (ru ? "низкая" : "low")
+      : strength === "strong" ? (ru ? "высокая" : "high")
+      : strength === "moderate" ? (ru ? "средняя" : "medium")
+      : (ru ? "низкая" : "low");
+
+    return {
+      direction: up ? "UP" : "DOWN",
+      confidence: conf,
+      summary: "",
+      reasons: reasons,
+      strategy: quickStrategy(up, strength, seed * 13 + 0.2, ru),
+      tips: quickTips(strength, actB, seed * 17 + 0.4, ru)
+    };
+  }
+
+  function fetchQuote(){
+    return fetch("/api/market", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol: state.asset, initData: initData })
+    }).then(function(r){
+      return r.json().catch(function(){ return null; });
+    }).then(function(j){
+      if(!j || j.error) return null;
+      return j;
+    }).catch(function(){ return null; });
+  }
+
+  function renderQuick(an, tm, label){
+    var ru = state.language === "ru";
+    var d = dirInfo(an.direction);
+    var live = d.norm === "UP" || d.norm === "DOWN";
+
+    $("quickAssetTop").textContent = label;
+    var dir = $("quickDir"); dir.className = "r-dir " + d.cls; dir.textContent = d.text;
+
+    var ct = confText(an.confidence);
+    if(ct){ $("quickConfWrap").style.display = "block"; $("quickConf").textContent = t("confidence") + ": " + ct; }
+    else { $("quickConfWrap").style.display = "none"; }
+
+    $("quickAsset").textContent = label;
+    $("quickDuration").textContent = tm.durationText;
+    $("quickEntry").textContent = live ? tm.entryText : "—";
+    $("quickOutcome").textContent = live ? tm.outcomeText : "—";
+
+    var cd = $("quickCountdown");
+    if(live){
+      cd.setAttribute("data-entry", tm.entryMs);
+      cd.setAttribute("data-outcome", tm.outcomeMs);
+    } else {
+      cd.removeAttribute("data-entry");
+      cd.removeAttribute("data-outcome");
+      cd.textContent = ru ? "Вход не рекомендуется" : "Entry is not advised";
+    }
+
+    $("quickSummaryTitle").textContent = t("detailSummary");
+    $("quickSummary").textContent = an.summary || "";
+    $("quickSummaryWrap").style.display = an.summary ? "block" : "none";
+
+    var reasons = Array.isArray(an.reasons) ? an.reasons : [];
+    $("quickReasonsTitle").textContent = t("detailWhy");
+    $("quickReasons").innerHTML = reasons.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
+    $("quickReasonsWrap").style.display = reasons.length ? "block" : "none";
+
+    $("quickStrategyTitle").textContent = t("detailStrategy");
+    $("quickStrategy").textContent = an.strategy || "";
+    $("quickStrategyWrap").style.display = an.strategy ? "block" : "none";
+
+    var tips = Array.isArray(an.tips) ? an.tips : [];
+    $("quickTipsTitle").textContent = t("detailTips");
+    $("quickTips").innerHTML = tips.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
+    $("quickTipsWrap").style.display = tips.length ? "block" : "none";
+
+    $("quickResult").classList.add("show");
+    tickCountdowns();
+
+    addHistory({
+      type: "quick", direction: an.direction, asset: label, duration: tm.durationText,
+      entry: live ? tm.entryText : "—", outcomeTime: live ? tm.outcomeText : "—",
+      entryISO: live ? tm.entryISO : null, outcomeISO: live ? tm.outcomeISO : null,
+      summary: an.summary || "", confidence: an.confidence || "", reasons: reasons,
+      strategy: an.strategy || "", tips: tips, timeframe: tm.durationText
+    });
+  }
+
   function runQuick(){
     $("quickResult").classList.remove("show");
-    $("createAction").disabled = true; $("createAction").textContent = t("quickPreparing");
+    $("createAction").disabled = true;
+    $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    wait(4600).then(function(){
+    Promise.all([fetchQuote(), wait(2200)]).then(function(res){
+      var q = res[0];
       stopQuickProcessing();
-      var pool=["UP","DOWN"]; var dirRaw = pool[Math.floor(Math.random()*pool.length)];
-      var d = dirInfo(dirRaw), tm = timing();
-      var an = buildQuickAnalysis(dirRaw, tm);
-      $("quickAssetTop").textContent = esc(state.asset);
-      var dir=$("quickDir"); dir.className="r-dir "+d.cls; dir.textContent=d.text;
-      $("quickConfWrap").style.display="block";
-      $("quickConf").textContent = t("confidence")+": "+confText(an.confidence);
-      $("quickAsset").textContent = state.asset;
-      $("quickDuration").textContent = tm.durationText;
-      $("quickEntry").textContent = tm.entryText;
-      $("quickOutcome").textContent = tm.outcomeText;
-      var cd=$("quickCountdown"); cd.setAttribute("data-entry",tm.entryMs); cd.setAttribute("data-outcome",tm.outcomeMs);
-
-      $("quickSummaryTitle").textContent = t("detailSummary");
-      $("quickSummary").textContent = an.summary;
-      $("quickSummaryWrap").style.display = "block";
-
-      $("quickReasonsTitle").textContent = t("detailWhy");
-      $("quickReasons").innerHTML = an.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
-      $("quickReasonsWrap").style.display = an.reasons.length ? "block" : "none";
-
-      $("quickStrategyTitle").textContent = t("detailStrategy");
-      $("quickStrategy").textContent = an.strategy;
-      $("quickStrategyWrap").style.display = "block";
-
-      $("quickTipsTitle").textContent = t("detailTips");
-      $("quickTips").innerHTML = an.tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
-      $("quickTipsWrap").style.display = an.tips.length ? "block" : "none";
-
-      $("quickResult").classList.add("show"); tickCountdowns();
-      addHistory({ type:"quick", direction:dirRaw, asset:state.asset, duration:tm.durationText,
-        entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
-        summary:an.summary, confidence:an.confidence, reasons:an.reasons,
-        strategy:an.strategy, tips:an.tips, timeframe:tm.durationText });
-      $("createAction").disabled=false; $("createAction").textContent = t("actionQuick");
-      $("quickResult").scrollIntoView({behavior:"smooth",block:"nearest"});
+      var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
+      var tm = timing();
+      var label = (q && q.display) ? q.display : state.asset;
+      setTimeout(function(){
+        renderQuick(an, tm, label);
+        $("createAction").disabled = false;
+        $("createAction").textContent = t("actionQuick");
+        $("quickResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 340);
     });
   }
 
