@@ -116,14 +116,55 @@ function parseJsonLoose(text) {
   catch (e) { try { return JSON.parse(repairJson(clean)); } catch (e2) { return null; } }
 }
 
+/* Технический мусор никогда не должен попасть на экран пользователю */
+function looksTechnical(s) {
+  const t = String(s || "");
+  if (/^[\s{\[]/.test(t)) return true;
+  if (/"\s*:\s*"/.test(t)) return true;
+  if (/\b(direction|confidence|entryWindow|expiry|timeframe|summary|strategy|reasons|tips|asset)\b\s*"?\s*:/i.test(t)) return true;
+  if (/(BUY|SELL|NO_SIGNAL)\s*"/.test(t)) return true;
+  return false;
+}
+
 function cleanList(v, max) {
   const arr = Array.isArray(v) ? v : (v ? [v] : []);
   const out = [];
   arr.forEach((x) => {
-    const s = String(x == null ? "" : x).replace(/^[\s\-*•\d.)]+/, "").trim();
-    if (s && s.length > 3 && out.indexOf(s) === -1) out.push(s);
+    const s = String(x == null ? "" : x).replace(/^[\s\-*•\d.)]+/, "").replace(/["\\]+$/, "").trim();
+    if (s && s.length > 3 && !looksTechnical(s) && out.indexOf(s) === -1) out.push(s);
   });
   return out.slice(0, max || 4);
+}
+
+/* Собираем поля даже из оборванного JSON, который не разобрался целиком */
+function extractFields(rawText) {
+  const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
+  const out = {};
+
+  const str = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)"', "i"));
+    return m && m[1] ? m[1].trim() : "";
+  };
+  const list = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*\\[([\\s\\S]*?)(\\]|$)', "i"));
+    if (!m || !m[1]) return [];
+    return m[1]
+      .split(/"\s*,\s*"/)
+      .map((s) => s.replace(/^[\s"]+|[\s",]+$/g, "").trim())
+      .filter(Boolean);
+  };
+
+  ["direction", "confidence", "entryWindow", "expiry", "asset", "timeframe", "summary", "strategy"].forEach((k) => {
+    const v = str(k);
+    if (v) out[k] = v;
+  });
+
+  const reasons = list("reasons");
+  if (reasons.length) out.reasons = reasons;
+  const tips = list("tips");
+  if (tips.length) out.tips = tips;
+
+  return out;
 }
 
 /* Спасаем причины из чего угодно, что вернула модель */
@@ -258,7 +299,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   });
 
   // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
-  const cap = Number(process.env.AI_MAX_TOKENS || 1600);
+  const cap = Number(process.env.AI_MAX_TOKENS || 3000);
 
   const base = {
     model,
@@ -348,7 +389,8 @@ const PROMPT_RU = `Ты — опытный трейдер-аналитик. Те
 - reasons ОБЯЗАТЕЛЬНО непустой: 2-3 коротких конкретных факта по этому графику, простым языком, без нумерации и без слова "голосование". Именно reasons отвечает на вопрос "почему вверх, вниз или пропустить".
 - tips — максимум 2.
 Верни ТОЛЬКО JSON без markdown:
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","entryWindow":"условие или время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 живых предложения","reasons":["причина","причина"],"strategy":"2-3 предложения: вход, подтверждение, отмена идеи","tips":["совет","совет"]}`;
+{"direction":"BUY|SELL|NO_SIGNAL","reasons":["причина","причина"],"confidence":"низкая|средняя|высокая","summary":"1-2 живых предложения","strategy":"2-3 предложения: вход, подтверждение, отмена идеи","entryWindow":"условие ил�� время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","tips":["совет","совет"]}
+Важно: соблюдай именно этот порядок ключей и пиши коротко.`;
 
 const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles and price action, key levels.
 Rules:
@@ -358,7 +400,8 @@ Rules:
 - reasons MUST be non-empty: 2-3 short concrete facts about this chart, plain language, no numbering. reasons is what answers "why up, down or skip".
 - tips — max 2.
 Return JSON only, no markdown:
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","entryWindow":"entry condition or timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 lively sentences","reasons":["reason","reason"],"strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["tip","tip"]}`;
+{"direction":"BUY|SELL|NO_SIGNAL","reasons":["reason","reason"],"confidence":"low|medium|high","summary":"1-2 lively sentences","strategy":"2-3 sentences: entry, confirmation, invalidation","entryWindow":"entry condition or timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","tips":["tip","tip"]}
+Important: keep exactly this key order and be concise.`;
 
 const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
@@ -468,10 +511,10 @@ module.exports = async (req, res) => {
       if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
         return softCard(res, lang,
           lang === "ru"
-            ? `На сегодня анализы закончились (${DAILY_LIMIT} в день).`
+            ? `На сегодня анализы закончил��сь (${DAILY_LIMIT} в день).`
             : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
           lang === "ru"
-            ? ["Лими�� обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
+            ? ["Лими���� обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
             : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
       }
     } catch (e) { /* fail-open */ }
@@ -543,7 +586,8 @@ module.exports = async (req, res) => {
       if (!r.ok) { diag.push(model + ": " + r.error); continue; }
 
       rawSeen = r.text;
-      const parsed = r.parsed || {};
+      // Сначала честный JSON, сверху — всё, что удалось вытащить из оборванного ответа
+      const parsed = Object.assign(extractFields(r.text), r.parsed || {});
       const reasons = salvageReasons(parsed, r.text, lang);
       const dir = parsed.direction || directionFromText(r.text);
 
@@ -570,7 +614,7 @@ module.exports = async (req, res) => {
         if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
 
         rawSeen = rawSeen || r.text;
-        const parsed = r.parsed || {};
+        const parsed = Object.assign(extractFields(r.text), r.parsed || {});
         const reasons = salvageReasons(parsed, r.text, lang);
         const dir = parsed.direction || directionFromText(r.text);
 
