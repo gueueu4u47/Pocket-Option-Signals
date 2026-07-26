@@ -427,6 +427,7 @@
     </div>
 
     <div class="result" id="quickResult">
+      <div id="quickGameBadge" style="display:none;margin:0 0 10px;padding:7px 11px;border:1px solid rgba(255,255,255,.16);border-radius:10px;font-size:11px;line-height:1.35;letter-spacing:.04em;text-transform:uppercase;opacity:.72;text-align:center">—</div>
       <div class="r-asset" id="quickAssetTop">—</div>
       <div class="r-dir none" id="quickDir">—</div>
       <div id="quickConfWrap" style="display:none"><span class="r-conf" id="quickConf">—</span></div>
@@ -601,7 +602,7 @@
       statsTitle:"Личная статистика", statAll:"Всего",
       profileNotice:"Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
       visionRisk:"Это анализ изображения, а не гарантия результата.",
-      detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для этого результата недоступен.",
+      detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для это��о результата недоступен.",
       win:"Win", loss:"Loss", skip:"Пропустить",
       errFailed:"Pulse Vision временно недоступен. Попробуйте позже.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Панель владельца", ownerSub:"Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.",
@@ -1388,7 +1389,7 @@
       if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
       else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
       else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл������во за тобой.");
     } else {
       out.push(pickBy(seed, [
         "Do not raise your size after a streak — the edge shifts faster than it feels.",
@@ -1420,12 +1421,20 @@
               "In this market an entry is a coin flip, not signal work."]
       },
       closed: {
-        ru: ["Рынок по этой паре закрыт, свежего движения нет.",
+        ru: ["Рынок по этой паре закрыт, св��жег�� движения нет.",
               "Последние данные устарели — судить о перевесе не по чему.",
               "Дождись открытия сессии: сигнал по замороженной цене смысла не имеет."],
         en: ["The market for this pair is closed, there is no fresh movement.",
               "The latest data is stale — there is nothing to judge the edge from.",
               "Wait for the session to open: a signal on a frozen price is meaningless."]
+      },
+      limit: {
+        ru: ["Поставщик данных занят — котировка не пришла.",
+              "Лимит запросов исчерпан, свежей цены нет.",
+              "Повтори запрос через минуту."],
+        en: ["The data provider is busy — no quote arrived.",
+              "The request limit is reached, there is no fresh price.",
+              "Retry in a minute."]
       },
       nodata: {
         ru: ["Данные по паре не пришли — судить о движении не по чему.",
@@ -1436,14 +1445,42 @@
               "Retry in a minute or pick another pair."]
       }
     };
+    var notes = {
+      flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
+      closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
+      limit: { ru: "Поставщик занят — повтори через минуту", en: "Provider is busy — retry in a minute" },
+      nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
+    };
     return {
       direction: "NO_SIGNAL",
       confidence: ru ? "низкая" : "low",
+      note: (notes[reasonKey] || notes.nodata)[ru ? "ru" : "en"],
       summary: "",
-      reasons: map[reasonKey][ru ? "ru" : "en"],
+      reasons: (map[reasonKey] || map.nodata)[ru ? "ru" : "en"],
       strategy: ru
         ? "Оставайся вне рынка и запроси сигнал заново, когда движение оживёт."
         : "Stay out of the market and request the signal again once the move wakes up.",
+      tips: []
+    };
+  }
+
+  /* Развлекательный режим: когда живого движения по паре нет, Quick выдаёт
+     игровое направление. Оно случайное, поэтому карточка всегда несёт
+     видимую подпись об этом — иначе это было бы выдачей монетки за анализ. */
+  function quickGameSignal(){
+    var ru = state.language === "ru";
+    var up = Math.random() < 0.5;
+    return {
+      direction: up ? "UP" : "DOWN",
+      confidence: "",
+      game: true,
+      badge: ru
+        ? "Игровой режим · случайный исход · не рекомендация"
+        : "Game mode · random outcome · not a recommendation",
+      note: "",
+      summary: "",
+      reasons: [],
+      strategy: "",
       tips: []
     };
   }
@@ -1453,19 +1490,37 @@
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
     var pct = qNum(q.percent_change);
-    if(pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
-    if(close === null || pct === null) return quickNoSignal("nodata");
-    if(q.is_market_open === false) return quickNoSignal("closed");
+    var tiny = 0.0005;
+    if((pct === null || Math.abs(pct) < tiny) && close !== null && prev) pct = ((close - prev) / prev) * 100;
+    // Когда сессия закрыта, дневное изменение приходит нулевым и сигнал глохнет.
+    // Тогда берём ход последней сессии (открытие -> закрытие): это реальные данные
+    // рынка, а не случайное направление.
+    if((pct === null || Math.abs(pct) < tiny) && close !== null && open) pct = ((close - open) / open) * 100;
+    if(close === null || pct === null) return quickGameSignal();
 
+    var stale = q.is_market_open === false;
     var absPct = Math.abs(pct);
-    if(absPct < QUICK_FLAT_PCT) return quickNoSignal("flat");
-
-    var up = pct > 0;
-    var strength = strengthBand(absPct);
     var pos = (high !== null && low !== null && high > low) ? (close - low) / (high - low) : null;
     var posB = positionBand(pos);
     var rangePct = (high !== null && low !== null && close) ? ((high - low) / close) * 100 : null;
     var actB = activityBand(rangePct);
+
+    // Порог тишины считается от самой пары: у привязанных и зажатых пар
+    // обычный ход в разы меньше, и единый порог глушил бы их всегда.
+    // Порог специально низкий: он отсекает только полностью замершие данные,
+    // а не мелкое но реальное движение по последним свечам.
+    var flatLimit = QUICK_FLAT_PCT;
+    if(rangePct !== null && rangePct > 0){
+      flatLimit = Math.min(QUICK_FLAT_PCT, Math.max(0.001, rangePct * 0.06));
+    } else {
+      flatLimit = 0.002;
+    }
+    if(absPct < flatLimit) return quickGameSignal();
+
+    var up = pct > 0;
+    var strength = strengthBand(absPct);
+    // У зажатой пары небольшой ход не должен читаться как сильный перевес
+    if(rangePct !== null && rangePct < 0.08 && strength === "strong") strength = "moderate";
 
     var seed = absPct + (pos === null ? 0 : pos) + (rangePct === null ? 0 : rangePct);
     var reasons = [];
@@ -1479,14 +1534,28 @@
     for(var i = 0; i < candidates.length && reasons.length < 3; i++){
       if(candidates[i]) reasons.push(candidates[i]);
     }
+    // Если котировка собрана окольным путём — говорим об этом прямо
+    if(q.derived === "cross" || reasons.length < 2){
+      reasons.push(ru
+        ? "Данных по паре немного — вывод построен на перевесе сторон, без разбора диапазона."
+        : "Data on this pair is limited — the read is based on the leading side, without range detail.");
+    }
+    if(stale){
+      reasons.unshift(ru
+        ? "Сессия по паре закрыта: перевес взят с последнего движения, свежего подтверждения нет."
+        : "The session for this pair is closed: the edge comes from the last move, with no fresh confirmation.");
+    }
+    reasons = reasons.slice(0, 3);
 
-    var conf = strength === "strong" ? (ru ? "высокая" : "high")
+    var conf = stale ? (ru ? "низкая" : "low")
+      : strength === "strong" ? (ru ? "высокая" : "high")
       : strength === "moderate" ? (ru ? "средняя" : "medium")
       : (ru ? "низкая" : "low");
 
     return {
       direction: up ? "UP" : "DOWN",
       confidence: conf,
+      note: "",
       summary: "",
       reasons: reasons,
       strategy: quickStrategy(up, strength, seed * 13 + 0.2, ru),
@@ -1502,15 +1571,26 @@
     }).then(function(r){
       return r.json().catch(function(){ return null; });
     }).then(function(j){
-      if(!j || j.error) return null;
+      if(!j) return { __error: "nodata" };
+      // Лимит поставщика и отсутствие пары — разные причины, и пишем их разно.
+      if(j.error) return { __error: j.code === "provider_limit" ? "limit" : "nodata" };
       return j;
-    }).catch(function(){ return null; });
+    }).catch(function(){ return { __error: "nodata" }; });
   }
 
   function renderQuick(an, tm, label){
     var ru = state.language === "ru";
     var d = dirInfo(an.direction);
     var live = d.norm === "UP" || d.norm === "DOWN";
+
+    var badge = $("quickGameBadge");
+    if(an.game && an.badge){
+      badge.textContent = an.badge;
+      badge.style.display = "block";
+    } else {
+      badge.textContent = "";
+      badge.style.display = "none";
+    }
 
     $("quickAssetTop").textContent = label;
     var dir = $("quickDir"); dir.className = "r-dir " + d.cls; dir.textContent = d.text;
@@ -1531,26 +1611,18 @@
     } else {
       cd.removeAttribute("data-entry");
       cd.removeAttribute("data-outcome");
-      cd.textContent = ru ? "Вход не рекомендуется" : "Entry is not advised";
+      cd.textContent = an.note ? an.note : (ru ? "Вход не рекомендуется" : "Entry is not advised");
     }
 
-    $("quickSummaryTitle").textContent = t("detailSummary");
-    $("quickSummary").textContent = an.summary || "";
-    $("quickSummaryWrap").style.display = an.summary ? "block" : "none";
-
-    var reasons = Array.isArray(an.reasons) ? an.reasons : [];
-    $("quickReasonsTitle").textContent = t("detailWhy");
-    $("quickReasons").innerHTML = reasons.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickReasonsWrap").style.display = reasons.length ? "block" : "none";
-
-    $("quickStrategyTitle").textContent = t("detailStrategy");
-    $("quickStrategy").textContent = an.strategy || "";
-    $("quickStrategyWrap").style.display = an.strategy ? "block" : "none";
-
-    var tips = Array.isArray(an.tips) ? an.tips : [];
-    $("quickTipsTitle").textContent = t("detailTips");
-    $("quickTips").innerHTML = tips.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickTipsWrap").style.display = tips.length ? "block" : "none";
+    /* В Quick остаётся только сигнал: разбор, стратегия и советы не выводятся. */
+    $("quickSummary").textContent = "";
+    $("quickSummaryWrap").style.display = "none";
+    $("quickReasons").innerHTML = "";
+    $("quickReasonsWrap").style.display = "none";
+    $("quickStrategy").textContent = "";
+    $("quickStrategyWrap").style.display = "none";
+    $("quickTips").innerHTML = "";
+    $("quickTipsWrap").style.display = "none";
 
     $("quickResult").classList.add("show");
     tickCountdowns();
@@ -1559,8 +1631,8 @@
       type: "quick", direction: an.direction, asset: label, duration: tm.durationText,
       entry: live ? tm.entryText : "—", outcomeTime: live ? tm.outcomeText : "—",
       entryISO: live ? tm.entryISO : null, outcomeISO: live ? tm.outcomeISO : null,
-      summary: an.summary || "", confidence: an.confidence || "", reasons: reasons,
-      strategy: an.strategy || "", tips: tips, timeframe: tm.durationText
+      summary: "", confidence: an.confidence || "", reasons: [],
+      strategy: "", tips: [], timeframe: tm.durationText
     });
   }
 
@@ -1569,10 +1641,10 @@
     $("createAction").disabled = true;
     $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    Promise.all([fetchQuote(), wait(2200)]).then(function(res){
+    Promise.all([fetchQuote(), wait(5400)]).then(function(res){
       var q = res[0];
       stopQuickProcessing();
-      var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
+      var an = (q && !q.__error) ? buildQuickFromQuote(q) : quickGameSignal();
       var tm = timing();
       var label = (q && q.display) ? q.display : state.asset;
       setTimeout(function(){
@@ -1580,7 +1652,7 @@
         $("createAction").disabled = false;
         $("createAction").textContent = t("actionQuick");
         $("quickResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 340);
+      }, 600);
     });
   }
 
