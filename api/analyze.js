@@ -80,8 +80,8 @@ function cacheSet(key, payload) {
 
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-// Дешёвая модель первой, дорогая — только как резерв
-const MODELS = String(process.env.AI_MODELS || "gemini-2.0-flash-lite,gemini-2.0-flash")
+// Дешёвая рабочая модель первой, вторая — только резерв при сбое
+const MODELS = String(process.env.AI_MODELS || "gemini-2.5-flash,gemini-3-flash-preview")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -280,6 +280,25 @@ const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, n
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
 reasons is required and cannot be empty.`;
 
+/* ---------- Мягкий ответ: пользователь никогда не видит кодов ошибок ---------- */
+function softCard(res, lang, summary, reasons) {
+  const ru = lang !== "en";
+  return res.status(200).json({
+    direction: "NO_SIGNAL",
+    confidence: ru ? "низкая" : "low",
+    asset: ru ? "Не распознан" : "Not recognized",
+    timeframe: "",
+    entryWindow: "",
+    expiry: "",
+    summary: summary,
+    reasons: (reasons && reasons.length) ? reasons : noDataReasons(ru ? "ru" : "en"),
+    strategy: "",
+    tips: [],
+    degraded: false,
+    notice: true
+  });
+}
+
 /* ============================================================ */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -288,7 +307,7 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Use POST request" });
+  if (req.method !== "POST") return res.status(200).end();
 
   const apiKey = process.env.GEMINI_API_KEY;
   const body0 = typeof req.body === "string" ? (JSON.parse(req.body || "{}") || {}) : (req.body || {});
@@ -316,28 +335,56 @@ module.exports = async (req, res) => {
     const lang = language === "en" ? "en" : "ru";
 
     const user = validateTelegramInitData(initData, botToken);
-    if (!user || !user.id) return res.status(401).json({ error: "Telegram verification failed" });
+    if (!user || !user.id) {
+      return softCard(res, lang,
+        lang === "ru" ? "Не удалось подтвердить вход через Telegram." : "Telegram sign-in could not be confirmed.",
+        lang === "ru"
+          ? ["Открой приложение заново из бота в Telegram.", "Анализ работает только внутри Telegram."]
+          : ["Reopen the app from the bot inside Telegram.", "Analysis works only inside Telegram."]);
+    }
     const isOwner = String(user.id) === String(process.env.OWNER_TELEGRAM_ID || "");
 
     if (!isOwner && !rateLimit("analyze:" + user.id, 5, 60000)) {
-      return res.status(429).json({ error: "Too many requests. Please slow down." });
+      return softCard(res, lang,
+        lang === "ru" ? "Слишком много анализов подряд." : "Too many analyses in a row.",
+        lang === "ru"
+          ? ["Подожди минуту и попробуй снова.", "Пауза помогает не торопиться со входами."]
+          : ["Wait a minute and try again.", "A pause helps you avoid rushed entries."]);
     }
 
     if (["image/png", "image/jpeg", "image/webp"].indexOf(String(mimeType)) === -1) {
-      return res.status(400).json({ error: "Unsupported image type" });
+      return softCard(res, lang,
+        lang === "ru" ? "Этот формат изображения не поддерживается." : "This image format is not supported.",
+        lang === "ru"
+          ? ["Подходят скриншоты PNG, JPG и WEBP.", "Сделай обычный скриншот экрана и загрузи его."]
+          : ["PNG, JPG and WEBP screenshots work.", "Take a regular screen capture and upload it."]);
     }
-    if (!image || typeof image !== "string") return res.status(400).json({ error: "Image is required" });
-    if (image.length > 12000000) return res.status(413).json({ error: "Image is too large" });
+    if (!image || typeof image !== "string") {
+      return softCard(res, lang,
+        lang === "ru" ? "Скриншот не загрузился." : "The screenshot was not uploaded.",
+        lang === "ru"
+          ? ["Выбери изображение графика и повтори анализ.", "Без графика разбор сделать невозможно."]
+          : ["Pick a chart image and run the analysis again.", "Without a chart there is nothing to read."]);
+    }
+    if (image.length > 12000000) {
+      return softCard(res, lang,
+        lang === "ru" ? "Изображение слишком большое." : "The image is too large.",
+        lang === "ru"
+          ? ["Загрузи файл поменьше, до 8 МБ.", "Обычного скриншота с телефона достаточно."]
+          : ["Upload a smaller file, up to 8 MB.", "A normal phone screenshot is enough."]);
+    }
 
     const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 5);
     try {
       const used = await dailyAnalyzeCount(user.id);
       if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
-        return res.status(429).json({
-          error: lang === "ru"
-            ? `Дневной лимит анализов исчерпан (${DAILY_LIMIT}). Возвращайтесь завтра.`
-            : `Daily analysis limit reached (${DAILY_LIMIT}). Come back tomorrow.`
-        });
+        return softCard(res, lang,
+          lang === "ru"
+            ? `На сегодня анализы закончились (${DAILY_LIMIT} в день).`
+            : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
+          lang === "ru"
+            ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
+            : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
       }
     } catch (e) { /* fail-open */ }
 
@@ -346,11 +393,13 @@ module.exports = async (req, res) => {
     // Экономия 1: пауза между анализами одного человека
     const COOLDOWN_SEC = Number(process.env.ANALYZE_COOLDOWN_SEC || 25);
     if (!isOwner && COOLDOWN_SEC > 0 && !rateLimit("cooldown:" + user.id, 1, COOLDOWN_SEC * 1000)) {
-      return res.status(429).json({
-        error: lang === "ru"
-          ? `Подожди ${COOLDOWN_SEC} секунд перед следующим анализом.`
-          : `Wait ${COOLDOWN_SEC} seconds before the next analysis.`
-      });
+      return softCard(res, lang,
+        lang === "ru"
+          ? `Нужна небольшая пауза — около ${COOLDOWN_SEC} секунд.`
+          : `A short pause is needed — about ${COOLDOWN_SEC} seconds.`,
+        lang === "ru"
+          ? ["Анализы идут слишком часто.", "Подожди немного и загрузи скриншот заново."]
+          : ["Analyses are coming in too fast.", "Wait a moment and upload the screenshot again."]);
     }
 
     // Экономия 2: тот же скриншот — ответ из кэша, без затрат на ИИ
@@ -378,7 +427,7 @@ module.exports = async (req, res) => {
             reasons: lang === "ru"
               ? ["Сегодняшний объём анализов исчерпан.", "Возвращайся завтра — лимит обновится."]
               : ["Today's analysis volume is used up.", "Come back tomorrow when the limit resets."],
-            strategy: "", tips: [], degraded: true, limited: true
+            strategy: "", tips: [], degraded: false, notice: true, limited: true
           });
         }
       } catch (e) { /* fail-open */ }
