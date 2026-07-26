@@ -80,7 +80,7 @@ function cacheSet(key, payload) {
 
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-// Дешёвая рабочая модель первой, вторая — только резерв при сбое
+// Рабочая модель первой, вторая — только резерв при сбое
 const MODELS = String(process.env.AI_MODELS || "gemini-2.5-flash,gemini-3-flash-preview")
   .split(",")
   .map((s) => s.trim())
@@ -173,22 +173,26 @@ function normDirection(d) {
   return "NO_SIGNAL";
 }
 
-async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
-  const content = parts.map((p) => {
-    if (p && p.text) return { type: "text", text: p.text };
-    if (p && p.inline_data) {
-      return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
-    }
-    return { type: "text", text: "" };
-  });
-  const payload = {
-    model,
-    messages: [{ role: "user", content }],
-    temperature,
-    max_tokens: Number(process.env.AI_MAX_TOKENS || 600)
-  };
-  if (forceJson) payload.response_format = { type: "json_object" };
+/* Извлекаем текст из любой формы ответа (строка, массив частей, reasoning_content) */
+function extractText(data) {
+  const ch = data && data.choices && data.choices[0];
+  if (!ch) return "";
+  const msg = ch.message || {};
+  let out = "";
 
+  if (typeof msg.content === "string") out = msg.content;
+  else if (Array.isArray(msg.content)) {
+    out = msg.content
+      .map((p) => (typeof p === "string" ? p : (p && (p.text || (p.parts && p.parts.text))) || ""))
+      .join("\n");
+  }
+  if (!out.trim() && typeof msg.reasoning_content === "string") out = msg.reasoning_content;
+  if (!out.trim() && typeof msg.reasoning === "string") out = msg.reasoning;
+  if (!out.trim() && typeof ch.text === "string") out = ch.text;
+  return String(out || "").trim();
+}
+
+async function postAI(apiKey, payload, timeoutMs) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
   try {
@@ -199,20 +203,68 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
       signal: ctrl.signal
     });
     const data = await resp.json().catch(() => null);
-    if (!resp.ok) {
-      const msg = (data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status);
-      return { ok: false, error: String(msg) };
-    }
-    const text = String(
-      (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || ""
-    ).trim();
-    if (!text) return { ok: false, error: "empty response" };
-    return { ok: true, text, parsed: parseJsonLoose(text) };
+    return { httpOk: resp.ok, status: resp.status, data };
   } catch (e) {
-    return { ok: false, error: (e && e.message) || String(e) };
+    return { httpOk: false, status: 0, data: null, netError: (e && e.message) || String(e) };
   } finally {
     clearTimeout(to);
   }
+}
+
+async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
+  const content = parts.map((p) => {
+    if (p && p.text) return { type: "text", text: p.text };
+    if (p && p.inline_data) {
+      return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
+    }
+    return { type: "text", text: "" };
+  });
+
+  // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
+  const cap = Number(process.env.AI_MAX_TOKENS || 1600);
+
+  const base = {
+    model,
+    messages: [{ role: "user", content }],
+    temperature,
+    max_tokens: cap
+  };
+
+  // Глушим внутренние рассуждения: именно они съедали весь лимит и давали пустой ответ
+  const attempts = [];
+  attempts.push(Object.assign({}, base, {
+    reasoning_effort: "none",
+    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
+  }, forceJson ? { response_format: { type: "json_object" } } : {}));
+  attempts.push(Object.assign({}, base, forceJson ? { response_format: { type: "json_object" } } : {}));
+  attempts.push(Object.assign({}, base, { max_tokens: Math.max(cap, 2400) }));
+
+  // Общий бюджет времени на все попытки этой модели
+  const deadline = Date.now() + (timeoutMs || 24000);
+
+  let lastErr = "no answer";
+  for (let i = 0; i < attempts.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
+
+    const r = await postAI(apiKey, attempts[i], remaining);
+    if (r.netError) { lastErr = r.netError; continue; }
+
+    if (!r.httpOk) {
+      const msg = String((r.data && r.data.error && (r.data.error.message || r.data.error)) || ("HTTP " + r.status));
+      lastErr = msg;
+      // Неизвестный параметр или нет поддержки JSON-режима — пробуем следующий вариант
+      if (/unknown|unsupported|invalid|not support|response_format|reasoning|thinking|extra_body/i.test(msg)) continue;
+      return { ok: false, error: msg };
+    }
+
+    const text = extractText(r.data);
+    if (text) return { ok: true, text, parsed: parseJsonLoose(text) };
+
+    const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
+    lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
+  }
+  return { ok: false, error: lastErr };
 }
 
 /* ---------- Supabase (дневной лимит, best-effort / fail-open) ---------- */
@@ -274,7 +326,7 @@ Return JSON only, no markdown:
 
 const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
-reasons обязателен и не может быть пустым.`;
+reasons ��бязателен и не может быть пустым.`;
 
 const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, no markdown, no text around it:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
@@ -444,7 +496,7 @@ module.exports = async (req, res) => {
 
     // Проход 1: основной промпт по всем моделям
     for (const model of MODELS) {
-      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, 18000, true);
+      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, 26000, true);
       if (!r.ok) { diag.push(model + ": " + r.error); continue; }
       rawSeen = r.text;
       const parsed = r.parsed || {};
@@ -457,7 +509,7 @@ module.exports = async (req, res) => {
     // Проход 2: ОДИН короткий повтор на самой дешёвой модели
     if (!best || !bestReasons.length) {
       for (const model of MODELS.slice(0, 1)) {
-        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, 14000, false);
+        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, 16000, false);
         if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
         rawSeen = rawSeen || r.text;
         const parsed = r.parsed || {};
