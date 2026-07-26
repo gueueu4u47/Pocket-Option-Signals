@@ -1388,7 +1388,7 @@
       if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
       else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
       else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл��во за тобой.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл����во за тобой.");
     } else {
       out.push(pickBy(seed, [
         "Do not raise your size after a streak — the edge shifts faster than it feels.",
@@ -1420,12 +1420,20 @@
               "In this market an entry is a coin flip, not signal work."]
       },
       closed: {
-        ru: ["Рынок по этой паре закрыт, свежего движения нет.",
+        ru: ["Рынок по этой паре закрыт, свежег�� движения нет.",
               "Последние данные устарели — судить о перевесе не по чему.",
               "Дождись открытия сессии: сигнал по замороженной цене смысла не имеет."],
         en: ["The market for this pair is closed, there is no fresh movement.",
               "The latest data is stale — there is nothing to judge the edge from.",
               "Wait for the session to open: a signal on a frozen price is meaningless."]
+      },
+      limit: {
+        ru: ["Поставщик данных занят — котировка не пришла.",
+              "Лимит запросов исчерпан, свежей цены нет.",
+              "Повтори запрос через минуту."],
+        en: ["The data provider is busy — no quote arrived.",
+              "The request limit is reached, there is no fresh price.",
+              "Retry in a minute."]
       },
       nodata: {
         ru: ["Данные по паре не пришли — судить о движении не по чему.",
@@ -1439,6 +1447,7 @@
     var notes = {
       flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
       closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
+      limit: { ru: "Поставщик занят — повтори через минуту", en: "Provider is busy — retry in a minute" },
       nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
     };
     return {
@@ -1446,7 +1455,7 @@
       confidence: ru ? "низкая" : "low",
       note: (notes[reasonKey] || notes.nodata)[ru ? "ru" : "en"],
       summary: "",
-      reasons: map[reasonKey][ru ? "ru" : "en"],
+      reasons: (map[reasonKey] || map.nodata)[ru ? "ru" : "en"],
       strategy: ru
         ? "Оставайся вне рынка и запроси сигнал заново, когда движение оживёт."
         : "Stay out of the market and request the signal again once the move wakes up.",
@@ -1538,9 +1547,11 @@
     }).then(function(r){
       return r.json().catch(function(){ return null; });
     }).then(function(j){
-      if(!j || j.error) return null;
+      if(!j) return { __error: "nodata" };
+      // Лимит поставщика и отсутствие пары — разные причины, и пишем их разно.
+      if(j.error) return { __error: j.code === "provider_limit" ? "limit" : "nodata" };
       return j;
-    }).catch(function(){ return null; });
+    }).catch(function(){ return { __error: "nodata" }; });
   }
 
   function renderQuick(an, tm, label){
@@ -1600,7 +1611,7 @@
     Promise.all([fetchQuote(), wait(5400)]).then(function(res){
       var q = res[0];
       stopQuickProcessing();
-      var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
+      var an = (q && !q.__error) ? buildQuickFromQuote(q) : quickNoSignal((q && q.__error) || "nodata");
       var tm = timing();
       var label = (q && q.display) ? q.display : state.asset;
       setTimeout(function(){
