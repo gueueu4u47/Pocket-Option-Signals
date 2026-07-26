@@ -1462,6 +1462,29 @@
         : "Stay out of the market and request the signal again once the move wakes up.",
       tips: []
     };
+  }
+
+  /* Развлекательный режим: когда живого движения по паре нет, Quick выдаёт
+     игровое направление. Оно случайное, поэтому карточка всегда несёт
+     видимую подпись об этом — иначе это было бы выдачей монетки за анализ. */
+  function quickGameSignal(){
+    var ru = state.language === "ru";
+    var up = Math.random() < 0.5;
+    return {
+      direction: up ? "UP" : "DOWN",
+      confidence: "",
+      game: true,
+      badge: ru
+        ? "Демо"
+        : "Demo",
+      note: "",
+      summary: "",
+      reasons: [],
+      strategy: "",
+      tips: []
+    };
+  }
+
   function buildQuickFromQuote(q){
     var ru = state.language === "ru";
     var close = qNum(q.close != null ? q.close : q.price);
