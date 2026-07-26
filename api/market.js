@@ -116,137 +116,6 @@ function rateLimit(key, limit, windowMs) {
   return true;
 }
 
-
-/* ---------- получение котировки: три пути ---------- */
-/* Поставщик держит не все пары в том виде, в каком они названы
-   в приложении. Порядок попыток: напрямую → перевёрнутая пара →
-   кросс через доллар. Все три — реальные числа, ничего не выдумывается. */
-function toNum(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-async function rawQuote(symbol, apiKey) {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), 7000);
-  try {
-    const url =
-      "https://api.twelvedata.com/quote?symbol=" +
-      encodeURIComponent(symbol) +
-      "&apikey=" +
-      encodeURIComponent(apiKey);
-    const response = await fetch(url, { signal: ctrl.signal });
-    const data = await response.json().catch(() => null);
-    if (!data || data.status === "error") return null;
-    if (toNum(data.close) === null && toNum(data.price) === null) return null;
-    return data;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(to);
-  }
-}
-
-function shape(data, symbol, derived) {
-  const close = toNum(data.close) !== null ? toNum(data.close) : toNum(data.price);
-  const prev = toNum(data.previous_close);
-  let pct = toNum(data.percent_change);
-  if (pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
-  return {
-    symbol,
-    close,
-    price: close,
-    open: toNum(data.open),
-    high: toNum(data.high),
-    low: toNum(data.low),
-    previous_close: prev,
-    change: toNum(data.change),
-    percent_change: pct,
-    datetime: data.datetime || null,
-    is_market_open:
-      typeof data.is_market_open === "boolean" ? data.is_market_open : undefined,
-    derived,
-    updated_at: new Date().toISOString()
-  };
-}
-
-/* Переворот пары: максимум становится минимумом и наоборот. */
-function invertQuote(data, symbol) {
-  const s = shape(data, symbol, "inverted");
-  const inv = (v) => (v === null || v === 0 ? null : 1 / v);
-  const close = inv(s.close);
-  const prev = inv(s.previous_close);
-  return {
-    symbol,
-    close,
-    price: close,
-    open: inv(s.open),
-    high: inv(s.low),
-    low: inv(s.high),
-    previous_close: prev,
-    change: close !== null && prev !== null ? close - prev : null,
-    percent_change: close !== null && prev ? ((close - prev) / prev) * 100 : null,
-    datetime: s.datetime,
-    is_market_open: s.is_market_open,
-    derived: "inverted",
-    updated_at: s.updated_at
-  };
-}
-
-/* Сколько единиц валюты дают за доллар. */
-async function perUsd(cur, apiKey) {
-  if (cur === "USD") return { rate: 1, prev: 1, is_market_open: undefined, datetime: null };
-  let d = await rawQuote("USD/" + cur, apiKey);
-  if (d) {
-    const s = shape(d, "USD/" + cur, "direct");
-    return {
-      rate: s.close,
-      prev: s.previous_close,
-      is_market_open: s.is_market_open,
-      datetime: s.datetime
-    };
-  }
-  d = await rawQuote(cur + "/USD", apiKey);
-  if (d) {
-    const s = shape(d, cur + "/USD", "direct");
-    return {
-      rate: s.close ? 1 / s.close : null,
-      prev: s.previous_close ? 1 / s.previous_close : null,
-      is_market_open: s.is_market_open,
-      datetime: s.datetime
-    };
-  }
-  return null;
-}
-
-/* X/Y = USD/Y ÷ USD/X. Диапазон дня так не собрать — high/low остаются
-   пустыми, и карточка сама сократит разбор, а не придумает его. */
-async function crossQuote(symbol, apiKey) {
-  const parts = symbol.split("/");
-  if (parts.length !== 2) return null;
-  const a = await perUsd(parts[0], apiKey);
-  const b = await perUsd(parts[1], apiKey);
-  if (!a || !b || !a.rate || !b.rate) return null;
-  const close = b.rate / a.rate;
-  const prev = a.prev && b.prev ? b.prev / a.prev : null;
-  return {
-    symbol,
-    close,
-    price: close,
-    open: null,
-    high: null,
-    low: null,
-    previous_close: prev,
-    change: prev !== null ? close - prev : null,
-    percent_change: prev ? ((close - prev) / prev) * 100 : null,
-    datetime: b.datetime || a.datetime || null,
-    is_market_open:
-      a.is_market_open === false || b.is_market_open === false ? false : undefined,
-    derived: "cross",
-    updated_at: new Date().toISOString()
-  };
-}
-
 /* ============================================================ */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -299,33 +168,48 @@ module.exports = async (req, res) => {
   }
 
   try {
-    let payload = null;
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 8000);
 
-    /* 4a. Прямой запрос пары */
-    const direct = await rawQuote(symbol, apiKey);
-    if (direct) payload = shape(direct, symbol, "direct");
+    const url =
+      "https://api.twelvedata.com/quote?symbol=" +
+      encodeURIComponent(symbol) +
+      "&apikey=" +
+      encodeURIComponent(apiKey);
 
-    /* 4b. Перевёрнутая пара: у поставщика часто есть только USD/XXX,
-           а в приложении пара названа XXX/USD. */
-    if (!payload) {
-      const parts = symbol.split("/");
-      if (parts.length === 2) {
-        const flipped = parts[1] + "/" + parts[0];
-        const inv = await rawQuote(flipped, apiKey);
-        if (inv) payload = invertQuote(inv, symbol);
-      }
+    let data = null;
+    try {
+      const response = await fetch(url, { signal: ctrl.signal });
+      data = await response.json().catch(() => null);
+    } finally {
+      clearTimeout(to);
     }
 
-    /* 4c. Кросс через доллар — для пар вроде JOD/CNY или SAR/CNY */
-    if (!payload) payload = await crossQuote(symbol, apiKey);
-
-    if (!payload || payload.close === null) {
-      return res.status(200).json({ error: "Market data is unavailable.", symbol });
+    if (!data || data.status === "error") {
+      return res.status(200).json({
+        error: (data && data.message) || "Market data is unavailable.",
+        symbol
+      });
     }
+
+    const payload = {
+      symbol: data.symbol || symbol,
+      close: data.close || data.price,
+      price: data.close || data.price,
+      open: data.open,
+      high: data.high,
+      low: data.low,
+      previous_close: data.previous_close,
+      change: data.change,
+      percent_change: data.percent_change,
+      datetime: data.datetime || null,
+      is_market_open: data.is_market_open,
+      updated_at: new Date().toISOString()
+    };
 
     cacheSet(symbol, payload);
 
-    /* Если просили OTC — подписываем как у брокера, но флаг сохраняем */
+    /* Если просили OTC — говорим прямо, что отдали базовую пару */
     return res.status(200).json(
       Object.assign({}, payload, { otc_requested: wasOtc, display: rawSymbol })
     );
