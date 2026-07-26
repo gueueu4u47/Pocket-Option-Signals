@@ -1055,14 +1055,19 @@
     (function(){
       var settled=false;
       var controller = ("AbortController" in window) ? new AbortController() : null;
-      function showDiag(msg){
-        var vr=$("visionRisk"); if(vr){ vr.textContent = t("errFailed"); vr.style.display="block"; }
-        if(window.console && console.warn) console.warn("[Pulse Vision]", msg);
+      function showDiag(msg, tech){
+        var vr=$("visionRisk");
+        if(vr){
+          // tech приходит с сервера только владельцу — обычные пользователи видят просто текст ошибки
+          vr.textContent = t("errFailed") + (tech ? ("  [" + tech + "]") : "");
+          vr.style.display="block";
+        }
+        if(window.console && console.warn) console.warn("[Pulse Vision]", msg, tech||"");
       }
       function finishWith(data, done, diag){
         if(settled) return; settled=true;
         stopProcessing(done);
-        setTimeout(function(){ showVisionResult(data); if(diag) showDiag(diag); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
+        setTimeout(function(){ showVisionResult(data); if(diag) showDiag(diag, data && data.diag); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
       }
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
