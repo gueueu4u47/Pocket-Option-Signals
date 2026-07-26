@@ -81,7 +81,7 @@ function cacheSet(key, payload) {
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
 // Рабочая модель первой, вторая — только резерв при сбое
-const MODELS = String(process.env.AI_MODELS || "gemini-2.5-flash,gemini-3-flash-preview")
+const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview,gemini-2.5-flash")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -140,12 +140,28 @@ function salvageReasons(parsed, rawText, lang) {
     if (reasons.length) return reasons;
   }
 
-  // 2. из сырого ответа модели
-  const lines = String(rawText || "")
-    .replace(/```[a-z]*/gi, "")
+  // 2. из сырого ответа модели (включая недописанный или битый JSON)
+  let raw = String(rawText || "").replace(/```[a-z]*/gi, "");
+
+  // вытаскиваем содержимое массива reasons даже из невалидного JSON
+  const rm = raw.match(/"reasons"\s*:\s*\[([\s\S]*?)(\]|$)/i);
+  if (rm && rm[1]) {
+    const items = rm[1].split(/"\s*,\s*"/).map((s) => s.replace(/^[\s"]+|[\s",]+$/g, ""));
+    reasons = cleanList(items, 3);
+    if (reasons.length) return reasons;
+  }
+
+  // снимаем JSON-обвязку и берём осмысленные фразы
+  const lines = raw
     .split(/\n|(?<=[.!?])\s+/)
-    .map((l) => l.replace(/^[\s\-*•\d.)"]+/, "").replace(/["{},]+$/, "").trim())
-    .filter((l) => l.length > 14 && l.indexOf(":") === -1);
+    .map((l) =>
+      l
+        .replace(/^[\s\-*•\d.)"]+/, "")
+        .replace(/^"?[a-z_A-Z]+"?\s*:\s*"?/, "")
+        .replace(/["{}\[\],]+$/, "")
+        .trim()
+    )
+    .filter((l) => l.length > 14 && /[а-яёa-z]{4}/i.test(l));
   reasons = cleanList(lines, 3);
   if (reasons.length) return reasons;
 
@@ -164,6 +180,16 @@ function noDataReasons(lang) {
         "No confirmed direction — entering on this screenshot is not justified.",
         "Take a larger screenshot: candles, time axis and price levels in full."
       ];
+}
+
+/* Направление из сырого текста, если JSON не собрался */
+function directionFromText(rawText) {
+  const s = String(rawText || "");
+  const m = s.match(/"direction"\s*:\s*"?(BUY|SELL|NO_SIGNAL|UP|DOWN|CALL|PUT)"?/i);
+  if (m) return m[1].toUpperCase();
+  if (/\b(BUY|CALL|LONG|ВВЕРХ|вверх|рост|быч)/.test(s) && !/\b(SELL|PUT|SHORT|ВНИЗ|вниз)/.test(s)) return "BUY";
+  if (/\b(SELL|PUT|SHORT|ВНИЗ|вниз|падени|медвеж)/.test(s) && !/\b(BUY|CALL|LONG|ВВЕРХ|вверх)/.test(s)) return "SELL";
+  return "";
 }
 
 function normDirection(d) {
@@ -186,9 +212,20 @@ function extractText(data) {
       .map((p) => (typeof p === "string" ? p : (p && (p.text || (p.parts && p.parts.text))) || ""))
       .join("\n");
   }
+  if (!out.trim() && Array.isArray(msg.parts)) {
+    out = msg.parts.map((p) => (p && p.text) || "").join("\n");
+  }
   if (!out.trim() && typeof msg.reasoning_content === "string") out = msg.reasoning_content;
   if (!out.trim() && typeof msg.reasoning === "string") out = msg.reasoning;
   if (!out.trim() && typeof ch.text === "string") out = ch.text;
+  if (!out.trim() && typeof data.output_text === "string") out = data.output_text;
+
+  // Родной формат Gemini, если прокси отдал его без преобразования
+  if (!out.trim() && data && Array.isArray(data.candidates)) {
+    out = data.candidates
+      .map((c) => (c && c.content && Array.isArray(c.content.parts) ? c.content.parts.map((p) => (p && p.text) || "").join("\n") : ""))
+      .join("\n");
+  }
   return String(out || "").trim();
 }
 
@@ -236,8 +273,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
     reasoning_effort: "none",
     extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
   }, forceJson ? { response_format: { type: "json_object" } } : {}));
-  attempts.push(Object.assign({}, base, forceJson ? { response_format: { type: "json_object" } } : {}));
-  attempts.push(Object.assign({}, base, { max_tokens: Math.max(cap, 2400) }));
+  attempts.push(Object.assign({}, base));
 
   // Общий бюджет времени на все попытки этой модели
   const deadline = Date.now() + (timeoutMs || 24000);
@@ -326,7 +362,7 @@ Return JSON only, no markdown:
 
 const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
-reasons ��бязателен и не может быть пустым.`;
+reasons ����бязателен и не может быть пустым.`;
 
 const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, no markdown, no text around it:
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
@@ -435,7 +471,7 @@ module.exports = async (req, res) => {
             ? `На сегодня анализы закончились (${DAILY_LIMIT} в день).`
             : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
           lang === "ru"
-            ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
+            ? ["Лими�� обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
             : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
       }
     } catch (e) { /* fail-open */ }
@@ -494,28 +530,52 @@ module.exports = async (req, res) => {
     let rawSeen = "";
     const diag = [];
 
+    // Общий бюджет времени на весь анализ — фронт ждёт не дольше 50 секунд
+    const overallDeadline = Date.now() + 44000;
+    const budget = (want) => Math.max(0, Math.min(want, overallDeadline - Date.now()));
+
     // Проход 1: основной промпт по всем моделям
     for (const model of MODELS) {
-      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, 26000, true);
+      const ms = budget(24000);
+      if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
+
+      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true);
       if (!r.ok) { diag.push(model + ": " + r.error); continue; }
+
       rawSeen = r.text;
       const parsed = r.parsed || {};
       const reasons = salvageReasons(parsed, r.text, lang);
-      if (parsed.direction && reasons.length) { best = parsed; bestReasons = reasons; break; }
-      if (parsed.direction && !best) { best = parsed; bestReasons = reasons; }
+      const dir = parsed.direction || directionFromText(r.text);
+
+      // Если модель вообще что-то сказала — это уже годный разбор, не выбрасываем его
+      if (dir && reasons.length) {
+        best = Object.assign({}, parsed, { direction: dir });
+        bestReasons = reasons;
+        break;
+      }
+      if (!best && (dir || reasons.length)) {
+        best = Object.assign({}, parsed, dir ? { direction: dir } : {});
+        bestReasons = reasons;
+      }
       diag.push(model + ": weak answer");
     }
 
-    // Проход 2: ОДИН короткий повтор на самой дешёвой модели
+    // Проход 2: ОДИН короткий повтор без JSON-режима
     if (!best || !bestReasons.length) {
-      for (const model of MODELS.slice(0, 1)) {
-        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, 16000, false);
+      for (const model of MODELS) {
+        const ms = budget(15000);
+        if (ms < 7000) { diag.push("retry skipped (time)"); break; }
+
+        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, ms, false);
         if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
+
         rawSeen = rawSeen || r.text;
         const parsed = r.parsed || {};
         const reasons = salvageReasons(parsed, r.text, lang);
+        const dir = parsed.direction || directionFromText(r.text);
+
         if (reasons.length) {
-          best = Object.assign({}, best || {}, parsed);
+          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : {});
           bestReasons = reasons;
           break;
         }
@@ -546,8 +606,10 @@ module.exports = async (req, res) => {
     };
 
     if (degraded) {
-      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 200));
-      if (isOwner) payload.diag = diag.join(" | ").slice(0, 300);
+      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 400));
+      if (isOwner) {
+        payload.diag = (diag.join(" | ") + " || RAW: " + String(rawSeen || "пусто").slice(0, 200)).slice(0, 500);
+      }
     }
 
     if (!degraded) cacheSet(cacheKey, payload);
