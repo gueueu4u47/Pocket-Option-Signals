@@ -1455,28 +1455,17 @@
     var pct = qNum(q.percent_change);
     if(pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
     if(close === null || pct === null) return quickNoSignal("nodata");
+    if(q.is_market_open === false) return quickNoSignal("closed");
 
-    var stale = q.is_market_open === false;
     var absPct = Math.abs(pct);
+    if(absPct < QUICK_FLAT_PCT) return quickNoSignal("flat");
+
+    var up = pct > 0;
+    var strength = strengthBand(absPct);
     var pos = (high !== null && low !== null && high > low) ? (close - low) / (high - low) : null;
     var posB = positionBand(pos);
     var rangePct = (high !== null && low !== null && close) ? ((high - low) / close) * 100 : null;
     var actB = activityBand(rangePct);
-
-    // Порог тишины считается от самой пары: у привязанных и зажатых пар
-    // обычный ход в разы меньше, и единый порог глушил бы их всегда.
-    var flatLimit = QUICK_FLAT_PCT;
-    if(rangePct !== null && rangePct > 0){
-      flatLimit = Math.min(QUICK_FLAT_PCT, Math.max(0.003, rangePct * 0.12));
-    } else {
-      flatLimit = 0.005;
-    }
-    if(absPct < flatLimit) return quickNoSignal("flat");
-
-    var up = pct > 0;
-    var strength = strengthBand(absPct);
-    // У зажатой пары небольшой ход не должен читаться как сильный перевес
-    if(rangePct !== null && rangePct < 0.08 && strength === "strong") strength = "moderate";
 
     var seed = absPct + (pos === null ? 0 : pos) + (rangePct === null ? 0 : rangePct);
     var reasons = [];
@@ -1490,21 +1479,8 @@
     for(var i = 0; i < candidates.length && reasons.length < 3; i++){
       if(candidates[i]) reasons.push(candidates[i]);
     }
-    // Если котировка собрана окольным путём — говорим об этом прямо
-    if(q.derived === "cross" || reasons.length < 2){
-      reasons.push(ru
-        ? "Данных по паре немного — вывод построен на перевесе сторон, без разбора диапазона."
-        : "Data on this pair is limited — the read is based on the leading side, without range detail.");
-    }
-    if(stale){
-      reasons.unshift(ru
-        ? "Сессия по паре закрыта: перевес взят с последнего движения, свежего подтверждения нет."
-        : "The session for this pair is closed: the edge comes from the last move, with no fresh confirmation.");
-    }
-    reasons = reasons.slice(0, 3);
 
-    var conf = stale ? (ru ? "низкая" : "low")
-      : strength === "strong" ? (ru ? "высокая" : "high")
+    var conf = strength === "strong" ? (ru ? "высокая" : "high")
       : strength === "moderate" ? (ru ? "средняя" : "medium")
       : (ru ? "низкая" : "low");
 
