@@ -1388,7 +1388,7 @@
       if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
       else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
       else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл����во за тобой.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
     } else {
       out.push(pickBy(seed, [
         "Do not raise your size after a streak — the edge shifts faster than it feels.",
@@ -1420,20 +1420,12 @@
               "In this market an entry is a coin flip, not signal work."]
       },
       closed: {
-        ru: ["Рынок по этой паре закрыт, свежег�� движения нет.",
+        ru: ["Рынок по этой паре закрыт, свежего движения нет.",
               "Последние данные устарели — судить о перевесе не по чему.",
               "Дождись открытия сессии: сигнал по замороженной цене смысла не имеет."],
         en: ["The market for this pair is closed, there is no fresh movement.",
               "The latest data is stale — there is nothing to judge the edge from.",
               "Wait for the session to open: a signal on a frozen price is meaningless."]
-      },
-      limit: {
-        ru: ["Поставщик данных занят — котировка не пришла.",
-              "Лимит запросов исчерпан, свежей цены нет.",
-              "Повтори запрос через минуту."],
-        en: ["The data provider is busy — no quote arrived.",
-              "The request limit is reached, there is no fresh price.",
-              "Retry in a minute."]
       },
       nodata: {
         ru: ["Данные по паре не пришли — судить о движении не по чему.",
@@ -1444,18 +1436,11 @@
               "Retry in a minute or pick another pair."]
       }
     };
-    var notes = {
-      flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
-      closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
-      limit: { ru: "Поставщик занят — повтори через минуту", en: "Provider is busy — retry in a minute" },
-      nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
-    };
     return {
       direction: "NO_SIGNAL",
       confidence: ru ? "низкая" : "low",
-      note: (notes[reasonKey] || notes.nodata)[ru ? "ru" : "en"],
       summary: "",
-      reasons: (map[reasonKey] || map.nodata)[ru ? "ru" : "en"],
+      reasons: map[reasonKey][ru ? "ru" : "en"],
       strategy: ru
         ? "Оставайся вне рынка и запроси сигнал заново, когда движение оживёт."
         : "Stay out of the market and request the signal again once the move wakes up.",
@@ -1468,12 +1453,7 @@
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
     var pct = qNum(q.percent_change);
-    var tiny = 0.0005;
-    if((pct === null || Math.abs(pct) < tiny) && close !== null && prev) pct = ((close - prev) / prev) * 100;
-    // Когда сессия закрыта, дневное изменение приходит нулевым и сигнал глохнет.
-    // Тогда берём ход последней сессии (открытие -> закрытие): это реальные данные
-    // рынка, а не случайное направление.
-    if((pct === null || Math.abs(pct) < tiny) && close !== null && open) pct = ((close - open) / open) * 100;
+    if(pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
     if(close === null || pct === null) return quickNoSignal("nodata");
 
     var stale = q.is_market_open === false;
@@ -1491,7 +1471,7 @@
     } else {
       flatLimit = 0.005;
     }
-    if(absPct < flatLimit) return quickNoSignal(stale ? "closed" : "flat");
+    if(absPct < flatLimit) return quickNoSignal("flat");
 
     var up = pct > 0;
     var strength = strengthBand(absPct);
@@ -1531,7 +1511,6 @@
     return {
       direction: up ? "UP" : "DOWN",
       confidence: conf,
-      note: "",
       summary: "",
       reasons: reasons,
       strategy: quickStrategy(up, strength, seed * 13 + 0.2, ru),
@@ -1547,11 +1526,9 @@
     }).then(function(r){
       return r.json().catch(function(){ return null; });
     }).then(function(j){
-      if(!j) return { __error: "nodata" };
-      // Лимит поставщика и отсутствие пары — разные причины, и пишем их разно.
-      if(j.error) return { __error: j.code === "provider_limit" ? "limit" : "nodata" };
+      if(!j || j.error) return null;
       return j;
-    }).catch(function(){ return { __error: "nodata" }; });
+    }).catch(function(){ return null; });
   }
 
   function renderQuick(an, tm, label){
@@ -1578,18 +1555,26 @@
     } else {
       cd.removeAttribute("data-entry");
       cd.removeAttribute("data-outcome");
-      cd.textContent = an.note ? an.note : (ru ? "Вход не рекомендуется" : "Entry is not advised");
+      cd.textContent = ru ? "Вход не рекомендуется" : "Entry is not advised";
     }
 
-    /* В Quick остаётся только сигнал: разбор, стратегия и советы не выводятся. */
-    $("quickSummary").textContent = "";
-    $("quickSummaryWrap").style.display = "none";
-    $("quickReasons").innerHTML = "";
-    $("quickReasonsWrap").style.display = "none";
-    $("quickStrategy").textContent = "";
-    $("quickStrategyWrap").style.display = "none";
-    $("quickTips").innerHTML = "";
-    $("quickTipsWrap").style.display = "none";
+    $("quickSummaryTitle").textContent = t("detailSummary");
+    $("quickSummary").textContent = an.summary || "";
+    $("quickSummaryWrap").style.display = an.summary ? "block" : "none";
+
+    var reasons = Array.isArray(an.reasons) ? an.reasons : [];
+    $("quickReasonsTitle").textContent = t("detailWhy");
+    $("quickReasons").innerHTML = reasons.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
+    $("quickReasonsWrap").style.display = reasons.length ? "block" : "none";
+
+    $("quickStrategyTitle").textContent = t("detailStrategy");
+    $("quickStrategy").textContent = an.strategy || "";
+    $("quickStrategyWrap").style.display = an.strategy ? "block" : "none";
+
+    var tips = Array.isArray(an.tips) ? an.tips : [];
+    $("quickTipsTitle").textContent = t("detailTips");
+    $("quickTips").innerHTML = tips.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
+    $("quickTipsWrap").style.display = tips.length ? "block" : "none";
 
     $("quickResult").classList.add("show");
     tickCountdowns();
@@ -1598,8 +1583,8 @@
       type: "quick", direction: an.direction, asset: label, duration: tm.durationText,
       entry: live ? tm.entryText : "—", outcomeTime: live ? tm.outcomeText : "—",
       entryISO: live ? tm.entryISO : null, outcomeISO: live ? tm.outcomeISO : null,
-      summary: "", confidence: an.confidence || "", reasons: [],
-      strategy: "", tips: [], timeframe: tm.durationText
+      summary: an.summary || "", confidence: an.confidence || "", reasons: reasons,
+      strategy: an.strategy || "", tips: tips, timeframe: tm.durationText
     });
   }
 
@@ -1608,10 +1593,10 @@
     $("createAction").disabled = true;
     $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    Promise.all([fetchQuote(), wait(5400)]).then(function(res){
+    Promise.all([fetchQuote(), wait(2200)]).then(function(res){
       var q = res[0];
       stopQuickProcessing();
-      var an = (q && !q.__error) ? buildQuickFromQuote(q) : quickNoSignal((q && q.__error) || "nodata");
+      var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
       var tm = timing();
       var label = (q && q.display) ? q.display : state.asset;
       setTimeout(function(){
@@ -1619,7 +1604,7 @@
         $("createAction").disabled = false;
         $("createAction").textContent = t("actionQuick");
         $("quickResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 600);
+      }, 340);
     });
   }
 
