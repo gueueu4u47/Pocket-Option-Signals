@@ -76,55 +76,23 @@ function normalizeSymbol(raw) {
    Если пользователей станет много — переноси в Upstash Redis. */
 const QUOTE_CACHE = new Map();
 const QUOTE_TTL = Number(process.env.MARKET_CACHE_TTL_MS || 30000);
-/* Пока сессия закрыта, цифры не меняются часами — держим их дольше,
-   чтобы не жечь лимит поставщика на одно и то же значение. */
-const CLOSED_TTL = 30 * 60 * 1000;
 
 function cacheGet(key) {
   const hit = QUOTE_CACHE.get(key);
   if (!hit) return null;
-  if (Date.now() - hit.t > (hit.ttl || QUOTE_TTL)) {
+  if (Date.now() - hit.t > QUOTE_TTL) {
     QUOTE_CACHE.delete(key);
     return null;
   }
   return hit.payload;
 }
 
-function cacheSet(key, payload, ttl) {
-  QUOTE_CACHE.set(key, { t: Date.now(), ttl: ttl || QUOTE_TTL, payload });
-  if (QUOTE_CACHE.size > 400) {
+function cacheSet(key, payload) {
+  QUOTE_CACHE.set(key, { t: Date.now(), payload });
+  if (QUOTE_CACHE.size > 200) {
     const now = Date.now();
     for (const [k, v] of QUOTE_CACHE) {
-      if (now - v.t > (v.ttl || QUOTE_TTL)) QUOTE_CACHE.delete(k);
-    }
-  }
-}
-
-/* Отказы тоже запоминаются. Без этого каждое нажатие снова уходило
-   к поставщику и выбивало квоту у всех остальных пар. */
-const MISS_CACHE = new Map();
-
-function missGet(key) {
-  const hit = MISS_CACHE.get(key);
-  if (!hit) return null;
-  if (Date.now() - hit.t > hit.ttl) {
-    MISS_CACHE.delete(key);
-    return null;
-  }
-  return hit;
-}
-
-function missSet(key, error, code) {
-  MISS_CACHE.set(key, {
-    t: Date.now(),
-    ttl: code === "provider_limit" ? 20000 : 300000,
-    error,
-    code
-  });
-  if (MISS_CACHE.size > 400) {
-    const now = Date.now();
-    for (const [k, v] of MISS_CACHE) {
-      if (now - v.t > v.ttl) MISS_CACHE.delete(k);
+      if (now - v.t > QUOTE_TTL) QUOTE_CACHE.delete(k);
     }
   }
 }
@@ -158,7 +126,7 @@ function toNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-async function rawQuote(symbol, apiKey, flags) {
+async function rawQuote(symbol, apiKey) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 7000);
   try {
@@ -169,15 +137,7 @@ async function rawQuote(symbol, apiKey, flags) {
       encodeURIComponent(apiKey);
     const response = await fetch(url, { signal: ctrl.signal });
     const data = await response.json().catch(() => null);
-    if (!data || data.status === "error") {
-      const msg = String((data && (data.message || data.error)) || "");
-      /* Лимит запросов — это не «нет данных по паре». Пару надо
-         перезапросить позже, а не глушить сигнал навсегда. */
-      if (response.status === 429 || /credit|limit|frequen/i.test(msg)) {
-        if (flags) flags.limit = true;
-      }
-      return null;
-    }
+    if (!data || data.status === "error") return null;
     if (toNum(data.close) === null && toNum(data.price) === null) return null;
     return data;
   } catch {
@@ -234,49 +194,38 @@ function invertQuote(data, symbol) {
 }
 
 /* Сколько единиц валюты дают за доллар. */
-async function perUsd(cur, apiKey, flags) {
+async function perUsd(cur, apiKey) {
   if (cur === "USD") return { rate: 1, prev: 1, is_market_open: undefined, datetime: null };
-  /* Плечо через доллар кэшируется отдельно: USD/CNY нужен сразу
-     нескольким кросс-парам, и без кэша каждая из них тратила квоту заново. */
-  const legKey = "usd:" + cur;
-  const legHit = cacheGet(legKey);
-  if (legHit) return legHit;
-  let d = await rawQuote("USD/" + cur, apiKey, flags);
+  let d = await rawQuote("USD/" + cur, apiKey);
   if (d) {
     const s = shape(d, "USD/" + cur, "direct");
-    const leg = {
+    return {
       rate: s.close,
       prev: s.previous_close,
       is_market_open: s.is_market_open,
       datetime: s.datetime
     };
-    cacheSet(legKey, leg, s.is_market_open === false ? CLOSED_TTL : QUOTE_TTL);
-    return leg;
   }
-  if (flags && flags.limit) return null;
-  d = await rawQuote(cur + "/USD", apiKey, flags);
+  d = await rawQuote(cur + "/USD", apiKey);
   if (d) {
     const s = shape(d, cur + "/USD", "direct");
-    const leg = {
+    return {
       rate: s.close ? 1 / s.close : null,
       prev: s.previous_close ? 1 / s.previous_close : null,
       is_market_open: s.is_market_open,
       datetime: s.datetime
     };
-    cacheSet(legKey, leg, s.is_market_open === false ? CLOSED_TTL : QUOTE_TTL);
-    return leg;
   }
   return null;
 }
 
 /* X/Y = USD/Y ÷ USD/X. Диапазон дня так не собрать — high/low остаются
    пустыми, и карточка сама сократит разбор, а не придумает его. */
-async function crossQuote(symbol, apiKey, flags) {
+async function crossQuote(symbol, apiKey) {
   const parts = symbol.split("/");
   if (parts.length !== 2) return null;
-  const a = await perUsd(parts[0], apiKey, flags);
-  if (flags && flags.limit) return null;
-  const b = await perUsd(parts[1], apiKey, flags);
+  const a = await perUsd(parts[0], apiKey);
+  const b = await perUsd(parts[1], apiKey);
   if (!a || !b || !a.rate || !b.rate) return null;
   const close = b.rate / a.rate;
   const prev = a.prev && b.prev ? b.prev / a.prev : null;
@@ -349,51 +298,32 @@ module.exports = async (req, res) => {
     );
   }
 
-  /* Пара, по которой поставщик только что отказал, не долбится заново. */
-  const miss = missGet(symbol);
-  if (miss) {
-    return res.status(200).json({ error: miss.error, code: miss.code, symbol });
-  }
-
-  const flags = { limit: false };
-
   try {
     let payload = null;
 
     /* 4a. Прямой запрос пары */
-    const direct = await rawQuote(symbol, apiKey, flags);
+    const direct = await rawQuote(symbol, apiKey);
     if (direct) payload = shape(direct, symbol, "direct");
 
     /* 4b. Перевёрнутая пара: у поставщика часто есть только USD/XXX,
            а в приложении пара названа XXX/USD. */
-    if (!payload && !flags.limit) {
+    if (!payload) {
       const parts = symbol.split("/");
       if (parts.length === 2) {
         const flipped = parts[1] + "/" + parts[0];
-        const inv = await rawQuote(flipped, apiKey, flags);
+        const inv = await rawQuote(flipped, apiKey);
         if (inv) payload = invertQuote(inv, symbol);
       }
     }
 
     /* 4c. Кросс через доллар — для пар вроде JOD/CNY или SAR/CNY */
-    if (!payload && !flags.limit) payload = await crossQuote(symbol, apiKey, flags);
+    if (!payload) payload = await crossQuote(symbol, apiKey);
 
     if (!payload || payload.close === null) {
-      if (flags.limit) {
-        missSet(symbol, "Market data provider limit reached.", "provider_limit");
-        return res.status(200).json({
-          error: "Market data provider limit reached.",
-          code: "provider_limit",
-          symbol
-        });
-      }
-      missSet(symbol, "Market data is unavailable.", "nodata");
-      return res
-        .status(200)
-        .json({ error: "Market data is unavailable.", code: "nodata", symbol });
+      return res.status(200).json({ error: "Market data is unavailable.", symbol });
     }
 
-    cacheSet(symbol, payload, payload.is_market_open === false ? CLOSED_TTL : QUOTE_TTL);
+    cacheSet(symbol, payload);
 
     /* Если просили OTC — подписываем как у брокера, но флаг сохраняем */
     return res.status(200).json(
