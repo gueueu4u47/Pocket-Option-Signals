@@ -1388,7 +1388,7 @@
       if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
       else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
       else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл��во за тобой.");
     } else {
       out.push(pickBy(seed, [
         "Do not raise your size after a streak — the edge shifts faster than it feels.",
@@ -1436,9 +1436,15 @@
               "Retry in a minute or pick another pair."]
       }
     };
+    var notes = {
+      flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
+      closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
+      nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
+    };
     return {
       direction: "NO_SIGNAL",
       confidence: ru ? "низкая" : "low",
+      note: (notes[reasonKey] || notes.nodata)[ru ? "ru" : "en"],
       summary: "",
       reasons: map[reasonKey][ru ? "ru" : "en"],
       strategy: ru
@@ -1453,7 +1459,12 @@
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
     var pct = qNum(q.percent_change);
-    if(pct === null && close !== null && prev) pct = ((close - prev) / prev) * 100;
+    var tiny = 0.0005;
+    if((pct === null || Math.abs(pct) < tiny) && close !== null && prev) pct = ((close - prev) / prev) * 100;
+    // Когда сессия закрыта, дневное изменение приходит нулевым и сигнал глохнет.
+    // Тогда берём ход последней сессии (открытие -> закрытие): это реальные данные
+    // рынка, а не случайное направление.
+    if((pct === null || Math.abs(pct) < tiny) && close !== null && open) pct = ((close - open) / open) * 100;
     if(close === null || pct === null) return quickNoSignal("nodata");
 
     var stale = q.is_market_open === false;
@@ -1471,7 +1482,7 @@
     } else {
       flatLimit = 0.005;
     }
-    if(absPct < flatLimit) return quickNoSignal("flat");
+    if(absPct < flatLimit) return quickNoSignal(stale ? "closed" : "flat");
 
     var up = pct > 0;
     var strength = strengthBand(absPct);
@@ -1511,6 +1522,7 @@
     return {
       direction: up ? "UP" : "DOWN",
       confidence: conf,
+      note: "",
       summary: "",
       reasons: reasons,
       strategy: quickStrategy(up, strength, seed * 13 + 0.2, ru),
@@ -1555,26 +1567,18 @@
     } else {
       cd.removeAttribute("data-entry");
       cd.removeAttribute("data-outcome");
-      cd.textContent = ru ? "Вход не рекомендуется" : "Entry is not advised";
+      cd.textContent = an.note ? an.note : (ru ? "Вход не рекомендуется" : "Entry is not advised");
     }
 
-    $("quickSummaryTitle").textContent = t("detailSummary");
-    $("quickSummary").textContent = an.summary || "";
-    $("quickSummaryWrap").style.display = an.summary ? "block" : "none";
-
-    var reasons = Array.isArray(an.reasons) ? an.reasons : [];
-    $("quickReasonsTitle").textContent = t("detailWhy");
-    $("quickReasons").innerHTML = reasons.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickReasonsWrap").style.display = reasons.length ? "block" : "none";
-
-    $("quickStrategyTitle").textContent = t("detailStrategy");
-    $("quickStrategy").textContent = an.strategy || "";
-    $("quickStrategyWrap").style.display = an.strategy ? "block" : "none";
-
-    var tips = Array.isArray(an.tips) ? an.tips : [];
-    $("quickTipsTitle").textContent = t("detailTips");
-    $("quickTips").innerHTML = tips.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("");
-    $("quickTipsWrap").style.display = tips.length ? "block" : "none";
+    /* В Quick остаётся только сигнал: разбор, стратегия и советы не выводятся. */
+    $("quickSummary").textContent = "";
+    $("quickSummaryWrap").style.display = "none";
+    $("quickReasons").innerHTML = "";
+    $("quickReasonsWrap").style.display = "none";
+    $("quickStrategy").textContent = "";
+    $("quickStrategyWrap").style.display = "none";
+    $("quickTips").innerHTML = "";
+    $("quickTipsWrap").style.display = "none";
 
     $("quickResult").classList.add("show");
     tickCountdowns();
@@ -1583,8 +1587,8 @@
       type: "quick", direction: an.direction, asset: label, duration: tm.durationText,
       entry: live ? tm.entryText : "—", outcomeTime: live ? tm.outcomeText : "—",
       entryISO: live ? tm.entryISO : null, outcomeISO: live ? tm.outcomeISO : null,
-      summary: an.summary || "", confidence: an.confidence || "", reasons: reasons,
-      strategy: an.strategy || "", tips: tips, timeframe: tm.durationText
+      summary: "", confidence: an.confidence || "", reasons: [],
+      strategy: "", tips: [], timeframe: tm.durationText
     });
   }
 
@@ -1593,7 +1597,7 @@
     $("createAction").disabled = true;
     $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    Promise.all([fetchQuote(), wait(2200)]).then(function(res){
+    Promise.all([fetchQuote(), wait(5400)]).then(function(res){
       var q = res[0];
       stopQuickProcessing();
       var an = q ? buildQuickFromQuote(q) : quickNoSignal("nodata");
@@ -1604,7 +1608,7 @@
         $("createAction").disabled = false;
         $("createAction").textContent = t("actionQuick");
         $("quickResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 340);
+      }, 600);
     });
   }
 
