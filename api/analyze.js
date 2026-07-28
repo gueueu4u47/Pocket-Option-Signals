@@ -136,6 +136,23 @@ function cleanList(v, max) {
   return out.slice(0, max || 4);
 }
 
+/* Ответ модели оборвался на середине? */
+function looksTruncated(rawText) {
+  const t = String(rawText || "").replace(/```[a-z]*/gi, "").trim();
+  if (!t) return true;
+  return !/}\s*$/.test(t);
+}
+
+/* Недописанный последний пункт не показываем пользователю */
+function dropPartialTail(reasons, rawText) {
+  const arr = Array.isArray(reasons) ? reasons.slice() : [];
+  if (!arr.length || !looksTruncated(rawText)) return arr;
+  const last = String(arr[arr.length - 1] || "").trim();
+  const finished = /[.!?\u2026\u00bb)]$/.test(last);
+  if (!finished) arr.pop();
+  return arr;
+}
+
 /* Собираем поля даже из оборванного JSON, который не разобрался целиком */
 function extractFields(rawText) {
   const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
@@ -299,7 +316,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   });
 
   // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
-  const cap = Number(process.env.AI_MAX_TOKENS || 3000);
+  const cap = Number(process.env.AI_MAX_TOKENS || 900);
 
   const base = {
     model,
@@ -414,6 +431,22 @@ const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, n
 reasons is required and cannot be empty.`;
 
 /* ---------- Мягкий ответ: пользователь никогда не видит кодов ошибок ---------- */
+const FAST_RU = `Ты опытный трейдер-аналитик. По скриншоту графика бинарных опционов дай короткий разбор.
+Отвечай ТОЛЬКО одним JSON-объектом, без markdown и без пояснений вокруг.
+Пиши предельно коротко: каждая причина - законченная фраза не длиннее 70 символов.
+Порядок ключей соблюдай строго, direction ставь первым.
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["коротко по графику","коротко по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"одно короткое предложение","entryWindow":"когда входить","expiry":"сколько держать"}
+Если график нечитаемый или картина смешанная - direction "NO_SIGNAL", и в reasons объясни, чего не хватает.
+reasons обязателен, ровно 2 пункта.`;
+
+const FAST_EN = `You are an experienced trading analyst. Give a short read of this binary options chart screenshot.
+Answer with ONE JSON object only, no markdown, no text around it.
+Be extremely brief: each reason is a complete phrase under 70 characters.
+Keep the key order exactly, direction first.
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart fact","short chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"one short sentence","entryWindow":"when to enter","expiry":"how long to hold"}
+If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
+reasons is required, exactly 2 items.`;
+
 function softCard(res, lang, summary, reasons) {
   const ru = lang !== "en";
   return res.status(200).json({
@@ -567,7 +600,8 @@ module.exports = async (req, res) => {
     }
 
     const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
-    const mainPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
+    const mainPrompt = lang === "ru" ? FAST_RU : FAST_EN;
+    const richPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     const retryPrompt = lang === "ru" ? RETRY_RU : RETRY_EN;
 
     let best = null;
@@ -590,7 +624,7 @@ module.exports = async (req, res) => {
       rawSeen = r.text;
       // Сначала честный JSON, сверху — всё, что удалось вытащить из оборванного ответа
       const parsed = Object.assign(extractFields(r.text), r.parsed || {});
-      const reasons = salvageReasons(parsed, r.text, lang);
+      const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
       const dir = parsed.direction || directionFromText(r.text);
 
       // Если модель вообще что-то сказала — это уже годный разбор, не выбрасываем его
@@ -607,7 +641,7 @@ module.exports = async (req, res) => {
     }
 
     // Проход 2: ОДИН короткий повтор без JSON-режима
-    if (!best || !bestReasons.length) {
+    if (!best || !bestReasons.length || !best.direction) {
       for (const model of MODELS) {
         const ms = budget(15000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
@@ -620,10 +654,11 @@ module.exports = async (req, res) => {
         const reasons = salvageReasons(parsed, r.text, lang);
         const dir = parsed.direction || directionFromText(r.text);
 
-        if (reasons.length) {
+        if (reasons.length || dir) {
+          const keep = bestReasons.slice();
           best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : {});
-          bestReasons = reasons;
-          break;
+          bestReasons = reasons.length ? reasons : keep;
+          if (bestReasons.length) break;
         }
         diag.push("retry " + model + ": no reasons");
       }
