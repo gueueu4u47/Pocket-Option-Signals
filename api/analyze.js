@@ -81,7 +81,7 @@ function cacheSet(key, payload) {
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
 // Рабочая модель первой, вторая — только резерв при сбое
-const MODELS = String(process.env.AI_MODELS || "gemini-2.5-flash")
+const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
