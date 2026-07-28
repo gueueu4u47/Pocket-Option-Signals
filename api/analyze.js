@@ -324,7 +324,9 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
     const remaining = deadline - Date.now();
     if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
 
-    const r = await postAI(apiKey, attempts[i], remaining);
+    // Первой попытке даём ограниченное окно, чтобы простой запрос без JSON-режима успел выполниться
+    const attemptMs = i === 0 ? Math.min(remaining, 18000) : remaining;
+    const r = await postAI(apiKey, attempts[i], attemptMs);
     if (r.netError) { lastErr = r.netError; continue; }
 
     if (!r.httpOk) {
