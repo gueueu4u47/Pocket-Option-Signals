@@ -81,7 +81,7 @@ function cacheSet(key, payload) {
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
 // Рабочая модель первой, вторая — только резерв при сбое
-const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview,gemini-2.5-flash")
+const MODELS = String(process.env.AI_MODELS || "gemini-2.5-flash")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -579,7 +579,7 @@ module.exports = async (req, res) => {
 
     // Проход 1: основной промпт по всем моделям
     for (const model of MODELS) {
-      const ms = budget(24000);
+      const ms = budget(32000);
       if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
 
       const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true);
@@ -649,9 +649,6 @@ module.exports = async (req, res) => {
 
     if (degraded) {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 400));
-      if (isOwner) {
-        payload.diag = (diag.join(" | ") + " || RAW: " + String(rawSeen || "пусто").slice(0, 200)).slice(0, 500);
-      }
     }
 
     if (!degraded) cacheSet(cacheKey, payload);
