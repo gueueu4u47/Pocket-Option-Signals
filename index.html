@@ -425,35 +425,60 @@
     filter:blur(26px);pointer-events:none;animation:breathe 3.6s ease-in-out infinite;}
   @keyframes breathe{0%,100%{opacity:.35;transform:scale(.9);}50%{opacity:.7;transform:scale(1.08);}}
   @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;}}
-  /* ---------- Breathing room ---------- */
-  .chart-box{margin-bottom:22px;}
-  .chart-head{padding:14px 16px;}
-  .chart-frame{height:250px;}
-  .chart-note{padding:13px 16px 15px;line-height:1.6;}
-  .chart-off{padding:22px;line-height:1.6;}
-  .v-params{gap:11px;margin-bottom:22px;}
-  .v-param{padding:15px 17px;padding-right:40px;}
-  .v-param small{margin-bottom:7px;}
-  .v-param b{line-height:1.35;}
-  .v-param::after{right:16px;width:8px;height:8px;}
-  .v-param .vp-hint{margin-top:9px;}
-  .upload{padding:34px 16px;}
-  .upload strong{margin-top:13px;}
-  .upload span{margin-top:8px;}
-  .pick-row{gap:11px;margin-top:14px;}
-  .pick-btn{padding:15px 10px;}
-  .preview{margin-top:16px;}
-  .shot-tip{margin-top:18px;padding:18px;}
-  .shot-tip ul{margin-top:14px;}
-  .shot-tip li{margin-top:8px;line-height:1.6;}
-  .processing{margin-top:20px;padding:30px 20px;}
-  .proc-meta{margin-bottom:24px;gap:26px;}
-  .proc-stage{margin-top:20px;}
-  .proc-steps{margin-top:18px;gap:7px;}
-  .result{margin-top:20px;padding:22px;}
-  .btn.primary{margin-top:22px;}
-  .vp-list{gap:10px;}
-  .vp-item{padding:15px 16px;}
+  /* ---------- Pair flags / favourites / payout ---------- */
+  .p-flags{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;width:38px;height:22px;}
+  .p-flags i{position:absolute;top:0;font-size:15px;line-height:22px;font-style:normal;}
+  .p-flags i.f1{left:0;z-index:2;}
+  .p-flags i.f2{left:15px;z-index:1;}
+  .fav{flex:0 0 auto;width:26px;height:26px;display:grid;place-items:center;border-radius:8px;
+    color:var(--muted);font-size:15px;line-height:1;cursor:pointer;}
+  .fav.on{color:#f5b544;}
+  .fav:active{background:var(--accent-soft);}
+  .asset-option .p-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800;}
+  .vp-item .p-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .asset-option{justify-content:flex-start;}
+  .vp-note{margin:2px 0 10px;color:var(--muted);font-size:11px;line-height:1.5;}
+  /* ---------- Spacing ---------- */
+  .chart-box{margin-bottom:16px;}
+  .chart-head{padding:12px 15px;}
+  .chart-frame{height:240px;}
+  .chart-note{padding:11px 15px 12px;line-height:1.55;}
+  .chart-off{padding:20px;line-height:1.55;}
+  .v-params{gap:10px;margin-bottom:16px;}
+  .v-param{padding:12px 14px;padding-right:34px;}
+  .v-param small{margin-bottom:5px;}
+  .v-param b{font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .v-param::after{right:13px;width:7px;height:7px;}
+  .v-param .vp-hint{margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block;}
+  .upload{padding:28px 15px;}
+  .upload strong{margin-top:11px;}
+  .upload span{margin-top:6px;}
+  .pick-row{gap:10px;margin-top:11px;}
+  .pick-btn{width:100%;padding:13px 10px;}
+  .preview{margin-top:12px;}
+  .shot-tip{margin-top:14px;padding:16px;}
+  .shot-tip ul{margin-top:11px;}
+  .shot-tip li{margin-top:6px;line-height:1.55;}
+  .processing{margin-top:16px;padding:26px 18px;}
+  .proc-meta{margin-bottom:20px;gap:24px;}
+  .proc-stage{margin-top:17px;}
+  .proc-steps{margin-top:15px;gap:7px;}
+  .result{margin-top:16px;padding:20px;}
+  .btn.primary{margin-top:18px;}
+  .vp-list{gap:9px;}
+  .vp-item{padding:13px 15px;}
+
+  /* ---------- In-app camera ---------- */
+  .cam-ov{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;background:#000;}
+  .cam-ov.show{display:flex;}
+  .cam-ov video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000;}
+  .cam-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:18px 22px calc(24px + env(safe-area-inset-bottom));background:#000;}
+  .cam-shot{width:66px;height:66px;border-radius:50%;border:3px solid #fff;
+    background:rgba(255,255,255,.16);cursor:pointer;}
+  .cam-shot:active{background:rgba(255,255,255,.34);}
+  .cam-txt{min-width:78px;color:#fff;font-size:13px;font-weight:800;background:none;border:0;cursor:pointer;}
+  .cam-txt.right{text-align:right;}
 </style>
 </head>
 <body>
@@ -613,11 +638,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
           <span id="pickGalleryText">Из галереи</span>
         </label>
-        <label class="pick-btn" for="camInput">
+        <button class="pick-btn" id="camBtn" type="button">
           <input id="camInput" type="file" accept="image/*" capture="environment" />
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <span id="pickCameraText">Сфотографировать</span>
-        </label>
+        </button>
       </div>
       <div class="preview" id="preview"><img id="previewImg" alt="" /><button class="rm-img" id="removeImg" type="button">×</button></div>
       <button class="btn primary" id="analyzeBtn" disabled>Анализировать график</button>
@@ -754,6 +779,14 @@
   </div>
 </div>
 
+<div class="cam-ov" id="camOv">
+  <video id="camVideo" playsinline autoplay muted></video>
+  <div class="cam-bar">
+    <button class="cam-txt" id="camCancel" type="button">Отмена</button>
+    <button class="cam-shot" id="camShot" type="button" aria-label="shot"></button>
+    <button class="cam-txt right" id="camFlip" type="button">Перевернуть</button>
+  </div>
+</div>
 <nav class="nav">
   <button class="nav-item active" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg><span id="navHistory">История</span></button>
   <button class="nav-item" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="navCreate">Создать</span></button>
@@ -1146,6 +1179,28 @@
   };
   for (var _lc3 in EXTRA_T3){ if(T[_lc3]){ for(var _ek3 in EXTRA_T3[_lc3]){ T[_lc3][_ek3] = EXTRA_T3[_lc3][_ek3]; } } }
 
+  var EXTRA_T5 = {
+    ru:{ camCancel:"Отмена", camFlip:"Перевернуть" },
+    en:{ camCancel:"Cancel", camFlip:"Flip" },
+    uz:{ camCancel:"Bekor qilish", camFlip:"Almashtirish" },
+    hi:{ camCancel:"रद्द करें", camFlip:"बदलें" },
+    pt:{ camCancel:"Cancelar", camFlip:"Virar" },
+    ar:{ camCancel:"إلغاء", camFlip:"تبديل" },
+    kk:{ camCancel:"Болдырмау", camFlip:"Ауыстыру" }
+  };
+  for (var _lc5 in EXTRA_T5){ if(T[_lc5]){ for(var _ek5 in EXTRA_T5[_lc5]){ T[_lc5][_ek5] = EXTRA_T5[_lc5][_ek5]; } } }
+
+  var EXTRA_T6 = {
+    ru:{ payNote:"Справочная выплата брокера — снимок на момент настройки. Актуальный процент смотри в терминале." },
+    en:{ payNote:"Reference broker payout — a snapshot from setup time. Check the live percentage in the terminal." },
+    uz:{ payNote:"Brokerning taxminiy to‘lovi — sozlash vaqtidagi holat. Aniq foizni terminalda tekshiring." },
+    hi:{ payNote:"ब्रोकर का संदर्भ पेआउट — सेटअप के समय का स्नैपशॉट। सही प्रतिशत टर्मिनल में देखें।" },
+    pt:{ payNote:"Payout de referência da corretora — um instantâneo da configuração. Confira a porcentagem atual no terminal." },
+    ar:{ payNote:"عائد تقريبي من الوسيط — لقطة وقت الإعداد. تحقق من النسبة الحالية في المنصة." },
+    kk:{ payNote:"Брокердің шамаланған төлемі — баптау кезіндегі жағдай. Нақты пайызды терминалдан қараңыз." }
+  };
+  for (var _lc6 in EXTRA_T6){ if(T[_lc6]){ for(var _ek6 in EXTRA_T6[_lc6]){ T[_lc6][_ek6] = EXTRA_T6[_lc6][_ek6]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1365,16 +1420,78 @@
     return CUR_FLAG[code] || "\uD83C\uDF10";
   }
 
+  // Два флага на пару: базовая + котируемая валюта
+  function pairFlags(asset){
+    var base = String(asset||"").replace(" OTC","");
+    var parts = base.split("/");
+    var f1 = CUR_FLAG[(parts[0]||"").toUpperCase()] || "\uD83C\uDF10";
+    var f2 = CUR_FLAG[(parts[1]||"").toUpperCase()] || "\uD83C\uDF10";
+    return '<span class="p-flags"><i class="f1">'+f1+'</i><i class="f2">'+f2+'</i></span>';
+  }
+
+  // Справочная выплата брокера (снимок, в терминале меняется)
+  var PAYOUT = {
+    "AUD/CAD OTC":92,"EUR/CHF OTC":92,"EUR/NZD OTC":92,"EUR/TRY OTC":92,"MAD/USD OTC":92,
+    "NGN/USD OTC":92,"OMR/CNY OTC":92,"QAR/CNY OTC":92,"USD/COP OTC":92,"USD/EGP OTC":92,
+    "USD/MYR OTC":92,"USD/PHP OTC":92,"USD/PKR OTC":92,"USD/THB OTC":92,"NZD/JPY OTC":91,
+    "GBP/USD OTC":87,"GBP/JPY OTC":86,"USD/CLP OTC":86,"AUD/CHF":84,"EUR/HUF OTC":83,
+    "EUR/RUB OTC":83,"TND/USD OTC":83,"AUD/JPY":82,"AUD/JPY OTC":82,"EUR/GBP":81,
+    "GBP/JPY":81,"GBP/CAD":80,"USD/SGD OTC":80,"AED/CNY OTC":79,"AUD/USD":79,
+    "JOD/CNY OTC":79,"GBP/USD":78,"USD/CAD OTC":78,"USD/VND OTC":78,"CHF/JPY":77,
+    "USD/IDR OTC":77,"USD/JPY OTC":74,"GBP/CHF":72,"USD/DZD OTC":71,"EUR/JPY":70,
+    "EUR/USD":70,"USD/CAD":70,"USD/JPY":70,"CAD/JPY":69,"SAR/CNY OTC":68,
+    "USD/BDT OTC":64,"LBP/USD OTC":63,"NZD/USD OTC":63,"KES/USD OTC":62,"USD/CNH OTC":60,
+    "CHF/JPY OTC":59,"USD/CHF":59,"EUR/USD OTC":56,"USD/MXN OTC":55,"GBP/AUD":54,
+    "USD/RUB OTC":54,"GBP/AUD OTC":51,"USD/BRL OTC":51,"AUD/CHF OTC":49,"USD/CHF OTC":49,
+    "AUD/USD OTC":48,"CAD/JPY OTC":39,"EUR/AUD":39,"CAD/CHF":37,"EUR/CHF":37,
+    "USD/ARS OTC":37,"AUD/NZD OTC":36,"EUR/JPY OTC":35,"CAD/CHF OTC":33,"EUR/GBP OTC":32,
+    "ZAR/USD OTC":32,"EUR/CAD":31,"AUD/CAD":30,"YER/USD OTC":27,"USD/INR OTC":20,
+    "BHD/CNY OTC":null,"UAH/USD OTC":null,"CHF/NOK OTC":null
+  };
+  function payoutOf(asset){
+    return Object.prototype.hasOwnProperty.call(PAYOUT, asset) ? PAYOUT[asset] : null;
+  }
+  function payoutHtml(asset){
+    var v = payoutOf(asset);
+    if(v === null || v === undefined) return '<span class="pay">N/A</span>';
+    var cls = v >= 80 ? "pay hi" : (v >= 60 ? "pay mid" : "pay");
+    return '<span class="'+cls+'">+'+v+'%</span>';
+  }
+
+  // Избранное
+  var favs = [];
+  try{ favs = JSON.parse(localStorage.getItem("pulse_favs") || "[]") || []; }catch(e){ favs = []; }
+  function isFav(a){ return favs.indexOf(a) > -1; }
+  function toggleFav(a){
+    var i = favs.indexOf(a);
+    if(i > -1) favs.splice(i,1); else favs.push(a);
+    try{ localStorage.setItem("pulse_favs", JSON.stringify(favs)); }catch(e){}
+  }
+  function favHtml(a){
+    return '<span class="fav '+(isFav(a)?"on":"")+'" data-fav="'+esc(a)+'" role="button">'+(isFav(a)?"\u2605":"\u2606")+'</span>';
+  }
+  // Избранные сверху, далее по выплате
+  function sortAssets(arr){
+    return arr.slice().sort(function(x,y){
+      var fx = isFav(x) ? 0 : 1, fy = isFav(y) ? 0 : 1;
+      if(fx !== fy) return fx - fy;
+      var ix = ASSETS.indexOf(x), iy = ASSETS.indexOf(y);
+      return ix - iy;
+    });
+  }
+
   function renderAssets(q){
     q = (q||"").trim().toLowerCase();
-    var list = ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; });
+    var list = sortAssets(ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; }));
     var html = list.map(function(a){
-      var tag = a.indexOf(" OTC") > -1 ? "OTC" : "FX";
-      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'"><span class="a-flag">'+pairFlag(a)+'</span><b>'+esc(a)+'</b><span>'+tag+'</span></button>';
+      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'">'+
+        favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+'</button>';
     }).join("");
     $("assetList").innerHTML = html || '<p class="section-text">—</p>';
     document.querySelectorAll("[data-asset]").forEach(function(b){
-      b.addEventListener("click", function(){
+      b.addEventListener("click", function(ev){
+        var st = ev.target && ev.target.closest ? ev.target.closest("[data-fav]") : null;
+        if(st){ ev.preventDefault(); ev.stopPropagation(); toggleFav(st.getAttribute("data-fav")); renderAssets($("assetSearch").value); return; }
         state.asset = b.getAttribute("data-asset"); save();
         $("profileAsset").textContent = state.asset;
         renderAssets($("assetSearch").value);
@@ -1433,6 +1550,43 @@
     }
   }
 
+  /* ---------- In-app camera ---------- */
+  var camStream = null, camFacing = "environment";
+  function camStop(){
+    if(camStream){ try{ camStream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){} camStream = null; }
+    var v = $("camVideo"); if(v){ try{ v.srcObject = null; }catch(e){} }
+  }
+  function closeCam(){ camStop(); var o = $("camOv"); if(o) o.classList.remove("show"); }
+  function openCam(){
+    var md = navigator.mediaDevices;
+    if(!md || !md.getUserMedia){ $("camInput").click(); return; }
+    md.getUserMedia({ video:{ facingMode:{ ideal: camFacing }, width:{ ideal:1920 }, height:{ ideal:1080 } }, audio:false })
+      .then(function(st){
+        camStream = st;
+        var v = $("camVideo");
+        v.srcObject = st;
+        var pl = v.play(); if(pl && pl.catch) pl.catch(function(){});
+        $("camOv").classList.add("show");
+      })
+      .catch(function(){ camStop(); $("camInput").click(); });
+  }
+  function camCapture(){
+    var v = $("camVideo");
+    var w = v.videoWidth, h = v.videoHeight;
+    if(!w || !h){ return; }
+    var max = 760, sc = Math.min(1, max / Math.max(w, h));
+    var cv = document.createElement("canvas");
+    cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
+    var cx = cv.getContext("2d");
+    cx.drawImage(v, 0, 0, cv.width, cv.height);
+    var data = cv.toDataURL("image/jpeg", 0.62);
+    closeCam();
+    state.image = data;
+    $("previewImg").src = data;
+    $("preview").classList.add("show");
+    $("analyzeBtn").disabled = false;
+  }
+
   /* ---------- Vision params ---------- */
   var vpKind = "asset";
   function syncVisionParams(){
@@ -1453,19 +1607,20 @@
     var list = $("vpList"); if(!list) return;
     if(vpKind === "asset"){
       q = (q||"").trim().toLowerCase();
-      var items = ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; });
-      list.innerHTML = items.map(function(a){
-        var tag = a.indexOf(" OTC") > -1 ? "OTC" : "FX";
+      var items = sortAssets(ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; }));
+      list.innerHTML = (items.map(function(a){
         return '<button type="button" class="vp-item '+(a===state.asset?"selected":"")+'" data-vp="'+esc(a)+'">'+
-          '<span class="vp-flag">'+pairFlag(a)+'</span><span>'+esc(a)+'</span><span class="vp-tag">'+tag+'</span></button>';
-      }).join("") || '<p class="section-text">—</p>';
+          favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+'</button>';
+      }).join("") || '<p class="section-text">—</p>');
     } else {
       list.innerHTML = DURATIONS.map(function(v){
         return '<button type="button" class="vp-item '+(v===state.duration?"selected":"")+'" data-vp="'+v+'"><span>'+durationText(v)+'</span></button>';
       }).join("");
     }
     list.querySelectorAll("[data-vp]").forEach(function(b){
-      b.addEventListener("click", function(){
+      b.addEventListener("click", function(ev){
+        var st = ev.target && ev.target.closest ? ev.target.closest("[data-fav]") : null;
+        if(st){ ev.preventDefault(); ev.stopPropagation(); toggleFav(st.getAttribute("data-fav")); renderVpList($("vpSearch") ? $("vpSearch").value : ""); renderAssets($("assetSearch").value); return; }
         var val = b.getAttribute("data-vp");
         if(vpKind === "asset"){
           state.asset = val; save();
@@ -2470,6 +2625,8 @@
     ["vAssetHint","vDurHint","cAssetHint","cDurHint"].forEach(function(id){ if($(id)) $(id).textContent = t("tapToPick"); });
     if($("pickGalleryText")) $("pickGalleryText").textContent = t("pickGallery");
     if($("pickCameraText")) $("pickCameraText").textContent = t("pickCamera");
+    if($("camCancel")) $("camCancel").textContent = t("camCancel");
+    if($("camFlip")) $("camFlip").textContent = t("camFlip");
     if($("shotTipTitle")) $("shotTipTitle").textContent = t("shotTipTitle");
     if($("shotTip1")) $("shotTip1").textContent = t("shotTip1");
     if($("shotTip2")) $("shotTip2").textContent = t("shotTip2");
@@ -2514,6 +2671,11 @@
   }
   $("imageInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
   $("camInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
+  $("camBtn").addEventListener("click", openCam);
+  $("camShot").addEventListener("click", camCapture);
+  $("camCancel").addEventListener("click", closeCam);
+  $("camFlip").addEventListener("click", function(){ camFacing = (camFacing === "environment" ? "user" : "environment"); camStop(); openCam(); });
+  window.addEventListener("pagehide", camStop);
   $("removeImg").addEventListener("click", function(){ state.image=null; $("imageInput").value=""; $("camInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; });
   $("analyzeBtn").addEventListener("click", analyze);
   $("langBtn").addEventListener("click", openLang);
