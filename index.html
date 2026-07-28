@@ -425,6 +425,28 @@
     filter:blur(26px);pointer-events:none;animation:breathe 3.6s ease-in-out infinite;}
   @keyframes breathe{0%,100%{opacity:.35;transform:scale(.9);}50%{opacity:.7;transform:scale(1.08);}}
   @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;}}
+  /* ---------- Tile overflow fix ---------- */
+  .v-params{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:100%;}
+  .v-param{min-width:0;max-width:100%;overflow:hidden;box-sizing:border-box;}
+  .v-param small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;letter-spacing:.03em;font-size:9.5px;}
+  .v-param b,.v-param .vp-hint{max-width:100%;}
+
+  /* ---------- Camera pre-prompt ---------- */
+  .ask-ov{position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;
+    padding:24px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .ask-ov.show{display:flex;}
+  .ask{width:100%;max-width:360px;padding:22px;border:1px solid var(--line);
+    border-radius:18px;background:var(--card);box-sizing:border-box;}
+  .ask-ic{width:44px;height:44px;display:grid;place-items:center;margin-bottom:14px;
+    border-radius:13px;border:1px solid var(--line);background:var(--card2);color:var(--accent);}
+  .ask-ic svg{width:21px;height:21px;}
+  .ask h4{margin:0 0 9px;font-size:16px;font-weight:800;}
+  .ask p{margin:0;color:var(--muted);font-size:13px;line-height:1.6;}
+  .ask-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
+  .ask-btn{padding:13px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card2);
+    color:var(--text);font-size:13px;font-weight:800;cursor:pointer;box-sizing:border-box;}
+  .ask-btn.yes{border-color:var(--accent);background:var(--accent-soft);}
   /* ---------- Pair flags / favourites / payout ---------- */
   .p-flags{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;width:38px;height:22px;}
   .p-flags i{position:absolute;top:0;font-size:15px;line-height:22px;font-style:normal;}
@@ -779,6 +801,17 @@
   </div>
 </div>
 
+<div class="ask-ov" id="camAsk">
+  <div class="ask">
+    <div class="ask-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+    <h4 id="camAskTitle">Снять график камерой</h4>
+    <p id="camAskText">Сейчас телефон спросит разрешение на камеру — нажми «Разрешить». Кадр используется только для анализа графика и никуда не сохраняется. Камера выключается сразу после снимка.</p>
+    <div class="ask-row">
+      <button class="ask-btn" id="camAskNo" type="button">Не сейчас</button>
+      <button class="ask-btn yes" id="camAskYes" type="button">Продолжить</button>
+    </div>
+  </div>
+</div>
 <div class="cam-ov" id="camOv">
   <video id="camVideo" playsinline autoplay muted></video>
   <div class="cam-bar">
@@ -1201,6 +1234,24 @@
   };
   for (var _lc6 in EXTRA_T6){ if(T[_lc6]){ for(var _ek6 in EXTRA_T6[_lc6]){ T[_lc6][_ek6] = EXTRA_T6[_lc6][_ek6]; } } }
 
+  var EXTRA_T8 = {
+    ru:{ camAskTitle:"Снять график камерой", camAskNo:"Не сейчас", camAskYes:"Продолжить",
+      camAskText:"Сейчас телефон спросит разрешение на камеру — нажми «Разрешить». Кадр нужен только для анализа графика и никуда не сохраняется. Камера выключается сразу после снимка." },
+    en:{ camAskTitle:"Capture the chart", camAskNo:"Not now", camAskYes:"Continue",
+      camAskText:"Your phone will now ask for camera access — tap Allow. The frame is used only to analyse the chart and is never saved. The camera turns off right after the shot." },
+    uz:{ camAskTitle:"Grafikni suratga olish", camAskNo:"Hozir emas", camAskYes:"Davom etish",
+      camAskText:"Telefon kamera uchun ruxsat so‘raydi — “Ruxsat berish” ni bosing. Kadr faqat grafikni tahlil qilish uchun ishlatiladi va saqlanmaydi. Kamera surat olingach darhol o‘chadi." },
+    hi:{ camAskTitle:"चार्ट की फोटो लें", camAskNo:"अब नहीं", camAskYes:"जारी रखें",
+      camAskText:"अब फोन कैमरा की अनुमति मांगेगा — 'अनुमति दें' दबाएँ। फोटो केवल चार्ट विश्लेषण के लिए है और कहीं सहेजी नहीं जाती। शॉट के बाद कैमरा तुरंत बंद हो जाता है।" },
+    pt:{ camAskTitle:"Fotografar o gráfico", camAskNo:"Agora não", camAskYes:"Continuar",
+      camAskText:"O telefone vai pedir acesso à câmera — toque em Permitir. A imagem serve apenas para analisar o gráfico e não é salva. A câmera desliga logo após a foto." },
+    ar:{ camAskTitle:"تصوير الرسم البياني", camAskNo:"ليس الآن", camAskYes:"متابعة",
+      camAskText:"سيطلب الهاتف الإذن بالوصول إلى الكاميرا — اضغط على «سماح». تستخدم الصورة لتحليل الرسم فقط ولا يتم حفظها. تنطفئ الكاميرا فور التقاط الصورة." },
+    kk:{ camAskTitle:"Графикті суретке түсіру", camAskNo:"Қазір емес", camAskYes:"Жалғастыру",
+      camAskText:"Телефон камераға рұқсат сұрайды — «Рұқсат беру» дегенді басыңыз. Сурет тек графикті талдауға қажет және ешқайда сақталмайды. Суреттен кейін камера бірден өшеді." }
+  };
+  for (var _lc8 in EXTRA_T8){ if(T[_lc8]){ for(var _ek8 in EXTRA_T8[_lc8]){ T[_lc8][_ek8] = EXTRA_T8[_lc8][_ek8]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1552,6 +1603,7 @@
 
   /* ---------- In-app camera ---------- */
   var camStream = null, camFacing = "environment";
+  var camAsked = localStorage.getItem("pulse_cam_asked") === "true";
   function camStop(){
     if(camStream){ try{ camStream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){} camStream = null; }
     var v = $("camVideo"); if(v){ try{ v.srcObject = null; }catch(e){} }
@@ -2627,6 +2679,10 @@
     if($("pickCameraText")) $("pickCameraText").textContent = t("pickCamera");
     if($("camCancel")) $("camCancel").textContent = t("camCancel");
     if($("camFlip")) $("camFlip").textContent = t("camFlip");
+    if($("camAskTitle")) $("camAskTitle").textContent = t("camAskTitle");
+    if($("camAskText")) $("camAskText").textContent = t("camAskText");
+    if($("camAskNo")) $("camAskNo").textContent = t("camAskNo");
+    if($("camAskYes")) $("camAskYes").textContent = t("camAskYes");
     if($("shotTipTitle")) $("shotTipTitle").textContent = t("shotTipTitle");
     if($("shotTip1")) $("shotTip1").textContent = t("shotTip1");
     if($("shotTip2")) $("shotTip2").textContent = t("shotTip2");
@@ -2671,7 +2727,18 @@
   }
   $("imageInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
   $("camInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
-  $("camBtn").addEventListener("click", openCam);
+  $("camBtn").addEventListener("click", function(){
+    if(camAsked){ openCam(); return; }
+    var o = $("camAsk"); if(o) o.classList.add("show"); else openCam();
+  });
+  $("camAskNo").addEventListener("click", function(){ $("camAsk").classList.remove("show"); });
+  $("camAskYes").addEventListener("click", function(){
+    $("camAsk").classList.remove("show");
+    camAsked = true;
+    try{ localStorage.setItem("pulse_cam_asked", "true"); }catch(e){}
+    openCam();
+  });
+  $("camAsk").addEventListener("click", function(ev){ if(ev.target === $("camAsk")) $("camAsk").classList.remove("show"); });
   $("camShot").addEventListener("click", camCapture);
   $("camCancel").addEventListener("click", closeCam);
   $("camFlip").addEventListener("click", function(){ camFacing = (camFacing === "environment" ? "user" : "environment"); camStop(); openCam(); });
