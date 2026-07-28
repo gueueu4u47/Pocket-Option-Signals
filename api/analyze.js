@@ -316,7 +316,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   });
 
   // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
-  const cap = Number(process.env.AI_MAX_TOKENS || 900);
+  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
 
   const base = {
     model,
@@ -327,6 +327,11 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
 
   // Глушим внутренние рассуждения: именно они съедали весь лимит и давали пустой ответ
   const attempts = [];
+  attempts.push(Object.assign({}, base, {
+    reasoning_effort: "none",
+    thinking: { type: "disabled" },
+    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
+  }, forceJson ? { response_format: { type: "json_object" } } : {}));
   attempts.push(Object.assign({}, base, {
     reasoning_effort: "none",
     extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
@@ -354,8 +359,17 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
       return { ok: false, error: msg };
     }
 
+    const finish = String((r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "");
     const text = extractText(r.data);
-    if (text) return { ok: true, text, parsed: parseJsonLoose(text) };
+    if (text) {
+      return {
+        ok: true,
+        text,
+        parsed: parseJsonLoose(text),
+        finish,
+        truncated: finish === "length" || looksTruncated(text)
+      };
+    }
 
     const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
     lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
@@ -606,6 +620,7 @@ module.exports = async (req, res) => {
 
     let best = null;
     let bestReasons = [];
+    let bestCut = false;
     let rawSeen = "";
     const diag = [];
 
@@ -627,21 +642,27 @@ module.exports = async (req, res) => {
       const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
       const dir = parsed.direction || directionFromText(r.text);
 
-      // Если модель вообще что-то сказала — это уже годный разбор, не выбрасываем его
-      if (dir && reasons.length) {
+      const cut = !!r.truncated;
+
+      // Готовым считаем только дописанный ответ с направлением и причинами
+      if (dir && reasons.length && !cut) {
         best = Object.assign({}, parsed, { direction: dir });
         bestReasons = reasons;
+        bestCut = false;
         break;
       }
-      if (!best && (dir || reasons.length)) {
+
+      // Обрывок придерживаем как запасной вариант и пробуем получить цельный
+      if ((dir || reasons.length) && (!best || bestCut)) {
         best = Object.assign({}, parsed, dir ? { direction: dir } : {});
         bestReasons = reasons;
+        bestCut = cut;
       }
-      diag.push(model + ": weak answer");
+      diag.push(model + (cut ? ": truncated (" + (r.finish || "cut") + ")" : ": weak answer"));
     }
 
     // Проход 2: ОДИН короткий повтор без JSON-режима
-    if (!best || !bestReasons.length || !best.direction) {
+    if (!best || !bestReasons.length || !best.direction || bestCut) {
       for (const model of MODELS) {
         const ms = budget(15000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
@@ -651,13 +672,15 @@ module.exports = async (req, res) => {
 
         rawSeen = rawSeen || r.text;
         const parsed = Object.assign(extractFields(r.text), r.parsed || {});
-        const reasons = salvageReasons(parsed, r.text, lang);
+        const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
         const dir = parsed.direction || directionFromText(r.text);
 
         if (reasons.length || dir) {
           const keep = bestReasons.slice();
-          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : {});
-          bestReasons = reasons.length ? reasons : keep;
+          const keepDir = (best && best.direction) || "";
+          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : (keepDir ? { direction: keepDir } : {}));
+          bestReasons = reasons.length >= keep.length ? reasons : keep;
+          bestCut = reasons.length ? !!r.truncated : bestCut;
           if (bestReasons.length) break;
         }
         diag.push("retry " + model + ": no reasons");
