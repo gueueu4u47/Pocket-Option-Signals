@@ -330,6 +330,12 @@
   .h-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:10px;
     color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;}
   .h-sum{margin:10px 0 0;color:var(--silver);font-size:12px;line-height:1.45;}
+  .h-open{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    color:var(--silver);font-size:11px;font-weight:800;letter-spacing:.2px;}
+  .h-open span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .h-open i{font-style:normal;font-size:15px;opacity:.65;flex:0 0 auto;}
+  .h-item:active .h-open{opacity:.6;}
   .oc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px;}
   .oc{min-height:38px;border:1px solid var(--line);border-radius:11px;background:var(--bg2);
     color:var(--silver);font-size:11px;font-weight:800;}
@@ -1252,6 +1258,17 @@
   };
   for (var _lc8 in EXTRA_T8){ if(T[_lc8]){ for(var _ek8 in EXTRA_T8[_lc8]){ T[_lc8][_ek8] = EXTRA_T8[_lc8][_ek8]; } } }
 
+  var EXTRA_T9 = {
+    ru:{ detailOpen:"Почему такой сигнал · тактика · советы", detailEntryWindow:"Когда входить", detailExpiry:"Сколько держать" },
+    en:{ detailOpen:"Why this signal · tactics · tips", detailEntryWindow:"When to enter", detailExpiry:"How long to hold" },
+    uz:{ detailOpen:"Nega bunday signal · taktika · maslahatlar", detailEntryWindow:"Qachon kirish", detailExpiry:"Qancha ushlash" },
+    hi:{ detailOpen:"यह संकेत क्यों · रणनीति · सुझाव", detailEntryWindow:"कब प्रवेश करें", detailExpiry:"कितनी देर रखें" },
+    pt:{ detailOpen:"Por que este sinal · tática · dicas", detailEntryWindow:"Quando entrar", detailExpiry:"Por quanto tempo manter" },
+    ar:{ detailOpen:"سبب هذه الإشارة · التكتيك · نصائح", detailEntryWindow:"وقت الدخول", detailExpiry:"مدة الاحتفاط" },
+    kk:{ detailOpen:"Сигнал неге осындай · тактика · кеңестер", detailEntryWindow:"Қашан кіру", detailExpiry:"Қанша устау" }
+  };
+  for (var _lc9 in EXTRA_T9){ if(T[_lc9]){ for(var _ek9 in EXTRA_T9[_lc9]){ T[_lc9][_ek9] = EXTRA_T9[_lc9][_ek9]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1739,6 +1756,7 @@
         +'<div class="h-head"><b>'+esc(typeLabel)+' · '+esc(it.asset)+'</b><span class="badge '+d.cls+'">'+d.text+'</span></div>'
         +'<div class="h-meta"><span>'+t("entry")+': '+esc(it.entry)+'</span><span>'+t("outcomeBy")+': '+esc(it.outcomeTime)+'</span><span>'+t("duration")+': '+esc(it.duration)+'</span><span>'+esc(created)+'</span></div>'
         +(it.summary?'<p class="h-sum">'+esc(it.summary)+'</p>':'')
+        +'<div class="h-open"><span>'+esc(t("detailOpen"))+'</span><i>›</i></div>'
         +'<div class="oc-grid">'
         +'<button class="btn oc win '+(it.outcome==="win"?"active":"")+'" data-oc="win" data-id="'+it.id+'">'+t("win")+'</button>'
         +'<button class="btn oc loss '+(it.outcome==="loss"?"active":"")+'" data-oc="loss" data-id="'+it.id+'">'+t("loss")+'</button>'
@@ -1786,6 +1804,8 @@
     if(it.summary){ h += '<div class="sd-block"><h4>'+t("detailSummary")+'</h4><p>'+esc(it.summary)+'</p></div>'; }
     if(it.reasons && it.reasons.length){ h += '<div class="sd-block"><h4>'+t("detailWhy")+'</h4><ul class="sd-list">'+it.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("")+'</ul></div>'; }
     if(it.strategy){ h += '<div class="sd-block"><h4>'+t("detailStrategy")+'</h4><p>'+esc(it.strategy)+'</p></div>'; }
+    if(it.entryWindow){ h += '<div class="sd-block"><h4>'+t("detailEntryWindow")+'</h4><p>'+esc(it.entryWindow)+'</p></div>'; }
+    if(it.expiry){ h += '<div class="sd-block"><h4>'+t("detailExpiry")+'</h4><p>'+esc(it.expiry)+'</p></div>'; }
     if(it.tips && it.tips.length){ h += '<div class="sd-block"><h4>'+t("detailTips")+'</h4><ul class="sd-list">'+it.tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("")+'</ul></div>'; }
     if(!it.summary && !(it.reasons&&it.reasons.length) && !it.strategy && !(it.tips&&it.tips.length)){ h += '<div class="sd-block"><p>'+t("detailNoData")+'</p></div>'; }
     body.innerHTML = h;
