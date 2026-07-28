@@ -584,13 +584,15 @@ reasons is required, 3 items.`;
 const ENRICH_RU = `Ты трейдер-наставник. По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}.
 Факты по графику: {REASONS}
 Объясни этот сигнал простым языком. Ответь ОДНИМ JSON без markdown:
-{"summary":"2 предложения: что сейчас происходит на рынке","strategy":"2-3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет"]}
+{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения: что сейчас происходит на рынке и почему сигнал именно такой","strategy":"3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет","практический совет"]}
+В reasons перепиши переданные факты более полными фразами по 80-130 символов: сам факт и что он значит для входа. Факты бери только переданные, новых не добавляй.
 Не противоречь направлению {DIR}. Не выдумывай цифры, которых нет в фактах.`;
 
 const ENRICH_EN = `You are a trading mentor. A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}.
 Chart facts: {REASONS}
 Explain this signal in plain language. Answer with ONE JSON, no markdown:
-{"summary":"2 sentences on what the market is doing now","strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"]}
+{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 sentences on what the market is doing and why the signal is this way","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip","practical tip"]}
+In reasons rewrite the given facts as fuller phrases of 80-130 characters each: the fact itself and what it means for the entry. Use only the given facts, add none.
 Do not contradict direction {DIR}. Do not invent numbers that are not in the facts.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
@@ -766,12 +768,14 @@ module.exports = async (req, res) => {
     const diag = [];
 
     // Общий бюджет времени на весь анализ — фронт ждёт не дольше 50 секунд
-    const overallDeadline = Date.now() + 44000;
+    const overallDeadline = Date.now() + 46000;
     const budget = (want) => Math.max(0, Math.min(want, overallDeadline - Date.now()));
+    // Шагам по картинке не даём съесть всё время: разбор словами тоже должен успеть
+    const budgetKeep = (want, reserve) => Math.max(0, Math.min(want, overallDeadline - (reserve || 0) - Date.now()));
 
     // Проход 1: основной промпт по всем моделям
     for (const model of MODELS) {
-      const ms = budget(32000);
+      const ms = budgetKeep(22000, 13000);
       if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
 
       const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true);
@@ -805,7 +809,7 @@ module.exports = async (req, res) => {
     // Проход 2: ОДИН короткий повтор без JSON-режима
     if (!best || !bestReasons.length || !best.direction || bestCut) {
       for (const model of MODELS) {
-        const ms = budget(15000);
+        const ms = budgetKeep(10000, 13000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
 
         const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, ms, false);
@@ -830,8 +834,8 @@ module.exports = async (req, res) => {
 
     // Шаг 3: развёрнутый текст отдельным запросом без картинки - сигнал уже в руках и не пострадает
     if (best && best.direction && bestReasons.length) {
-      const ms = budget(12000);
-      if (ms >= 6000) {
+      const ms = budget(13000);
+      if (ms >= 5000) {
         const tpl = lang === "ru" ? ENRICH_RU : ENRICH_EN;
         const ep = tpl
           .split("{DIR}").join(normDirection(best.direction))
@@ -848,6 +852,10 @@ module.exports = async (req, res) => {
           if (sum2 && sum2.length > String((best && best.summary) || "").length) best.summary = sum2;
           if (st2) best.strategy = st2;
           if (tp2.length) best.tips = tp2;
+          const rs2 = dropPartialTail(cleanList(ex.reasons, 3), r.text);
+          if (rs2.length >= bestReasons.length && rs2.join(" ").length > bestReasons.join(" ").length) {
+            bestReasons = rs2;
+          }
         } else {
           diag.push("enrich: " + r.error);
         }
