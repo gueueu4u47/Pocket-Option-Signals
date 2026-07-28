@@ -148,8 +148,18 @@ function dropPartialTail(reasons, rawText) {
   const arr = Array.isArray(reasons) ? reasons.slice() : [];
   if (!arr.length || !looksTruncated(rawText)) return arr;
   const last = String(arr[arr.length - 1] || "").trim();
-  const finished = /[.!?\u2026\u00bb)]$/.test(last);
-  if (!finished) arr.pop();
+  if (/[.!?\u2026\u00bb)]$/.test(last)) return arr;
+
+  // Обрезаем оборванную фразу до последнего целого слова
+  const words = last.split(/\s+/);
+  if (words.length > 2) words.pop();
+  const fixed = words.join(" ").replace(/[\s,;:\-\u2014]+$/, "");
+
+  if (fixed.length >= 20 && fixed.split(/\s+/).length >= 3) {
+    arr[arr.length - 1] = fixed + "\u2026";
+  } else if (arr.length > 1) {
+    arr.pop();
+  }
   return arr;
 }
 
@@ -316,7 +326,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   });
 
   // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
-  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
+  const cap = Number(process.env.AI_MAX_TOKENS || 900);
 
   const base = {
     model,
@@ -327,11 +337,6 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
 
   // Глушим внутренние рассуждения: именно они съедали весь лимит и давали пустой ответ
   const attempts = [];
-  attempts.push(Object.assign({}, base, {
-    reasoning_effort: "none",
-    thinking: { type: "disabled" },
-    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
-  }, forceJson ? { response_format: { type: "json_object" } } : {}));
   attempts.push(Object.assign({}, base, {
     reasoning_effort: "none",
     extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
@@ -359,17 +364,8 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
       return { ok: false, error: msg };
     }
 
-    const finish = String((r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "");
     const text = extractText(r.data);
-    if (text) {
-      return {
-        ok: true,
-        text,
-        parsed: parseJsonLoose(text),
-        finish,
-        truncated: finish === "length" || looksTruncated(text)
-      };
-    }
+    if (text) return { ok: true, text, parsed: parseJsonLoose(text) };
 
     const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
     lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
@@ -460,6 +456,14 @@ Keep the key order exactly, direction first.
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart fact","short chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"one short sentence","entryWindow":"when to enter","expiry":"how long to hold"}
 If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
 reasons is required, exactly 2 items.`;
+
+const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
+{"direction":"BUY|SELL|NO_SIGNAL","reasons":["до 50 символов","до 50 символов"],"confidence":"низкая|средняя|высокая"}
+Причины - очень короткие законченные фразы по графику. Никакого текста вне JSON.`;
+
+const MICRO_EN = `Binary options chart screenshot. Answer with ONE JSON and nothing else:
+{"direction":"BUY|SELL|NO_SIGNAL","reasons":["under 50 chars","under 50 chars"],"confidence":"low|medium|high"}
+Reasons are very short complete phrases about the chart. No text outside JSON.`;
 
 function softCard(res, lang, summary, reasons) {
   const ru = lang !== "en";
@@ -616,11 +620,11 @@ module.exports = async (req, res) => {
     const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
     const mainPrompt = lang === "ru" ? FAST_RU : FAST_EN;
     const richPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
-    const retryPrompt = lang === "ru" ? RETRY_RU : RETRY_EN;
+    const retryPrompt = lang === "ru" ? MICRO_RU : MICRO_EN;
+    const legacyRetry = lang === "ru" ? RETRY_RU : RETRY_EN;
 
     let best = null;
     let bestReasons = [];
-    let bestCut = false;
     let rawSeen = "";
     const diag = [];
 
@@ -642,27 +646,21 @@ module.exports = async (req, res) => {
       const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
       const dir = parsed.direction || directionFromText(r.text);
 
-      const cut = !!r.truncated;
-
-      // Готовым считаем только дописанный ответ с направлением и причинами
-      if (dir && reasons.length && !cut) {
+      // Если модель вообще что-то сказала — это уже годный разбор, не выбрасываем его
+      if (dir && reasons.length) {
         best = Object.assign({}, parsed, { direction: dir });
         bestReasons = reasons;
-        bestCut = false;
         break;
       }
-
-      // Обрывок придерживаем как запасной вариант и пробуем получить цельный
-      if ((dir || reasons.length) && (!best || bestCut)) {
+      if (!best && (dir || reasons.length)) {
         best = Object.assign({}, parsed, dir ? { direction: dir } : {});
         bestReasons = reasons;
-        bestCut = cut;
       }
-      diag.push(model + (cut ? ": truncated (" + (r.finish || "cut") + ")" : ": weak answer"));
+      diag.push(model + ": weak answer");
     }
 
     // Проход 2: ОДИН короткий повтор без JSON-режима
-    if (!best || !bestReasons.length || !best.direction || bestCut) {
+    if (!best || !bestReasons.length || !best.direction) {
       for (const model of MODELS) {
         const ms = budget(15000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
@@ -672,15 +670,13 @@ module.exports = async (req, res) => {
 
         rawSeen = rawSeen || r.text;
         const parsed = Object.assign(extractFields(r.text), r.parsed || {});
-        const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
+        const reasons = salvageReasons(parsed, r.text, lang);
         const dir = parsed.direction || directionFromText(r.text);
 
         if (reasons.length || dir) {
           const keep = bestReasons.slice();
-          const keepDir = (best && best.direction) || "";
-          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : (keepDir ? { direction: keepDir } : {}));
-          bestReasons = reasons.length >= keep.length ? reasons : keep;
-          bestCut = reasons.length ? !!r.truncated : bestCut;
+          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : {});
+          bestReasons = reasons.length ? reasons : keep;
           if (bestReasons.length) break;
         }
         diag.push("retry " + model + ": no reasons");
@@ -708,7 +704,7 @@ module.exports = async (req, res) => {
     };
 
     if (degraded) {
-      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 400));
+      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
     }
 
     if (!degraded) cacheSet(cacheKey, payload);
