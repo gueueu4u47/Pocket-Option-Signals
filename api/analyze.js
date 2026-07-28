@@ -163,6 +163,18 @@ function dropPartialTail(reasons, rawText) {
   return arr;
 }
 
+/* Оборванный абзац тоже подрезаем до целого слова */
+function trimPartialText(s, cut) {
+  const t = String(s == null ? "" : s).trim();
+  if (!t || !cut) return t;
+  if (/[.!?\u2026\u00bb)]$/.test(t)) return t;
+  const w = t.split(/\s+/);
+  if (w.length > 3) w.pop();
+  const fixed = w.join(" ").replace(/[\s,;:\-\u2014]+$/, "");
+  if (fixed.length >= 25 && fixed.split(/\s+/).length >= 4) return fixed + "\u2026";
+  return "";
+}
+
 /* Собираем поля даже из оборванного JSON, который не разобрался целиком */
 function extractFields(rawText) {
   const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
@@ -553,19 +565,19 @@ reasons is required and cannot be empty.`;
 /* ---------- Мягкий ответ: пользователь никогда не видит кодов ошибок ---------- */
 const FAST_RU = `Ты опытный трейдер-аналитик. По скриншоту графика бинарных опционов дай короткий разбор.
 Отвечай ТОЛЬКО одним JSON-объектом, без markdown и без пояснений вокруг.
-Пиши предельно коротко: каждая причина - законченная фраза не длиннее 70 символов.
+Пиши живо и по делу: каждая причина - законченная фраза на 60-110 символов.
 Порядок ключей соблюдай строго, direction ставь первым.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["коротко по графику","коротко по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"одно короткое предложение","entryWindow":"когда входить","expiry":"сколько держать"}
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["факт по графику","факт по графику","факт по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 предложения общей картины","entryWindow":"когда входить","expiry":"сколько держать","strategy":"2 предложения: где вход, что подтверждает и что отменяет идею","tips":["практический совет","практический совет"]}
 Если график нечитаемый или картина смешанная - direction "NO_SIGNAL", и в reasons объясни, чего не хватает.
-reasons обязателен, ровно 2 пункта.`;
+reasons обязателен, 3 пункта. strategy и tips заполняй всегда, когда график читается.`;
 
 const FAST_EN = `You are an experienced trading analyst. Give a short read of this binary options chart screenshot.
 Answer with ONE JSON object only, no markdown, no text around it.
-Be extremely brief: each reason is a complete phrase under 70 characters.
+Write vividly and to the point: each reason is a complete phrase of 60-110 characters.
 Keep the key order exactly, direction first.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart fact","short chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"one short sentence","entryWindow":"when to enter","expiry":"how long to hold"}
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["chart fact","chart fact","chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 sentences on the overall picture","entryWindow":"when to enter","expiry":"how long to hold","strategy":"2 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"]}
 If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
-reasons is required, exactly 2 items.`;
+reasons is required, 3 items. Always fill strategy and tips when the chart is readable.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
 {"direction":"BUY|SELL|NO_SIGNAL","reasons":["до 50 символов","до 50 символов"],"confidence":"низкая|средняя|высокая"}
@@ -814,10 +826,10 @@ module.exports = async (req, res) => {
       expiry: (best && best.expiry) || "",
       asset: (best && best.asset) || (lang === "ru" ? "Не распознан" : "Not recognized"),
       timeframe: (best && best.timeframe) || (lang === "ru" ? "Не распознан" : "Not recognized"),
-      summary: (best && best.summary) || "",
+      summary: trimPartialText((best && best.summary) || "", bestCut),
       reasons: reasonsOut,
-      strategy: (best && best.strategy) || "",
-      tips: cleanList(best && best.tips, 2),
+      strategy: trimPartialText((best && best.strategy) || "", bestCut),
+      tips: cleanList(best && best.tips, 3),
       agents: [],
       degraded: degraded
     };
