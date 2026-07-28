@@ -316,7 +316,103 @@ async function postAI(apiKey, payload, timeoutMs) {
   }
 }
 
+/* ---------- Прямой Google Gemini, без посредника ---------- */
+const GOOGLE_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+/* Ключи Google: старый формат AIza... и новый AQ.... */
+function isGoogleKey(key) {
+  if (process.env.AI_BASE_URL) return false;
+  const k = String(key || "").trim();
+  return /^AIza[0-9A-Za-z_\-]{20,}$/.test(k) || /^AQ\.[0-9A-Za-z._\-]{20,}$/.test(k);
+}
+
+/* У шлюза и у Google разные имена моделей */
+function googleModel(model) {
+  const m = String(model || "").trim();
+  if (!m || /^gemini-3/.test(m)) return "gemini-2.5-flash";
+  return m;
+}
+
+function googleText(data) {
+  const cand = (data && Array.isArray(data.candidates) && data.candidates[0]) || null;
+  if (!cand || !cand.content || !Array.isArray(cand.content.parts)) return "";
+  return cand.content.parts.map((p) => (p && p.text) || "").join("").trim();
+}
+
+async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson) {
+  const mdl = googleModel(model);
+  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
+
+  const gParts = parts.map((p) => {
+    if (p && p.inline_data) {
+      return { inline_data: { mime_type: p.inline_data.mime_type, data: p.inline_data.data } };
+    }
+    return { text: (p && p.text) || "" };
+  });
+
+  const cfg = { temperature: temperature, maxOutputTokens: cap };
+  if (forceJson) cfg.responseMimeType = "application/json";
+
+  // Сначала без внутренних рассуждений — это быстрее и дешевле
+  const bodies = [
+    { contents: [{ role: "user", parts: gParts }], generationConfig: Object.assign({ thinkingConfig: { thinkingBudget: 0 } }, cfg) },
+    { contents: [{ role: "user", parts: gParts }], generationConfig: cfg }
+  ];
+
+  const deadline = Date.now() + (timeoutMs || 24000);
+  let lastErr = "no answer";
+
+  for (let i = 0; i < bodies.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
+
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), remaining);
+    try {
+      const url = GOOGLE_BASE + "/models/" + encodeURIComponent(mdl) + ":generateContent";
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": String(apiKey).trim() },
+        body: JSON.stringify(bodies[i]),
+        signal: ctrl.signal
+      });
+      const data = await resp.json().catch(() => null);
+
+      if (!resp.ok) {
+        const msg = String((data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status));
+        lastErr = msg;
+        // Некоторые модели не знают этих полей — пробуем вариант попроще
+        if (/thinking|responseMimeType|unknown|invalid argument|not supported/i.test(msg)) continue;
+        return { ok: false, error: msg };
+      }
+
+      const text = googleText(data);
+      const cand = (data && Array.isArray(data.candidates) && data.candidates[0]) || {};
+      const fin = String(cand.finishReason || "");
+
+      if (text) {
+        return {
+          ok: true,
+          text,
+          parsed: parseJsonLoose(text),
+          finish: fin.toLowerCase(),
+          truncated: fin === "MAX_TOKENS" || looksTruncated(text)
+        };
+      }
+      lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
+    } catch (e) {
+      lastErr = (e && e.name === "AbortError") ? "This operation was aborted" : String((e && e.message) || e);
+    } finally {
+      clearTimeout(to);
+    }
+  }
+  return { ok: false, error: lastErr };
+}
+
 async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
+  // Ключ Google — идём напрямую; иначе работаем через шлюз, как раньше
+  if (isGoogleKey(apiKey)) return callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson);
+
   const content = parts.map((p) => {
     if (p && p.text) return { type: "text", text: p.text };
     if (p && p.inline_data) {
@@ -326,7 +422,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   });
 
   // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
-  const cap = Number(process.env.AI_MAX_TOKENS || 900);
+  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
 
   const base = {
     model,
@@ -337,6 +433,11 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
 
   // Глушим внутренние рассуждения: именно они съедали весь лимит и давали пустой ответ
   const attempts = [];
+  attempts.push(Object.assign({}, base, {
+    reasoning_effort: "none",
+    thinking: { type: "disabled" },
+    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
+  }, forceJson ? { response_format: { type: "json_object" } } : {}));
   attempts.push(Object.assign({}, base, {
     reasoning_effort: "none",
     extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
@@ -364,8 +465,17 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
       return { ok: false, error: msg };
     }
 
+    const finish = String((r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "");
     const text = extractText(r.data);
-    if (text) return { ok: true, text, parsed: parseJsonLoose(text) };
+    if (text) {
+      return {
+        ok: true,
+        text,
+        parsed: parseJsonLoose(text),
+        finish,
+        truncated: finish === "length" || looksTruncated(text)
+      };
+    }
 
     const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
     lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
@@ -625,6 +735,7 @@ module.exports = async (req, res) => {
 
     let best = null;
     let bestReasons = [];
+    let bestCut = false;
     let rawSeen = "";
     const diag = [];
 
@@ -646,21 +757,27 @@ module.exports = async (req, res) => {
       const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
       const dir = parsed.direction || directionFromText(r.text);
 
-      // Если модель вообще что-то сказала — это уже годный разбор, не выбрасываем его
-      if (dir && reasons.length) {
+      const cut = !!r.truncated;
+
+      // Готовым считаем только дописанный ответ с направлением и причинами
+      if (dir && reasons.length && !cut) {
         best = Object.assign({}, parsed, { direction: dir });
         bestReasons = reasons;
+        bestCut = false;
         break;
       }
-      if (!best && (dir || reasons.length)) {
+
+      // Обрывок держим как запасной вариант и пробуем получить цельный
+      if ((dir || reasons.length) && (!best || bestCut)) {
         best = Object.assign({}, parsed, dir ? { direction: dir } : {});
         bestReasons = reasons;
+        bestCut = cut;
       }
-      diag.push(model + ": weak answer");
+      diag.push(model + (cut ? ": truncated (" + (r.finish || "cut") + ")" : ": weak answer"));
     }
 
     // Проход 2: ОДИН короткий повтор без JSON-режима
-    if (!best || !bestReasons.length || !best.direction) {
+    if (!best || !bestReasons.length || !best.direction || bestCut) {
       for (const model of MODELS) {
         const ms = budget(15000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
@@ -670,13 +787,15 @@ module.exports = async (req, res) => {
 
         rawSeen = rawSeen || r.text;
         const parsed = Object.assign(extractFields(r.text), r.parsed || {});
-        const reasons = salvageReasons(parsed, r.text, lang);
+        const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
         const dir = parsed.direction || directionFromText(r.text);
 
         if (reasons.length || dir) {
           const keep = bestReasons.slice();
-          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : {});
-          bestReasons = reasons.length ? reasons : keep;
+          const keepDir = (best && best.direction) || "";
+          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : (keepDir ? { direction: keepDir } : {}));
+          bestReasons = reasons.length >= keep.length ? reasons : keep;
+          bestCut = reasons.length ? !!r.truncated : bestCut;
           if (bestReasons.length) break;
         }
         diag.push("retry " + model + ": no reasons");
