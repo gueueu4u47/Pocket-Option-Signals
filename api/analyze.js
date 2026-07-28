@@ -408,6 +408,7 @@ async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJso
           text,
           parsed: parseJsonLoose(text),
           finish: fin.toLowerCase(),
+          variant: i,
           truncated: fin === "MAX_TOKENS" || looksTruncated(text)
         };
       }
@@ -567,17 +568,30 @@ const FAST_RU = `Ты опытный трейдер-аналитик. По ск�
 Отвечай ТОЛЬКО одним JSON-объектом, без markdown и без пояснений вокруг.
 Пиши живо и по делу: каждая причина - законченная фраза на 60-110 символов.
 Порядок ключей соблюдай строго, direction ставь первым.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["факт по графику","факт по графику","факт по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 предложения общей картины","entryWindow":"когда входить","expiry":"сколько держать","strategy":"2 предложения: где вход, что подтверждает и что отменяет идею","tips":["практический совет","практический совет"]}
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["факт по графику","факт по графику","факт по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 предложения общей картины","entryWindow":"когда входить","expiry":"сколько держать"}
 Если график нечитаемый или картина смешанная - direction "NO_SIGNAL", и в reasons объясни, чего не хватает.
-reasons обязателен, 3 пункта. strategy и tips заполняй всегда, когда график читается.`;
+reasons обязателен, 3 пункта.`;
 
 const FAST_EN = `You are an experienced trading analyst. Give a short read of this binary options chart screenshot.
 Answer with ONE JSON object only, no markdown, no text around it.
 Write vividly and to the point: each reason is a complete phrase of 60-110 characters.
 Keep the key order exactly, direction first.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["chart fact","chart fact","chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 sentences on the overall picture","entryWindow":"when to enter","expiry":"how long to hold","strategy":"2 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"]}
+{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["chart fact","chart fact","chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 sentences on the overall picture","entryWindow":"when to enter","expiry":"how long to hold"}
 If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
-reasons is required, 3 items. Always fill strategy and tips when the chart is readable.`;
+reasons is required, 3 items.`;
+
+/* Развёрнутый текст запрашиваем вторым шагом, уже без скриншота */
+const ENRICH_RU = `Ты трейдер-наставник. По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}.
+Факты по графику: {REASONS}
+Объясни этот сигнал простым языком. Ответь ОДНИМ JSON без markdown:
+{"summary":"2 предложения: что сейчас происходит на рынке","strategy":"2-3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет"]}
+Не противоречь направлению {DIR}. Не выдумывай цифры, которых нет в фактах.`;
+
+const ENRICH_EN = `You are a trading mentor. A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}.
+Chart facts: {REASONS}
+Explain this signal in plain language. Answer with ONE JSON, no markdown:
+{"summary":"2 sentences on what the market is doing now","strategy":"2-3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"]}
+Do not contradict direction {DIR}. Do not invent numbers that are not in the facts.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
 {"direction":"BUY|SELL|NO_SIGNAL","reasons":["до 50 символов","до 50 символов"],"confidence":"низкая|средняя|высокая"}
@@ -814,6 +828,34 @@ module.exports = async (req, res) => {
       }
     }
 
+    // Шаг 3: развёрнутый текст отдельным запросом без картинки - сигнал уже в руках и не пострадает
+    if (best && best.direction && bestReasons.length) {
+      const ms = budget(12000);
+      if (ms >= 6000) {
+        const tpl = lang === "ru" ? ENRICH_RU : ENRICH_EN;
+        const ep = tpl
+          .split("{DIR}").join(normDirection(best.direction))
+          .split("{REASONS}").join(bestReasons.join("; "))
+          .split("{ASSET}").join(String(best.asset || "-"))
+          .split("{TF}").join(String(best.timeframe || "-"));
+        const r = await callModel(apiKey, MODELS[0], [{ text: ep }], 0.5, ms, true);
+        if (r.ok) {
+          const ex = Object.assign(extractFields(r.text), r.parsed || {});
+          const cut2 = !!r.truncated;
+          const sum2 = trimPartialText(String(ex.summary || ""), cut2);
+          const st2 = trimPartialText(String(ex.strategy || ""), cut2);
+          const tp2 = cleanList(ex.tips, 3);
+          if (sum2 && sum2.length > String((best && best.summary) || "").length) best.summary = sum2;
+          if (st2) best.strategy = st2;
+          if (tp2.length) best.tips = tp2;
+        } else {
+          diag.push("enrich: " + r.error);
+        }
+      } else {
+        diag.push("enrich skipped (time)");
+      }
+    }
+
     const degraded = !best || !bestReasons.length;
     const direction = normDirection(best && best.direction);
     const finalDirection = degraded ? "NO_SIGNAL" : direction;
@@ -838,6 +880,9 @@ module.exports = async (req, res) => {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
     }
 
+    if (!degraded && bestCut) {
+      console.error("ANALYZE_CUT " + diag.join(" | ") + " reasons=" + bestReasons.length + " raw=" + String(rawSeen).slice(0, 600));
+    }
     if (!degraded) cacheSet(cacheKey, payload);
     supaLogAnalyze(user.id);
     return res.status(200).json(payload);
