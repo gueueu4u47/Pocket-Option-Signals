@@ -154,6 +154,30 @@
   .rm-img{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;
     background:rgba(0,0,0,.75);color:#fff;font-size:20px;display:grid;place-items:center;}
 
+  /* Tappable params */
+  .v-param{position:relative;padding-right:34px;}
+  .v-param::after{content:"";position:absolute;right:14px;top:50%;width:7px;height:7px;
+    border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);
+    transform:translateY(-60%) rotate(45deg);opacity:.9;}
+  .v-param .vp-hint{display:inline-flex;align-items:center;gap:4px;margin-top:5px;
+    color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.04em;opacity:.85;}
+  .v-param.tapped{border-color:var(--accent);background:var(--accent-soft);}
+  .v-params{position:relative;}
+
+  /* Camera / gallery buttons */
+  .pick-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .pick-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;
+    border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);
+    font-size:13px;font-weight:800;cursor:pointer;}
+  .pick-btn:active{border-color:var(--accent);background:var(--accent-soft);}
+  .pick-btn input{display:none;}
+  .pick-btn svg{width:17px;height:17px;}
+
+  /* Chart note */
+  .chart-note{margin:0;padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);
+    font-size:11px;line-height:1.5;}
+  .chart-note.hide{display:none;}
+
   /* Live chart */
   .chart-box{margin-bottom:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden;}
   .chart-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);}
@@ -463,11 +487,12 @@
           <iframe id="chartFrame" title="chart" loading="lazy" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
           <div class="chart-off" id="chartOff"><span id="chartOffText">Для OTC-пар график недоступен — эти активы есть только в терминале брокера.</span></div>
         </div>
+        <p class="chart-note hide" id="chartNote"></p>
       </div>
 
       <div class="v-params">
-        <button class="v-param" id="cAssetBtn" type="button"><small id="cAssetCap">АКТИВ</small><b id="cAssetVal">—</b></button>
-        <button class="v-param" id="cDurBtn" type="button"><small id="cDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="cDurVal">—</b></button>
+        <button class="v-param" id="cAssetBtn" type="button"><small id="cAssetCap">АКТИВ</small><b id="cAssetVal">—</b><span class="vp-hint" id="cAssetHint">Нажми, чтобы выбрать</span></button>
+        <button class="v-param" id="cDurBtn" type="button"><small id="cDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="cDurVal">—</b><span class="vp-hint" id="cDurHint">Нажми, чтобы выбрать</span></button>
       </div>
 
       <div id="createAdvanced" style="display:none">
@@ -545,8 +570,8 @@
     </div>
     <div class="card">
       <div class="v-params">
-        <button class="v-param" id="vAssetBtn" type="button"><small id="vAssetCap">АКТИВ</small><b id="vAssetVal">—</b></button>
-        <button class="v-param" id="vDurBtn" type="button"><small id="vDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="vDurVal">—</b></button>
+        <button class="v-param" id="vAssetBtn" type="button"><small id="vAssetCap">АКТИВ</small><b id="vAssetVal">—</b><span class="vp-hint" id="vAssetHint">Нажми, чтобы выбрать</span></button>
+        <button class="v-param" id="vDurBtn" type="button"><small id="vDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="vDurVal">—</b><span class="vp-hint" id="vDurHint">Нажми, чтобы выбрать</span></button>
       </div>
       <label class="upload" for="imageInput">
         <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
@@ -554,6 +579,17 @@
         <strong id="uploadTitle">Выбрать скриншот</strong>
         <span id="uploadHint">PNG, JPG или WEBP · до 8 МБ</span>
       </label>
+      <div class="pick-row">
+        <label class="pick-btn" for="imageInput">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span id="pickGalleryText">Из галереи</span>
+        </label>
+        <label class="pick-btn" for="camInput">
+          <input id="camInput" type="file" accept="image/*" capture="environment" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="pickCameraText">Сфотографировать</span>
+        </label>
+      </div>
       <div class="preview" id="preview"><img id="previewImg" alt="" /><button class="rm-img" id="removeImg" type="button">×</button></div>
       <button class="btn primary" id="analyzeBtn" disabled>Анализировать график</button>
       <div class="shot-tip" id="shotTip">
@@ -1056,6 +1092,31 @@
   };
   for (var _lc2 in EXTRA_T2){ if(T[_lc2]){ for(var _ek2 in EXTRA_T2[_lc2]){ T[_lc2][_ek2] = EXTRA_T2[_lc2][_ek2]; } } }
 
+  var EXTRA_T3 = {
+    ru:{ tapToPick:"Нажми, чтобы выбрать", pickGallery:"Из галереи", pickCamera:"Сфотографировать",
+      chartProxy:"Показан график реального рынка — у OTC своя котировка брокера, цифры могут отличаться.",
+      chartExotic:"Графика по этой паре нет ни на одной публичной бирже — такие активы брокер рисует сам." },
+    en:{ tapToPick:"Tap to choose", pickGallery:"From gallery", pickCamera:"Take a photo",
+      chartProxy:"Showing the real market chart — OTC has its own broker quote, so the numbers may differ.",
+      chartExotic:"This pair has no chart on any public exchange — the broker draws such assets itself." },
+    uz:{ tapToPick:"Tanlash uchun bosing", pickGallery:"Galereyadan", pickCamera:"Suratga olish",
+      chartProxy:"Haqiqiy bozor grafigi ko'rsatilgan — OTC narxi brokerning o'zida, raqamlar farq qilishi mumkin.",
+      chartExotic:"Bu juftlik uchun hech bir ochiq birjada grafik yo'q — bunday aktivlarni broker o'zi chizadi." },
+    hi:{ tapToPick:"चुनने के लिए दबाएँ", pickGallery:"गैलरी से", pickCamera:"फोटो लें",
+      chartProxy:"वास्तविक बाज़ार का चार्ट दिख रहा है — OTC का भाव ब्रोकर का अपना होता है, संख्याएँ बदल सकती हैं।",
+      chartExotic:"इस जोडी का चार्ट किसी सार्वजनिक एक्सचेंज पर नहीं है — ऐसी संपत्तियाँ ब्रोकर स्वयं बनाता है।" },
+    pt:{ tapToPick:"Toque para escolher", pickGallery:"Da galeria", pickCamera:"Tirar foto",
+      chartProxy:"Mostrando o gráfico do mercado real — o OTC tem a cotação própria da corretora, os números podem diferir.",
+      chartExotic:"Este par não tem gráfico em nenhuma bolsa pública — a corretora desenha esses ativos por conta própria." },
+    ar:{ tapToPick:"انقر للاختيار", pickGallery:"من المعرض", pickCamera:"التقاط صورة",
+      chartProxy:"يظهر رسم السوق الحقيقي — لـ OTC سعر خاص من الوسيط وقد تختلف الأرقام.",
+      chartExotic:"لا يوجد رسم لهذا الزوج في أي بورصة عامة — الوسيط يرسم مزل هذه الأصول بنفسه." },
+    kk:{ tapToPick:"Таңдау үшін басыңыз", pickGallery:"Галереядан", pickCamera:"Суретке түсіру",
+      chartProxy:"Нақты нарық графигі көрсетілген — OTC бағасы брокердің өзінде, сандар өзгеше болуы мүмкін.",
+      chartExotic:"Бұл жұп үшін ешбір ашық биржада график жоқ — мұндай активтерді брокер өзі сызады." }
+  };
+  for (var _lc3 in EXTRA_T3){ if(T[_lc3]){ for(var _ek3 in EXTRA_T3[_lc3]){ T[_lc3][_ek3] = EXTRA_T3[_lc3][_ek3]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1314,20 +1375,28 @@
     var box = $("chartBox"); if(!box) return;
     var pair = $("chartPair"); if(pair) pair.textContent = pairFlag(state.asset) + " " + state.asset;
     var ct = $("chartTitle"); if(ct) ct.textContent = t("chartTitle");
-    var co = $("chartOffText"); if(co) co.textContent = t("chartOff");
+    var co = $("chartOffText"); if(co) co.textContent = t("chartExotic");
+    var note = $("chartNote");
     var isOtc = String(state.asset||"").indexOf(" OTC") > -1;
+    var base = String(state.asset||"").replace(" OTC","");
     var sym = tvSymbol(state.asset);
-    if(isOtc || !sym){
+    // Публичный график есть только у биржевых пар; у OTC берём её реальный аналог
+    var hasReal = FX.indexOf(base) > -1;
+    if(!sym || !hasReal){
       box.classList.add("off");
+      if(note){ note.classList.add("hide"); note.textContent = ""; }
       var fr0 = $("chartFrame");
       if(fr0 && chartSrcNow){ fr0.removeAttribute("src"); chartSrcNow = ""; }
       return;
     }
     box.classList.remove("off");
+    if(note){
+      if(isOtc){ note.textContent = t("chartProxy"); note.classList.remove("hide"); }
+      else { note.textContent = ""; note.classList.add("hide"); }
+    }
     var iv = TV_INTERVAL[state.duration] || "1";
-    var theme = "dark";
     var src = "https://s.tradingview.com/widgetembed/?symbol=" + encodeURIComponent(sym) +
-      "&interval=" + iv + "&theme=" + theme + "&style=1&locale=en&hide_top_toolbar=1&hide_legend=0" +
+      "&interval=" + iv + "&theme=dark&style=1&locale=en&hide_top_toolbar=1&hide_legend=0" +
       "&hidesidetoolbar=1&allow_symbol_change=0&saveimage=0&withdateranges=0&timezone=Etc%2FUTC";
     if(src !== chartSrcNow){
       var fr = $("chartFrame");
@@ -2369,6 +2438,9 @@
     $("welcomeSub").textContent=t("welcomeSub"); if($("wStart")) $("wStart").textContent=t("btnStart");
     renderAssets($("assetSearch").value); renderDurations(); renderHistory(); renderStats();
     syncVisionParams();
+    ["vAssetHint","vDurHint","cAssetHint","cDurHint"].forEach(function(id){ if($(id)) $(id).textContent = t("tapToPick"); });
+    if($("pickGalleryText")) $("pickGalleryText").textContent = t("pickGallery");
+    if($("pickCameraText")) $("pickCameraText").textContent = t("pickCamera");
     if($("shotTipTitle")) $("shotTipTitle").textContent = t("shotTipTitle");
     if($("shotTip1")) $("shotTip1").textContent = t("shotTip1");
     if($("shotTip2")) $("shotTip2").textContent = t("shotTip2");
@@ -2400,17 +2472,20 @@
   $("emptyGoVision").addEventListener("click",function(){ setTab("vision"); });
   $("quickAgain").addEventListener("click", runQuick);
   $("quickHistory").addEventListener("click",function(){ setTab("history"); });
-  $("visionAgain").addEventListener("click",function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; window.scrollTo({top:0,behavior:"smooth"}); });
+  $("visionAgain").addEventListener("click",function(){ state.image=null; $("imageInput").value=""; $("camInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; window.scrollTo({top:0,behavior:"smooth"}); });
   $("visionHistory").addEventListener("click",function(){ setTab("history"); });
   $("detailClose").addEventListener("click", closeDetail);
   $("detailOverlay").addEventListener("click", function(e){ if(e.target===this) closeDetail(); });
-  $("imageInput").addEventListener("change", function(e){
-    var file = e.target.files && e.target.files[0]; if(!file) return;
-    if(["image/png","image/jpeg","image/webp"].indexOf(file.type)===-1){ alert(t("errBadType")); return; }
+  // Один обработчик на галерею и камеру; с камеры тип может быть любым image/*
+  function handlePickedFile(file){
+    if(!file) return;
+    if(String(file.type||"").indexOf("image/") !== 0){ alert(t("errBadType")); return; }
     if(file.size > 8*1024*1024){ alert(t("errTooLarge")); return; }
     compressImage(file).then(function(data){ state.image=data; $("previewImg").src=data; $("preview").classList.add("show"); $("analyzeBtn").disabled=false; }).catch(function(){ alert(t("errBadType")); });
-  });
-  $("removeImg").addEventListener("click", function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; });
+  }
+  $("imageInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
+  $("camInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
+  $("removeImg").addEventListener("click", function(){ state.image=null; $("imageInput").value=""; $("camInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; });
   $("analyzeBtn").addEventListener("click", analyze);
   $("langBtn").addEventListener("click", openLang);
   $("langClose").addEventListener("click", closeLang);
