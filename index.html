@@ -284,6 +284,16 @@
   .sched input{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;
     background:var(--bg2);color:var(--text);outline:none;}
 
+  .lang-h{margin:2px 0 12px;font-size:15px;font-weight:800;}
+  .lang-list{display:grid;gap:8px;}
+  .lang-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px;border:1px solid var(--line);
+    border-radius:13px;background:var(--card);text-align:left;font-size:14px;font-weight:700;color:var(--text);}
+  .lang-item.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);}
+  .lang-flag{font-size:22px;line-height:1;}
+  [dir="rtl"] .lang-item{text-align:right;}
+  [dir="rtl"] .lang-item.selected{box-shadow:inset -3px 0 0 var(--accent);}
+  [dir="rtl"] .reasons,[dir="rtl"] .sd-list{padding-left:0;padding-right:18px;}
+
   /* Bottom nav */
   .nav{position:fixed;z-index:20;bottom:0;left:50%;transform:translateX(-50%);
     display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,560px);
@@ -484,7 +494,7 @@
         <div id="visionConfWrap"><span class="r-conf" id="visionConf">—</span></div>
         <div class="facts">
           <div class="fact"><small id="vL1">АКТИВ</small><b id="visionAsset">—</b></div>
-          <div class="fact"><small id="vL2">ДЛИ����ЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
+          <div class="fact"><small id="vL2">ДЛИТЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
           <div class="fact"><small id="vL3">ВХОД</small><b id="visionEntry">—</b></div>
           <div class="fact"><small id="vL4">ДО РЕЗУЛЬТАТА</small><b id="visionOutcome">—</b></div>
         </div>
@@ -512,7 +522,7 @@
     <div class="card">
       <div class="p-row">
         <div><b id="langTitle">Язык интерфейса</b><span id="langHint">Сохраняется после перезапуска</span></div>
-        <select id="langSelect"><option value="ru">Русский</option><option value="en">English</option></select>
+        <button class="toggle" id="langBtn">🇷🇺 Русский</button>
       </div>
       <div class="p-row">
         <div><b id="soundTitle">Звук интерфейса</b><span id="soundHint">Тихий отклик при нажатии</span></div>
@@ -544,6 +554,16 @@
     <button class="sheet-close" id="detailClose" type="button">×</button>
     <div class="sheet-chart" id="detailChart"><div class="sc-in" id="detailChartIn"></div></div>
     <div class="sheet-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="langOverlay">
+  <div class="sheet">
+    <button class="sheet-close" id="langClose" type="button">×</button>
+    <div class="sheet-body">
+      <h4 class="lang-h" id="langSheetTitle">Язык интерфейса</h4>
+      <div class="lang-list" id="langList"></div>
+    </div>
   </div>
 </div>
 
@@ -603,7 +623,7 @@
       statsTitle:"Личная статистика", statAll:"Всего",
       profileNotice:"Pulse Vision анализирует только видимые элементы загруженного графика и не гарантирует направление или итог.",
       visionRisk:"Это анализ изображения, а не гарантия результата.",
-      detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для это��о результата недоступен.",
+      detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для этого результата недоступен.",
       win:"Win", loss:"Loss", skip:"Пропустить",
       errFailed:"Pulse Vision временно недоступен. Попробуйте позже.",
       errTimeout:"Анализ не успел завершиться. Повтори попытку.",
@@ -616,7 +636,8 @@
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Оформление", designSub:"Тема и режим показа сохраняются на этом устройстве.",
       modeAlways:"Постоянно", modeNow:"Сейчас", modeSchedule:"Расписание", modeLaunch:"Запуск", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"С (Asia/Oral)", schedTo:"До (Asia/Oral)", saveDesign:"Сохранить оформление", savedDesign:"Сохранено",
-      greetMorning:"Доброе утро", greetDay:"Добрый день", greetEvening:"Добрый вечер"
+      greetMorning:"Доброе утро", greetDay:"Добрый день", greetEvening:"Добрый вечер",
+      unitSec:"сек", unitMin:"мин", unitHour:"ч"
     },
     en:{
       brand:"Personal chart assistant", welcomeSub:"Signal Pulse is ready.",
@@ -657,16 +678,253 @@
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Appearance", designSub:"Theme and display mode are stored on this device.",
       modeAlways:"Always", modeNow:"Now", modeSchedule:"Schedule", modeLaunch:"Launch", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"From (Asia/Oral)", schedTo:"To (Asia/Oral)", saveDesign:"Save appearance", savedDesign:"Saved",
-      greetMorning:"Good morning", greetDay:"Good afternoon", greetEvening:"Good evening"
+      greetMorning:"Good morning", greetDay:"Good afternoon", greetEvening:"Good evening",
+      unitSec:"sec", unitMin:"min", unitHour:"h"
+    },
+    uz:{
+      brand:"Grafik bilan ishlash uchun shaxsiy yordamchi", welcomeSub:"Signal Pulse ishga tayyor.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Boshlash",
+      navHistory:"Tarix", navCreate:"Yaratish", navVision:"Vision", navProfile:"Profil",
+      historyEyebrow:"TARIX", historyTitle:"Natijalar tarixi", historyText:"Pulse Vision va Pulse Quick natijalari shu yerda ko'rinadi.",
+      emptyTitle:"Tarix hozircha bo'sh", emptyText:"Pulse Vision'ga grafik yuklang yoki tezkor natija yarating.", goVision:"Pulse Vision'ga o'tish",
+      createEyebrow:"YARATISH", createTitle:"Natija parametrlari", createText:"OTC aktiv, davomiylik, kirish turi va rejimni tanlang.",
+      assetLabel:"OTC aktiv", searchPlaceholder:"Aktivni qidirish", durationLabel:"Davomiylik", entryLabel:"Kirish turi",
+      entryNearest:"Eng yaqin nuqta", entryLater:"Davomiylikdan keyin", modeLabel:"Rejim",
+      visionModeText:"Yuklangan grafik tahlili", quickModeText:"Valyuta juftligi harakati va bozor faolligi bo'yicha signal",
+      actionVision:"Pulse Vision'ga o'tish", actionQuick:"Pulse Quick'ni ishga tushirish", quickPreparing:"Bozorni tahlil qilmoqdamiz…",
+      qs1:"Tanlangan juftlikni o'qiymiz", qs2:"Narx harakatini ko'ramiz", qs3:"Yaqin darajalarni tekshiramiz", qs4:"Bozor faolligini solishtiramiz", qs5:"Signalni shakllantiramiz",
+      visionEyebrow:"PULSE VISION", visionTitle:"Grafik tahlili", visionText:"To'liq skrinshot yuklang — ilova nisbatlarni saqlaydi.",
+      uploadTitle:"Skrinshot tanlash", uploadHint:"PNG, JPG yoki WEBP · 8 MB gacha", analyze:"Grafikni tahlil qilish",
+      stage1:"Rasmni tayyorlaymiz", stage2:"Grafik tuzilishini o'rganamiz", stage3:"Ko'rinadigan darajalarni tekshiramiz", stage4:"Natijani shakllantiramiz",
+      confidence:"Ishonch", asset:"AKTIV", duration:"DAVOMIYLIK", entry:"KIRISH", outcomeBy:"NATIJAGACHA",
+      cdEntry:"Kirishgacha", cdResult:"Natijagacha", cdDone:"Natija vaqti keldi",
+      dirUp:"YUQORI", dirDown:"PAST", dirNone:"SIGNAL YO'Q", confLow:"past", confMid:"o'rta", confHigh:"yuqori",
+      newAnalysis:"Yangi tahlil", newQuick:"Yangi Pulse Quick", openHistory:"Tarixni ochish",
+      profileEyebrow:"PROFIL", profileTitle:"Sozlamalar", profileText:"Sozlamalar shu qurilmada saqlanadi.",
+      langTitle:"Interfeys tili", langHint:"Qayta ishga tushirilganda ham saqlanadi", soundTitle:"Interfeys ovozi", soundHint:"Bosishda yumshoq javob",
+      hapticTitle:"Taktil javob", hapticHint:"Bosishda Telegram tebranishi", on:"Yoniq", off:"O'chiq",
+      selAssetTitle:"Tanlangan aktiv", selAssetHint:"Natija yaratishda ishlatiladi",
+      statsTitle:"Shaxsiy statistika", statAll:"Jami",
+      profileNotice:"Pulse Vision faqat yuklangan grafikning ko'rinadigan elementlarini tahlil qiladi va yo'nalish yoki natijani kafolatlamaydi.",
+      visionRisk:"Bu rasm tahlili, natija kafolati emas.",
+      detailWhy:"Nega bunday signal", detailStrategy:"Strategiya", detailTips:"Maslahatlar", detailSummary:"Qisqacha", detailTimeframe:"Taymfreym", detailNoData:"Bu natija uchun batafsil tahlil mavjud emas.",
+      win:"Win", loss:"Loss", skip:"O'tkazib yuborish",
+      errFailed:"Pulse Vision vaqtincha ishlamaydi. Keyinroq urinib ko'ring.",
+      errTimeout:"Tahlil o'z vaqtida tugamadi. Yana urinib ko'ring.",
+      errNetwork:"Server bilan aloqa yo'q. Internetni tekshirib, qayta urinib ko'ring.",
+      errServer:"Tahlil xizmati xato qaytardi. Bir daqiqadan so'ng urinib ko'ring.",
+      errBusy:"So'rovlar chegarasi tugadi. Kutib, qayta urinib ko'ring.",
+      errDegraded:"Grafikni o'qib bo'lmadi. To'liq skrinshot oling: shamlar, vaqt va narx shkalasi.",
+      errTooLarge:"Rasm juda katta. 8 MB gacha fayl tanlang.", errBadType:"Faqat PNG, JPG va WEBP qo'llanadi.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"Egasi paneli", ownerSub:"Signal Pulse server statistikasi. Kirish Telegram orqali tasdiqlandi.",
+      mUsers:"Foydalanuvchilar", mResults:"Natijalar", mEvents:"Hodisalar", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Bugun", refresh:"Ko'rsatkichlarni yangilash",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Ko'rinish", designSub:"Mavzu va ko'rsatish rejimi shu qurilmada saqlanadi.",
+      modeAlways:"Doimiy", modeNow:"Hozir", modeSchedule:"Jadval", modeLaunch:"Ishga tushish", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"Dan (Asia/Oral)", schedTo:"Gacha (Asia/Oral)", saveDesign:"Ko'rinishni saqlash", savedDesign:"Saqlandi",
+      greetMorning:"Xayrli tong", greetDay:"Xayrli kun", greetEvening:"Xayrli kech",
+      unitSec:"sek", unitMin:"daq", unitHour:"soat"
+    },
+    hi:{
+      brand:"चार्ट के लिए निजी सहायक", welcomeSub:"Signal Pulse तैयार है।",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"शुरू करें",
+      navHistory:"इतिहास", navCreate:"बनाएँ", navVision:"Vision", navProfile:"प्रोफ़ाइल",
+      historyEyebrow:"इतिहास", historyTitle:"परिणामों का इतिहास", historyText:"Pulse Vision और Pulse Quick के परिणाम यहाँ दिखते हैं।",
+      emptyTitle:"इतिहास अभी खाली है", emptyText:"Pulse Vision में चार्ट अपलोड करें या तेज़ परिणाम बनाएँ।", goVision:"Pulse Vision खोलें",
+      createEyebrow:"बनाएँ", createTitle:"परिणाम की सेटिंग", createText:"OTC एसेट, अवधि, एंट्री प्रकार और मोड चुनें।",
+      assetLabel:"OTC एसेट", searchPlaceholder:"एसेट खोजें", durationLabel:"अवधि", entryLabel:"एंट्री प्रकार",
+      entryNearest:"निकटतम बिंदु", entryLater:"अवधि के बाद", modeLabel:"मोड",
+      visionModeText:"अपलोड किए चार्ट का विश्लेषण", quickModeText:"जोड़ी की चाल और बाज़ार सक्रियता पर संकेत",
+      actionVision:"Pulse Vision खोलें", actionQuick:"Pulse Quick चलाएँ", quickPreparing:"बाज़ार का विश्लेषण…",
+      qs1:"चुनी गई जोड़ी पढ़ रहे हैं", qs2:"कीमत की चाल देख रहे हैं", qs3:"नज़दीकी स्तर जाँच रहे हैं", qs4:"बाज़ार सक्रियता मिला रहे हैं", qs5:"संकेत बना रहे हैं",
+      visionEyebrow:"PULSE VISION", visionTitle:"चार्ट विश्लेषण", visionText:"पूरा स्क्रीनशॉट अपलोड करें — ऐप अनुपात बनाए रखता है।",
+      uploadTitle:"स्क्रीनशॉट चुनें", uploadHint:"PNG, JPG या WEBP · 8 MB तक", analyze:"चार्ट का विश्लेषण करें",
+      stage1:"छवि तैयार कर रहे हैं", stage2:"चार्ट संरचना पढ़ रहे हैं", stage3:"दिखने वाले स्तर जाँच रहे हैं", stage4:"परिणाम बना रहे हैं",
+      confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
+      cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
+      dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
+      newAnalysis:"नया विश्लेषण", newQuick:"नया Pulse Quick", openHistory:"इतिहास खोलें",
+      profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
+      langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
+      hapticTitle:"कंपन प्रतिक्रिया", hapticHint:"टैप पर Telegram कंपन", on:"चालू", off:"बंद",
+      selAssetTitle:"चुना गया एसेट", selAssetHint:"परिणाम बनाते समय उपयोग होता है",
+      statsTitle:"निजी आँकड़े", statAll:"कुल",
+      profileNotice:"Pulse Vision केवल अपलोड किए चार्ट के दिखने वाले हिस्सों का विश्लेषण करता है और दिशा या परिणाम की गारंटी नहीं देता।",
+      visionRisk:"यह छवि का विश्लेषण है, परिणाम की गारंटी नहीं।",
+      detailWhy:"यह संकेत क्यों", detailStrategy:"रणनीति", detailTips:"सुझाव", detailSummary:"संक्षेप", detailTimeframe:"टाइमफ़्रेम", detailNoData:"इस परिणाम के लिए विस्तृत विवरण नहीं है।",
+      win:"Win", loss:"Loss", skip:"छोड़ें",
+      errFailed:"Pulse Vision अभी उपलब्ध नहीं है। बाद में कोशिश करें।",
+      errTimeout:"विश्लेषण समय पर पूरा नहीं हुआ। दोबारा कोशिश करें।",
+      errNetwork:"सर्वर से संपर्क नहीं है। इंटरनेट जाँचें और दोबारा कोशिश करें।",
+      errServer:"विश्लेषण सेवा ने त्रुटि दी। एक मिनट बाद कोशिश करें।",
+      errBusy:"अनुरोध सीमा पूरी हो गई। रुककर दोबारा कोशिश करें।",
+      errDegraded:"चार्ट पढ़ा नहीं जा सका। पूरा स्क्रीनशॉट लें: कैंडल, समय और कीमत की पट्टी।",
+      errTooLarge:"छवि बहुत बड़ी है। 8 MB तक की फ़ाइल चुनें।", errBadType:"केवल PNG, JPG और WEBP समर्थित हैं।",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"मालिक पैनल", ownerSub:"Signal Pulse सर्वर आँकड़े। पहुँच Telegram से सत्यापित।",
+      mUsers:"उपयोगकर्ता", mResults:"परिणाम", mEvents:"घटनाएँ", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"आज", refresh:"आँकड़े ताज़ा करें",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"रूप-रंग", designSub:"थीम और प्रदर्शन मोड इसी डिवाइस पर रहते हैं।",
+      modeAlways:"हमेशा", modeNow:"अभी", modeSchedule:"समय-सारणी", modeLaunch:"शुरुआत", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"से (Asia/Oral)", schedTo:"तक (Asia/Oral)", saveDesign:"रूप-रंग सहेजें", savedDesign:"सहेजा गया",
+      greetMorning:"सुप्रभात", greetDay:"नमस्ते", greetEvening:"शुभ संध्या",
+      unitSec:"से", unitMin:"मिन", unitHour:"घं"
+    },
+    pt:{
+      brand:"Assistente pessoal para gráficos", welcomeSub:"Signal Pulse está pronto.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Começar",
+      navHistory:"Histórico", navCreate:"Criar", navVision:"Vision", navProfile:"Perfil",
+      historyEyebrow:"HISTÓRICO", historyTitle:"Histórico de resultados", historyText:"Os resultados do Pulse Vision e do Pulse Quick aparecem aqui.",
+      emptyTitle:"Histórico vazio", emptyText:"Envie um gráfico no Pulse Vision ou crie um resultado rápido.", goVision:"Abrir Pulse Vision",
+      createEyebrow:"CRIAR", createTitle:"Parâmetros do resultado", createText:"Escolha o ativo OTC, a duração, o tipo de entrada e o modo.",
+      assetLabel:"Ativo OTC", searchPlaceholder:"Buscar ativo", durationLabel:"Duração", entryLabel:"Tipo de entrada",
+      entryNearest:"Ponto mais próximo", entryLater:"Após a duração", modeLabel:"Modo",
+      visionModeText:"Análise do gráfico enviado", quickModeText:"Sinal pelo movimento do par e pela atividade do mercado",
+      actionVision:"Abrir Pulse Vision", actionQuick:"Iniciar Pulse Quick", quickPreparing:"Analisando o mercado…",
+      qs1:"Lendo o par selecionado", qs2:"Observando o movimento do preço", qs3:"Verificando os níveis próximos", qs4:"Medindo a atividade do mercado", qs5:"Formando o sinal",
+      visionEyebrow:"PULSE VISION", visionTitle:"Análise do gráfico", visionText:"Envie a captura completa — o app mantém as proporções.",
+      uploadTitle:"Escolher captura", uploadHint:"PNG, JPG ou WEBP · até 8 MB", analyze:"Analisar gráfico",
+      stage1:"Preparando a imagem", stage2:"Estudando a estrutura do gráfico", stage3:"Verificando níveis visíveis", stage4:"Formando o resultado",
+      confidence:"Confiança", asset:"ATIVO", duration:"DURAÇÃO", entry:"ENTRADA", outcomeBy:"ATÉ O RESULTADO",
+      cdEntry:"Entrada em", cdResult:"Resultado em", cdDone:"A hora do resultado chegou",
+      dirUp:"PARA CIMA", dirDown:"PARA BAIXO", dirNone:"SEM SINAL", confLow:"baixa", confMid:"média", confHigh:"alta",
+      newAnalysis:"Nova análise", newQuick:"Novo Pulse Quick", openHistory:"Abrir histórico",
+      profileEyebrow:"PERFIL", profileTitle:"Configurações", profileText:"As configurações ficam neste dispositivo.",
+      langTitle:"Idioma da interface", langHint:"Salvo após reiniciar", soundTitle:"Som da interface", soundHint:"Resposta suave ao toque",
+      hapticTitle:"Resposta tátil", hapticHint:"Vibração do Telegram ao toque", on:"Ligado", off:"Desligado",
+      selAssetTitle:"Ativo selecionado", selAssetHint:"Usado ao criar um resultado",
+      statsTitle:"Estatística pessoal", statAll:"Total",
+      profileNotice:"O Pulse Vision analisa apenas os elementos visíveis do gráfico enviado e não garante direção nem resultado.",
+      visionRisk:"Esta é uma análise de imagem, não uma garantia de resultado.",
+      detailWhy:"Por que este sinal", detailStrategy:"Estratégia", detailTips:"Dicas", detailSummary:"Resumo", detailTimeframe:"Tempo gráfico", detailNoData:"Não há análise detalhada para este resultado.",
+      win:"Win", loss:"Loss", skip:"Pular",
+      errFailed:"O Pulse Vision está indisponível agora. Tente mais tarde.",
+      errTimeout:"A análise não terminou em tempo. Tente de novo.",
+      errNetwork:"Sem conexão com o servidor. Verifique a internet e tente de novo.",
+      errServer:"O serviço de análise retornou um erro. Tente em um minuto.",
+      errBusy:"Limite de solicitações atingido. Aguarde e tente de novo.",
+      errDegraded:"Não foi possível ler o gráfico. Faça a captura completa: velas, escala de tempo e de preço.",
+      errTooLarge:"A imagem é muito grande. Escolha um arquivo de até 8 MB.", errBadType:"Apenas PNG, JPG e WEBP são aceitos.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"Painel do proprietário", ownerSub:"Estatísticas do servidor do Signal Pulse. Acesso verificado pelo Telegram.",
+      mUsers:"Usuários", mResults:"Resultados", mEvents:"Eventos", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Hoje", refresh:"Atualizar métricas",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Aparência", designSub:"O tema e o modo de exibição ficam neste dispositivo.",
+      modeAlways:"Sempre", modeNow:"Agora", modeSchedule:"Agenda", modeLaunch:"Início", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"De (Asia/Oral)", schedTo:"Até (Asia/Oral)", saveDesign:"Salvar aparência", savedDesign:"Salvo",
+      greetMorning:"Bom dia", greetDay:"Boa tarde", greetEvening:"Boa noite",
+      unitSec:"s", unitMin:"min", unitHour:"h"
+    },
+    ar:{
+      brand:"مساعد شخصي للعمل مع الرسم البياني", welcomeSub:"Signal Pulse جاهز.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"ابدأ",
+      navHistory:"السجل", navCreate:"إنشاء", navVision:"Vision", navProfile:"الملف",
+      historyEyebrow:"السجل", historyTitle:"سجل النتائج", historyText:"تظهر هنا نتائج Pulse Vision و Pulse Quick.",
+      emptyTitle:"السجل فارغ حتى الآن", emptyText:"حمّل رسمًا بيانيًا في Pulse Vision أو أنشئ نتيجة سريعة.", goVision:"الانتقال إلى Pulse Vision",
+      createEyebrow:"إنشاء", createTitle:"إعدادات النتيجة", createText:"اختر أصل OTC والمدة ونوع الدخول والوضع.",
+      assetLabel:"أصل OTC", searchPlaceholder:"بحث عن أصل", durationLabel:"المدة", entryLabel:"نوع الدخول",
+      entryNearest:"أقرب نقطة", entryLater:"بعد المدة", modeLabel:"الوضع",
+      visionModeText:"تحليل الرسم البياني المُحمّل", quickModeText:"إشارة حسب حركة الزوج ونشاط السوق",
+      actionVision:"الانتقال إلى Pulse Vision", actionQuick:"تشغيل Pulse Quick", quickPreparing:"نحلل السوق…",
+      qs1:"نقرأ الزوج المختار", qs2:"نراقب حركة السعر", qs3:"نتحقق من المستويات القريبة", qs4:"نقيس نشاط السوق", qs5:"نُشكّل الإشارة",
+      visionEyebrow:"PULSE VISION", visionTitle:"تحليل الرسم البياني", visionText:"حمّل لقطة شاشة كاملة — يحفظ التطبيق الأبعاد.",
+      uploadTitle:"اختيار لقطة الشاشة", uploadHint:"PNG أو JPG أو WEBP · حتى 8 ميغابايت", analyze:"تحليل الرسم البياني",
+      stage1:"نجهّز الصورة", stage2:"ندرس بنية الرسم", stage3:"نتحقق من المستويات الظاهرة", stage4:"نُشكّل النتيجة",
+      confidence:"الثقة", asset:"الأصل", duration:"المدة", entry:"الدخول", outcomeBy:"حتى النتيجة",
+      cdEntry:"الدخول بعد", cdResult:"النتيجة بعد", cdDone:"حان وقت النتيجة",
+      dirUp:"صعود", dirDown:"هبوط", dirNone:"لا إشارة", confLow:"منخفضة", confMid:"متوسطة", confHigh:"عالية",
+      newAnalysis:"تحليل جديد", newQuick:"Pulse Quick جديد", openHistory:"فتح السجل",
+      profileEyebrow:"الملف", profileTitle:"الإعدادات", profileText:"تُحفظ الإعدادات على هذا الجهاز.",
+      langTitle:"لغة الواجهة", langHint:"تبقى بعد إعادة التشغيل", soundTitle:"صوت الواجهة", soundHint:"استجابة خفيفة عند اللمس",
+      hapticTitle:"الاستجابة اللمسية", hapticHint:"اهتزاز Telegram عند اللمس", on:"مُفعّل", off:"مُعطّل",
+      selAssetTitle:"الأصل المختار", selAssetHint:"يُستخدم عند إنشاء نتيجة",
+      statsTitle:"إحصاءاتك", statAll:"الإجمالي",
+      profileNotice:"يحلل Pulse Vision العناصر الظاهرة في الرسم البياني المُحمّل فقط ولا يضمن الاتجاه أو النتيجة.",
+      visionRisk:"هذا تحليل صورة، وليس ضمانًا للنتيجة.",
+      detailWhy:"سبب هذه الإشارة", detailStrategy:"الاستراتيجية", detailTips:"نصائح", detailSummary:"باختصار", detailTimeframe:"الإطار الزمني", detailNoData:"لا يوجد تحليل مفصّل لهذه النتيجة.",
+      win:"Win", loss:"Loss", skip:"تخطٍّ",
+      errFailed:"Pulse Vision غير متاح حاليًا. حاول لاحقًا.",
+      errTimeout:"لم يكتمل التحليل في الوقت المحدد. حاول مرة أخرى.",
+      errNetwork:"لا اتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.",
+      errServer:"أعادت خدمة التحليل خطأً. حاول بعد دقيقة.",
+      errBusy:"تم استهلاك حد الطلبات. انتظر ثم حاول مرة أخرى.",
+      errDegraded:"لم نتمكن من قراءة الرسم. خذ لقطة كاملة: الشموع ومقياس الوقت والسعر.",
+      errTooLarge:"الصورة كبيرة جدًا. اختر ملفًا حتى 8 ميغابايت.", errBadType:"المدعوم فقط PNG و JPG و WEBP.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"لوحة المالك", ownerSub:"إحصاءات خادم Signal Pulse. تم التحقق من الوصول عبر Telegram.",
+      mUsers:"المستخدمون", mResults:"النتائج", mEvents:"الأحداث", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"اليوم", refresh:"تحديث المؤشرات",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"المظهر", designSub:"يُحفظ المظهر ووضع العرض على هذا الجهاز.",
+      modeAlways:"دائمًا", modeNow:"الآن", modeSchedule:"جدول", modeLaunch:"البداية", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"من (Asia/Oral)", schedTo:"إلى (Asia/Oral)", saveDesign:"حفظ المظهر", savedDesign:"تم الحفظ",
+      greetMorning:"صباح الخير", greetDay:"طاب يومك", greetEvening:"مساء الخير",
+      unitSec:"ث", unitMin:"د", unitHour:"س"
+    },
+    kk:{
+      brand:"График бойынша жеке көмекші", welcomeSub:"Signal Pulse жұмысқа дайын.",
+      btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Бастау",
+      navHistory:"Тарих", navCreate:"Жасау", navVision:"Vision", navProfile:"Профиль",
+      historyEyebrow:"ТАРИХ", historyTitle:"Нәтижелер тарихы", historyText:"Мұнда Pulse Vision және Pulse Quick нәтижелері шығады.",
+      emptyTitle:"Тарих әзірге бос", emptyText:"Pulse Vision-ға график жүктеңіз немесе жылдам нәтиже жасаңыз.", goVision:"Pulse Vision-ға өту",
+      createEyebrow:"ЖАСАУ", createTitle:"Нәтиже параметрлері", createText:"OTC активін, ұзақтығын, кіру түрін және режимді таңдаңыз.",
+      assetLabel:"OTC активі", searchPlaceholder:"Актив іздеу", durationLabel:"Ұзақтығы", entryLabel:"Кіру түрі",
+      entryNearest:"Ең жақын нүкте", entryLater:"Ұзақтықтан кейін", modeLabel:"Режим",
+      visionModeText:"Жүктелген графикті талдау", quickModeText:"Валюта жұбының қозғалысы мен нарық белсенділігі бойынша сигнал",
+      actionVision:"Pulse Vision-ға өту", actionQuick:"Pulse Quick іске қосу", quickPreparing:"Нарықты талдап жатырмыз…",
+      qs1:"Таңдалған жұпты оқып жатырмыз", qs2:"Баға қозғалысын қараймыз", qs3:"Жақын деңгейлерді тексереміз", qs4:"Нарық белсенділігін салыстырамыз", qs5:"Сигнал құрып жатырмыз",
+      visionEyebrow:"PULSE VISION", visionTitle:"График талдауы", visionText:"Толық скриншот жүктеңіз — қолданба пропорцияны сақтайды.",
+      uploadTitle:"Скриншот таңдау", uploadHint:"PNG, JPG немесе WEBP · 8 МБ дейін", analyze:"Графикті талдау",
+      stage1:"Суретті дайындап жатырмыз", stage2:"График құрылымын зерттеп жатырмыз", stage3:"Көрінетін деңгейлерді тексереміз", stage4:"Нәтижені құрып жатырмыз",
+      confidence:"Сенімділік", asset:"АКТИВ", duration:"ҰЗАҚТЫҒЫ", entry:"КІРУ", outcomeBy:"НӘТИЖЕГЕ ДЕЙІН",
+      cdEntry:"Кіруге", cdResult:"Нәтижеге", cdDone:"Нәтиже уақыты келді",
+      dirUp:"ЖОҒАРЫ", dirDown:"ТӨМЕН", dirNone:"СИГНАЛ ЖОҚ", confLow:"төмен", confMid:"орташа", confHigh:"жоғары",
+      newAnalysis:"Жаңа талдау", newQuick:"Жаңа Pulse Quick", openHistory:"Тарихты ашу",
+      profileEyebrow:"ПРОФИЛЬ", profileTitle:"Параметрлер", profileText:"Параметрлер осы құрылғыда сақталады.",
+      langTitle:"Интерфейс тілі", langHint:"Қайта іске қосқанда сақталады", soundTitle:"Интерфейс дыбысы", soundHint:"Басқанда жұмсақ дыбыс",
+      hapticTitle:"Тактильді жауап", hapticHint:"Басқанда Telegram дірілі", on:"Қосулы", off:"Өшірулі",
+      selAssetTitle:"Таңдалған актив", selAssetHint:"Нәтиже жасағанда қолданылады",
+      statsTitle:"Жеке статистика", statAll:"Барлығы",
+      profileNotice:"Pulse Vision тек жүктелген графиктің көрінетін элементтерін талдайды және бағыт пен нәтижеге кепілдік бермейді.",
+      visionRisk:"Бұл сурет талдауы, нәтиже кепілдігі емес.",
+      detailWhy:"Сигнал неге осындай", detailStrategy:"Стратегия", detailTips:"Кеңестер", detailSummary:"Қысқаша", detailTimeframe:"Таймфрейм", detailNoData:"Бұл нәтиже үшін толық талдау жоқ.",
+      win:"Win", loss:"Loss", skip:"Өткізу",
+      errFailed:"Pulse Vision уақытша қолжетімсіз. Кейінірек көріңіз.",
+      errTimeout:"Талдау уақытында бітпеді. Қайта көріңіз.",
+      errNetwork:"Сервермен байланыс жоқ. Интернетті тексеріп, қайта көріңіз.",
+      errServer:"Талдау қызметі қате қайтарды. Бір минуттан кейін көріңіз.",
+      errBusy:"Сұраныс шегі бітті. Күтіп, қайта көріңіз.",
+      errDegraded:"Графикті оқу мүмкін болмады. Толық скриншот жасаңыз: шамдар, уақыт және баға шкаласы.",
+      errTooLarge:"Сурет тым үлкен. 8 МБ дейінгі файл таңдаңыз.", errBadType:"Тек PNG, JPG және WEBP қолданылады.",
+      ownerEyebrow:"PULSE CONTROL", ownerTitle:"Иесі панелі", ownerSub:"Signal Pulse сервер статистикасы. Кіру Telegram арқылы расталды.",
+      mUsers:"Қолданушылар", mResults:"Нәтижелер", mEvents:"Оқиғалар", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Бүгін", refresh:"Көрсеткіштерді жаңарту",
+      designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Безендіру", designSub:"Тақырып пен көрсету режимі осы құрылғыда сақталады.",
+      modeAlways:"Тұрақты", modeNow:"Қазір", modeSchedule:"Кесте", modeLaunch:"Іске қосу", modeVision:"Vision", modeQuick:"Quick",
+      schedFrom:"Бастап (Asia/Oral)", schedTo:"Дейін (Asia/Oral)", saveDesign:"Безендіруді сақтау", savedDesign:"Сақталды",
+      greetMorning:"Қайырлы таң", greetDay:"Қайырлы күн", greetEvening:"Қайырлы кеш",
+      unitSec:"сек", unitMin:"мин", unitHour:"сағ"
     }
   };
 
+  var LANGS = [
+    {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
+    {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
+    {code:"uz", label:"O'zbek", flag:"\uD83C\uDDFA\uD83C\uDDFF"},
+    {code:"hi", label:"हिन्दी", flag:"\uD83C\uDDEE\uD83C\uDDF3"},
+    {code:"pt", label:"Português", flag:"\uD83C\uDDE7\uD83C\uDDF7"},
+    {code:"ar", label:"العربية", flag:"\uD83C\uDDF8\uD83C\uDDE6"},
+    {code:"kk", label:"Қазақша", flag:"\uD83C\uDDF0\uD83C\uDDFF"}
+  ];
+  var LOCALES = {ru:"ru-RU", en:"en-GB", uz:"uz-UZ", hi:"hi-IN", pt:"pt-BR", ar:"ar-EG", kk:"kk-KZ"};
+  var RTL = {ar:true};
+
+  function langMeta(code){
+    for(var i=0;i<LANGS.length;i++){ if(LANGS[i].code===code) return LANGS[i]; }
+    return LANGS[0];
+  }
+  function hasLang(code){
+    if(!code) return false;
+    for(var i=0;i<LANGS.length;i++){ if(LANGS[i].code===code) return true; }
+    return false;
+  }
   function detectLang(){
     var saved = localStorage.getItem("pulse_language");
-    if(saved === "ru" || saved === "en") return saved;
-    if(tgUser && tgUser.language_code) return tgUser.language_code.indexOf("ru")===0 ? "ru" : "en";
-    var nav = (navigator.language || "ru").toLowerCase();
-    return nav.indexOf("ru")===0 ? "ru" : "ru";
+    if(hasLang(saved)) return saved;
+    var raw = (tgUser && tgUser.language_code) ? String(tgUser.language_code) : String(navigator.language || "ru");
+    var base = raw.toLowerCase().split("-")[0];
+    return hasLang(base) ? base : "ru";
   }
 
   var state = {
@@ -692,7 +950,8 @@
   if(!THEMES[state.theme]) state.theme = "obsidian";
 
   var $ = function(id){ return document.getElementById(id); };
-  var t = function(k){ return (T[state.language] && T[state.language][k]) || k; };
+  function localeTag(){ return LOCALES[state.language] || "en-GB"; }
+  var t = function(k){ var d = T[state.language] || T.ru; return d[k] || T.en[k] || T.ru[k] || k; };
 
   function esc(v){ return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];}); }
 
@@ -761,14 +1020,12 @@
 
   /* ---------- Time ---------- */
   function fmtTime(ms){
-    return new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ms));
+    return new Intl.DateTimeFormat(localeTag(),{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ms));
   }
   function durationText(sec){
-    var ru = state.language === "ru";
-    if(sec < 60) return sec + " " + (ru ? "сек" : "sec");
-    if(sec < 3600) return (sec/60) + " " + (ru ? "мин" : "min");
-    var h = sec/3600;
-    return (Math.round(h*10)/10) + " " + (ru ? "ч" : "h");
+    if(sec < 60) return sec + " " + t("unitSec");
+    if(sec < 3600) return (sec/60) + " " + t("unitMin");
+    return (Math.round((sec/3600)*10)/10) + " " + t("unitHour");
   }
   function timing(){
     var dur = state.duration, durMs = dur*1000;
@@ -904,7 +1161,7 @@
       var d = dirInfo(it.direction);
       var typeLabel = it.type==="vision" ? "Pulse Vision" : "Pulse Quick";
       var created;
-      try{ created = new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(it.createdAt)); }catch(e){ created=""; }
+      try{ created = new Intl.DateTimeFormat(localeTag(),{dateStyle:"medium",timeStyle:"short"}).format(new Date(it.createdAt)); }catch(e){ created=""; }
       return '<article class="h-item" data-open="'+it.id+'">'
         +'<div class="h-head"><b>'+esc(typeLabel)+' · '+esc(it.asset)+'</b><span class="badge '+d.cls+'">'+d.text+'</span></div>'
         +'<div class="h-meta"><span>'+t("entry")+': '+esc(it.entry)+'</span><span>'+t("outcomeBy")+': '+esc(it.outcomeTime)+'</span><span>'+t("duration")+': '+esc(it.duration)+'</span><span>'+esc(created)+'</span></div>'
@@ -1226,7 +1483,7 @@
              "Инициатива слегка у покупателя, борьба почти равная.",
              "Спрос чуть впереди — основание шаткое."]
           : ["Перевес продавца есть, но он едва заметен.",
-             "Инициатива слегка у ��родавца, борьба почти равная.",
+             "Инициатива слегка у продавца, борьба почти равная.",
              "Предложение чуть впереди — основание шаткое."]
       },
       en: {
@@ -1273,7 +1530,7 @@
                 "Основная торговля дня идёт ниже середины диапазона.",
                 "Цена держится ближе к нижней границе сессии."],
         atBottom: ["Цена прижимается к минимуму сессии — уровень тестируется.",
-                   "Работа идёт у дн�� дня, запаса хода вниз почти не осталось.",
+                   "Работа идёт у дна дня, запаса хода вниз почти не осталось.",
                    "Цена давит в нижнюю границу дневного диапазона."]
       },
       en: {
@@ -1412,7 +1669,7 @@
       if(actBand === "tight") out.push("Рынок зажат — в таком состоянии пропуск входа часто выгоднее самого входа.");
       else if(actBand === "wide") out.push("Размах большой: цена может сходить против тебя и вернуться — короткое время здесь рискованнее.");
       else if(strength === "weak") out.push("Слабый перевес — нормально пропустить и дождаться понятного движения.");
-      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее сл������во за тобой.");
+      else out.push("Сравни сигнал с графиком у брокера перед входом — последнее слово за тобой.");
     } else {
       out.push(pickBy(seed, [
         "Do not raise your size after a streak — the edge shifts faster than it feels.",
@@ -1444,7 +1701,7 @@
               "In this market an entry is a coin flip, not signal work."]
       },
       closed: {
-        ru: ["Рынок по этой паре закрыт, св��жег�� движения нет.",
+        ru: ["Рынок по этой паре закрыт, свежего движения нет.",
               "Последние данные устарели — судить о перевесе не по чему.",
               "Дождись открытия сессии: сигнал по замороженной цене смысла не имеет."],
         en: ["The market for this pair is closed, there is no fresh movement.",
@@ -1774,6 +2031,29 @@
       +'</svg>';
   }
 
+  function renderLangPicker(){
+    var cur = langMeta(state.language);
+    if($("langBtn")) $("langBtn").textContent = cur.flag + " " + cur.label;
+    if($("langSheetTitle")) $("langSheetTitle").textContent = t("langTitle");
+    var list = $("langList");
+    if(!list) return;
+    list.innerHTML = LANGS.map(function(l){
+      return '<button class="btn lang-item' + (l.code===state.language ? " selected" : "") + '" data-lang="' + l.code + '">'
+        + '<span class="lang-flag">' + l.flag + '</span><span>' + esc(l.label) + '</span></button>';
+    }).join("");
+    list.querySelectorAll("[data-lang]").forEach(function(b){
+      b.addEventListener("click", function(){
+        state.language = b.getAttribute("data-lang");
+        save();
+        applyLanguage();
+        $("welcomeTitle").textContent = greeting();
+        closeLang();
+      });
+    });
+  }
+  function openLang(){ $("langOverlay").classList.add("show"); }
+  function closeLang(){ $("langOverlay").classList.remove("show"); }
+
   function applyLanguage(){
     var map={
       brandText:"brand", welcomeSub:"welcomeSub", wStart:"btnStart",
@@ -1795,7 +2075,9 @@
     };
     for(var id in map){ if($(id)) $(id).textContent=t(map[id]); }
     $("assetSearch").placeholder=t("searchPlaceholder");
-    $("langSelect").value=state.language;
+    document.documentElement.setAttribute("lang", state.language);
+    document.documentElement.setAttribute("dir", RTL[state.language] ? "rtl" : "ltr");
+    renderLangPicker();
     $("profileAsset").textContent=state.asset;
     $("soundToggle").textContent = state.sound?t("on"):t("off"); $("soundToggle").classList.toggle("on", state.sound);
     $("hapticToggle").textContent = state.haptic?t("on"):t("off"); $("hapticToggle").classList.toggle("on", state.haptic);
@@ -1843,7 +2125,9 @@
   });
   $("removeImg").addEventListener("click", function(){ state.image=null; $("imageInput").value=""; $("previewImg").src=""; $("preview").classList.remove("show"); $("visionResult").classList.remove("show"); $("analyzeBtn").disabled=true; });
   $("analyzeBtn").addEventListener("click", analyze);
-  $("langSelect").addEventListener("change",function(e){ state.language=e.target.value; save(); applyLanguage(); $("welcomeTitle").textContent=greeting(); });
+  $("langBtn").addEventListener("click", openLang);
+  $("langClose").addEventListener("click", closeLang);
+  $("langOverlay").addEventListener("click", function(e){ if(e.target===this) closeLang(); });
   $("soundToggle").addEventListener("click",function(){ state.sound=!state.sound; save(); this.textContent=state.sound?t("on"):t("off"); this.classList.toggle("on", state.sound); });
   $("hapticToggle").addEventListener("click",function(){ state.haptic=!state.haptic; save(); this.textContent=state.haptic?t("on"):t("off"); this.classList.toggle("on", state.haptic); });
   $("wStart").addEventListener("click",function(){ closeLaunch("history"); });
