@@ -154,6 +154,68 @@
   .rm-img{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;
     background:rgba(0,0,0,.75);color:#fff;font-size:20px;display:grid;place-items:center;}
 
+  /* Live chart */
+  .chart-box{margin-bottom:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden;}
+  .chart-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);}
+  .chart-head span{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.09em;}
+  .chart-head .c-live{display:inline-flex;align-items:center;gap:5px;color:var(--accent);}
+  .chart-head .c-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:dotBlink 1.4s ease-in-out infinite;}
+  .chart-head b{margin-left:auto;color:var(--text);font-size:13px;font-weight:800;}
+  .chart-frame{position:relative;height:230px;background:var(--bg2);}
+  .chart-frame iframe{display:block;width:100%;height:100%;border:0;}
+  .chart-off{display:none;position:absolute;inset:0;padding:18px;text-align:center;
+    align-items:center;justify-content:center;color:var(--muted);font-size:12px;line-height:1.55;}
+  .chart-box.off .chart-frame iframe{display:none;}
+  .chart-box.off .chart-off{display:flex;}
+
+  /* Vision params */
+  .v-params{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .v-param{display:block;width:100%;text-align:left;padding:11px 13px;border:1px solid var(--line);
+    border-radius:13px;background:var(--card);transition:border-color .18s ease,transform .18s ease;}
+  .v-param:active{transform:scale(.985);}
+  .v-param small{display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.06em;}
+  .v-param b{display:block;color:var(--text);font-size:14px;font-weight:800;}
+  .vp-search{margin-bottom:10px;}
+  .vp-list{display:grid;gap:8px;max-height:56vh;overflow-y:auto;}
+  .vp-item{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:1px solid var(--line);
+    border-radius:13px;background:var(--card);color:var(--text);font-size:14px;font-weight:700;text-align:left;}
+  .vp-item.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .vp-item .vp-flag{font-size:20px;line-height:1;}
+  .vp-item .vp-tag{margin-left:auto;color:var(--muted);font-size:11px;font-weight:800;}
+  .asset-option .a-flag{margin-right:8px;font-size:17px;line-height:1;}
+
+  /* Shot tip */
+  .shot-tip{display:none;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:15px;background:var(--card);}
+  .shot-tip.show{display:block;animation:viewIn .3s ease;}
+  .shot-tip h5{margin:0 0 10px;font-size:13px;font-weight:800;color:var(--text);}
+  .shot-tip ul{margin:10px 0 0;padding-left:17px;color:var(--muted);font-size:12px;line-height:1.6;}
+  .shot-demo{display:block;width:100%;height:auto;border-radius:11px;background:var(--bg2);border:1px solid var(--line);color:var(--silver);}
+
+  /* Premium processing */
+  .processing{position:relative;overflow:hidden;}
+  .processing.show::before{content:"";position:absolute;inset:-40% -10%;pointer-events:none;
+    background:radial-gradient(closest-side,var(--accent-soft),transparent 70%);animation:auraDrift 7s ease-in-out infinite;}
+  @keyframes auraDrift{0%,100%{transform:translate3d(-6%,-4%,0) scale(1);opacity:.75;}50%{transform:translate3d(6%,4%,0) scale(1.12);opacity:1;}}
+  .ring-wrap::before{content:"";position:absolute;inset:-16px;border-radius:50%;z-index:0;
+    background:conic-gradient(from 0deg,transparent 0deg,var(--accent-soft) 90deg,transparent 210deg);
+    animation:ringSweep 2.8s linear infinite;filter:blur(7px);}
+  @keyframes ringSweep{to{transform:rotate(360deg);}}
+  .ring-wrap::after{content:"";position:absolute;inset:14px;border-radius:50%;z-index:0;
+    box-shadow:inset 0 0 34px 6px var(--accent-soft);animation:corePulse 2.2s ease-in-out infinite;}
+  @keyframes corePulse{0%,100%{opacity:.4;transform:scale(.96);}50%{opacity:1;transform:scale(1.02);}}
+  .ring,.ring-pct{position:relative;z-index:1;}
+  .ring .fg{stroke:url(#ringGrad);filter:drop-shadow(0 0 7px var(--accent-soft));
+    transition:stroke-dashoffset .55s cubic-bezier(.25,1,.3,1);}
+  .ring-pct{letter-spacing:-.02em;text-shadow:0 0 22px var(--accent-soft);}
+  .ring-pct small{display:block;margin-top:2px;font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--muted);text-shadow:none;}
+  .proc-stage{display:flex;align-items:center;justify-content:center;gap:7px;}
+  .proc-stage i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:dotBlink 1.1s ease-in-out infinite;}
+  .proc-stage i:nth-child(2){animation-delay:.16s;} .proc-stage i:nth-child(3){animation-delay:.32s;}
+  @keyframes dotBlink{0%,100%{opacity:.25;transform:scale(.8);}50%{opacity:1;transform:scale(1);}}
+  .proc-steps{display:flex;justify-content:center;gap:6px;margin-top:14px;}
+  .proc-steps span{width:26px;height:3px;border-radius:99px;background:var(--line);transition:background .3s ease,box-shadow .3s ease;}
+  .proc-steps span.on{background:var(--accent);box-shadow:0 0 10px var(--accent-soft);}
+
   /* Processing */
   .processing{display:none;margin-top:14px;padding:24px 18px;border:1px solid var(--line);
     border-radius:var(--radius);background:var(--card2);text-align:center;}
@@ -395,12 +457,27 @@
       <p id="createText">Выбери OTC-актив, длительность, тип входа и режим.</p>
     </div>
     <div class="card">
+      <div class="chart-box" id="chartBox">
+        <div class="chart-head"><span class="c-live"><i class="c-dot"></i><span id="chartTitle">ЖИВОЙ ГРАФИК</span></span><b id="chartPair">—</b></div>
+        <div class="chart-frame">
+          <iframe id="chartFrame" title="chart" loading="lazy" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+          <div class="chart-off" id="chartOff"><span id="chartOffText">Для OTC-пар график недоступен — эти активы есть только в терминале брокера.</span></div>
+        </div>
+      </div>
+
+      <div class="v-params">
+        <button class="v-param" id="cAssetBtn" type="button"><small id="cAssetCap">АКТИВ</small><b id="cAssetVal">—</b></button>
+        <button class="v-param" id="cDurBtn" type="button"><small id="cDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="cDurVal">—</b></button>
+      </div>
+
+      <div id="createAdvanced" style="display:none">
       <label class="field-label" id="assetLabel">OTC-актив</label>
       <input class="search" id="assetSearch" type="text" autocomplete="off" placeholder="Поиск актива" />
       <div class="asset-list" id="assetList"></div>
 
       <label class="field-label" id="durationLabel">Длительность</label>
       <div class="grid3" id="durationGrid"></div>
+      </div>
 
       <label class="field-label" id="entryLabel">Тип входа</label>
       <div class="grid2">
@@ -467,6 +544,10 @@
       <p id="visionText">Загрузи полный скриншот — приложение сохранит пропорции без обрезки.</p>
     </div>
     <div class="card">
+      <div class="v-params">
+        <button class="v-param" id="vAssetBtn" type="button"><small id="vAssetCap">АКТИВ</small><b id="vAssetVal">—</b></button>
+        <button class="v-param" id="vDurBtn" type="button"><small id="vDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="vDurVal">—</b></button>
+      </div>
       <label class="upload" for="imageInput">
         <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
         <span class="upload-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></span>
@@ -475,6 +556,35 @@
       </label>
       <div class="preview" id="preview"><img id="previewImg" alt="" /><button class="rm-img" id="removeImg" type="button">×</button></div>
       <button class="btn primary" id="analyzeBtn" disabled>Анализировать график</button>
+      <div class="shot-tip" id="shotTip">
+        <h5 id="shotTipTitle">Как сделать правильный скриншот</h5>
+        <svg class="shot-demo" viewBox="0 0 300 120" aria-hidden="true">
+          <line x1="26" y1="6" x2="26" y2="100" stroke="currentColor" stroke-opacity=".22"/>
+          <line x1="26" y1="100" x2="292" y2="100" stroke="currentColor" stroke-opacity=".22"/>
+          <g stroke="currentColor" stroke-opacity=".16" stroke-dasharray="3 5">
+            <line x1="26" y1="30" x2="292" y2="30"/><line x1="26" y1="62" x2="292" y2="62"/>
+          </g>
+          <g stroke-width="2">
+            <g stroke="#2FD47F" fill="#2FD47F"><line x1="48" y1="46" x2="48" y2="84"/><rect x="43" y="56" width="10" height="20" rx="2"/></g>
+            <g stroke="#FF5A5A" fill="#FF5A5A"><line x1="76" y1="40" x2="76" y2="80"/><rect x="71" y="48" width="10" height="22" rx="2"/></g>
+            <g stroke="#2FD47F" fill="#2FD47F"><line x1="104" y1="34" x2="104" y2="74"/><rect x="99" y="42" width="10" height="24" rx="2"/></g>
+            <g stroke="#2FD47F" fill="#2FD47F"><line x1="132" y1="24" x2="132" y2="64"/><rect x="127" y="32" width="10" height="22" rx="2"/></g>
+            <g stroke="#FF5A5A" fill="#FF5A5A"><line x1="160" y1="28" x2="160" y2="70"/><rect x="155" y="36" width="10" height="24" rx="2"/></g>
+            <g stroke="#2FD47F" fill="#2FD47F"><line x1="188" y1="20" x2="188" y2="58"/><rect x="183" y="26" width="10" height="22" rx="2"/></g>
+            <g stroke="#2FD47F" fill="#2FD47F"><line x1="216" y1="16" x2="216" y2="52"/><rect x="211" y="22" width="10" height="20" rx="2"/></g>
+            <g stroke="#FF5A5A" fill="#FF5A5A"><line x1="244" y1="22" x2="244" y2="60"/><rect x="239" y="30" width="10" height="20" rx="2"/></g>
+          </g>
+          <g fill="currentColor" fill-opacity=".45" font-size="8">
+            <text x="2" y="33">1.0850</text><text x="2" y="65">1.0820</text>
+            <text x="40" y="113">09:00</text><text x="128" y="113">09:15</text><text x="216" y="113">09:30</text>
+          </g>
+        </svg>
+        <ul>
+          <li id="shotTip1">Свечи целиком — не обрезай верх и низ графика.</li>
+          <li id="shotTip2">Шкала времени снизу и цены справа должны быть видны.</li>
+          <li id="shotTip3">20–60 свечей в кадре: слишком близко — нет картины, слишком далеко — не видно тела свечей.</li>
+        </ul>
+      </div>
 
       <div class="processing" id="processing">
         <div class="proc-meta">
@@ -482,10 +592,11 @@
           <div id="procDurationLabel">Длительность<b id="procDuration">—</b></div>
         </div>
         <div class="ring-wrap">
-          <svg class="ring" viewBox="0 0 132 132"><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
+          <svg class="ring" viewBox="0 0 132 132"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="55%" stop-color="var(--silver)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
           <div class="ring-pct" id="ringPct">0%</div>
         </div>
         <div class="proc-stage" id="procStage">—</div>
+        <div class="proc-steps" id="procSteps"><span></span><span></span><span></span><span></span></div>
       </div>
 
       <div class="result" id="visionResult">
@@ -563,6 +674,17 @@
     <div class="sheet-body">
       <h4 class="lang-h" id="langSheetTitle">Язык интерфейса</h4>
       <div class="lang-list" id="langList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="vpOverlay">
+  <div class="sheet">
+    <button class="sheet-close" id="vpClose" type="button">×</button>
+    <div class="sheet-body">
+      <h4 class="lang-h" id="vpTitle">Актив</h4>
+      <input class="search vp-search" id="vpSearch" type="text" autocomplete="off" />
+      <div class="vp-list" id="vpList"></div>
     </div>
   </div>
 </div>
@@ -898,6 +1020,42 @@
     }
   };
 
+  var EXTRA_T = {
+    ru:{ vpAssetTitle:"Выбери актив", vpDurTitle:"Выбери длительность", shotTipTitle:"Как сделать правильный скриншот",
+      shotTip1:"Свечи целиком — не обрезай верх и низ графика.", shotTip2:"Шкала времени снизу и цены справа должны быть видны.",
+      shotTip3:"20–60 свечей в кадре: слишком близко — нет картины, слишком далеко — не видно тела свечей.", procDone:"ГОТОВО" },
+    en:{ vpAssetTitle:"Choose asset", vpDurTitle:"Choose duration", shotTipTitle:"How to take a proper screenshot",
+      shotTip1:"Whole candles — do not crop the top or bottom of the chart.", shotTip2:"The time axis at the bottom and price levels on the right must be visible.",
+      shotTip3:"20–60 candles in frame: too close and there is no picture, too far and candle bodies disappear.", procDone:"DONE" },
+    uz:{ vpAssetTitle:"Aktivni tanlang", vpDurTitle:"Muddatni tanlang", shotTipTitle:"To'g'ri skrinshot qanday olinadi",
+      shotTip1:"Shamlar to'liq bo'lsin — grafikning yuqori va pastini qirqmang.", shotTip2:"Pastdagi vaqt shkalasi va o'ngdagi narx darajalari ko'rinishi kerak.",
+      shotTip3:"Kadrda 20–60 sham bo'lsin: juda yaqin bo'lsa surat yo'q, juda uzoq bo'lsa sham tanasi ko'rinmaydi.", procDone:"TAYYOR" },
+    hi:{ vpAssetTitle:"संपत्ति चुनें", vpDurTitle:"अवधि चुनें", shotTipTitle:"सही स्क्रीनशॉट कैसे लें",
+      shotTip1:"पूरी कैंडल दिखें — चार्ट का उपरी या निचला हिस्सा न काटें।", shotTip2:"नीचे समय की पट्टी और दाईं ओर कीमत के स्तर दिखने चाहिए।",
+      shotTip3:"फ्रेम में 20–60 कैंडल: बहुत पास से तस्वीर नहीं बनती, बहुत दूर से कैंडल की बॉडी नहीं दिखती।", procDone:"तैयार" },
+    pt:{ vpAssetTitle:"Escolha o ativo", vpDurTitle:"Escolha a duração", shotTipTitle:"Como fazer a captura correta",
+      shotTip1:"Velas inteiras — não corte o topo nem a base do gráfico.", shotTip2:"A escala de tempo embaixo e os níveis de preço à direita devem aparecer.",
+      shotTip3:"20–60 velas no enquadramento: muito perto não mostra o contexto, muito longe esconde os corpos das velas.", procDone:"PRONTO" },
+    ar:{ vpAssetTitle:"اختر الأصل", vpDurTitle:"اختر المدة", shotTipTitle:"كيف تأخذ لقطة شاشة صحيحة",
+      shotTip1:"شموع كاملة — لا تقطع أعلى الرسم أو أسفله.", shotTip2:"يجب أن يظهر محور الوقت أسفل ومستويات السعر يميناً.",
+      shotTip3:"من 20 إلى 60 شمعة في الإطار: القريب جداً يفقد السياق والبعيد جداً يخفي أجسام الشموع.", procDone:"تم" },
+    kk:{ vpAssetTitle:"Активті таңдаңыз", vpDurTitle:"Узақтығын таңдаңыз", shotTipTitle:"Дұрыс скриншотты қалай түсіру керек",
+      shotTip1:"Шамдар толық болсын — графиктің үстін не астын қиып алмаңыз.", shotTip2:"Астыңдағы уақыт шкаласы мен оңдағы баға деңгейлері көрінуі тиіс.",
+      shotTip3:"Кадрда 20–60 шам: тым жақын болса сурет жоқ, тым алыс болса шам денесі көрінмейді.", procDone:"ДАЙЫН" }
+  };
+  for (var _lc in EXTRA_T){ if(T[_lc]){ for(var _ek in EXTRA_T[_lc]){ T[_lc][_ek] = EXTRA_T[_lc][_ek]; } } }
+
+  var EXTRA_T2 = {
+    ru:{ chartTitle:"ЖИВОЙ ГРАФИК", chartOff:"Для OTC-пар график недоступен — эти активы есть только в терминале брокера." },
+    en:{ chartTitle:"LIVE CHART", chartOff:"There is no chart for OTC pairs — these assets exist only inside the broker terminal." },
+    uz:{ chartTitle:"JONLI GRAFIK", chartOff:"OTC juftliklar uchun grafik yo'q — bu aktivlar faqat broker terminalida bor." },
+    hi:{ chartTitle:"लाइव चार्ट", chartOff:"OTC जोड़ियों का चार्ट नहीं होता — ये संपत्तियाँ केवल ब्रोकर टर्मिनल में हैं।" },
+    pt:{ chartTitle:"GRÁFICO AO VIVO", chartOff:"Não há gráfico para pares OTC — esses ativos existem apenas no terminal da corretora." },
+    ar:{ chartTitle:"الرسم المباشر", chartOff:"لا يوجد رسم لأزواج OTC — هذه الأصول متاحة فقط داخل منصة الوسيط." },
+    kk:{ chartTitle:"ТІКЕЛЕЙ ГРАФИК", chartOff:"OTC жұптары үшін график жоқ — бұл активтер тек брокер терминалында бар." }
+  };
+  for (var _lc2 in EXTRA_T2){ if(T[_lc2]){ for(var _ek2 in EXTRA_T2[_lc2]){ T[_lc2][_ek2] = EXTRA_T2[_lc2][_ek2]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1098,12 +1256,31 @@
   }
 
   /* ---------- Assets ---------- */
+  var CUR_FLAG = {
+    AED:"\uD83C\uDDE6\uD83C\uDDEA", ARS:"\uD83C\uDDE6\uD83C\uDDF7", AUD:"\uD83C\uDDE6\uD83C\uDDFA", BDT:"\uD83C\uDDE7\uD83C\uDDE9",
+    BHD:"\uD83C\uDDE7\uD83C\uDDED", BRL:"\uD83C\uDDE7\uD83C\uDDF7", CAD:"\uD83C\uDDE8\uD83C\uDDE6", CHF:"\uD83C\uDDE8\uD83C\uDDED",
+    CLP:"\uD83C\uDDE8\uD83C\uDDF1", CNH:"\uD83C\uDDE8\uD83C\uDDF3", CNY:"\uD83C\uDDE8\uD83C\uDDF3", COP:"\uD83C\uDDE8\uD83C\uDDF4",
+    DZD:"\uD83C\uDDE9\uD83C\uDDFF", EGP:"\uD83C\uDDEA\uD83C\uDDEC", EUR:"\uD83C\uDDEA\uD83C\uDDFA", GBP:"\uD83C\uDDEC\uD83C\uDDE7",
+    HUF:"\uD83C\uDDED\uD83C\uDDFA", IDR:"\uD83C\uDDEE\uD83C\uDDE9", INR:"\uD83C\uDDEE\uD83C\uDDF3", JOD:"\uD83C\uDDEF\uD83C\uDDF4",
+    JPY:"\uD83C\uDDEF\uD83C\uDDF5", KES:"\uD83C\uDDF0\uD83C\uDDEA", LBP:"\uD83C\uDDF1\uD83C\uDDE7", MAD:"\uD83C\uDDF2\uD83C\uDDE6",
+    MXN:"\uD83C\uDDF2\uD83C\uDDFD", MYR:"\uD83C\uDDF2\uD83C\uDDFE", NGN:"\uD83C\uDDF3\uD83C\uDDEC", NOK:"\uD83C\uDDF3\uD83C\uDDF4",
+    NZD:"\uD83C\uDDF3\uD83C\uDDFF", OMR:"\uD83C\uDDF4\uD83C\uDDF2", PHP:"\uD83C\uDDF5\uD83C\uDDED", PKR:"\uD83C\uDDF5\uD83C\uDDF0",
+    QAR:"\uD83C\uDDF6\uD83C\uDDE6", RUB:"\uD83C\uDDF7\uD83C\uDDFA", SAR:"\uD83C\uDDF8\uD83C\uDDE6", SGD:"\uD83C\uDDF8\uD83C\uDDEC",
+    THB:"\uD83C\uDDF9\uD83C\uDDED", TND:"\uD83C\uDDF9\uD83C\uDDF3", TRY:"\uD83C\uDDF9\uD83C\uDDF7", UAH:"\uD83C\uDDFA\uD83C\uDDE6",
+    USD:"\uD83C\uDDFA\uD83C\uDDF8", VND:"\uD83C\uDDFB\uD83C\uDDF3", YER:"\uD83C\uDDFE\uD83C\uDDEA", ZAR:"\uD83C\uDDFF\uD83C\uDDE6"
+  };
+  // Один флаг на пару — по базовой валюте
+  function pairFlag(asset){
+    var code = String(asset||"").slice(0,3).toUpperCase();
+    return CUR_FLAG[code] || "\uD83C\uDF10";
+  }
+
   function renderAssets(q){
     q = (q||"").trim().toLowerCase();
     var list = ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; });
     var html = list.map(function(a){
       var tag = a.indexOf(" OTC") > -1 ? "OTC" : "FX";
-      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'"><b>'+esc(a)+'</b><span>'+tag+'</span></button>';
+      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'"><span class="a-flag">'+pairFlag(a)+'</span><b>'+esc(a)+'</b><span>'+tag+'</span></button>';
     }).join("");
     $("assetList").innerHTML = html || '<p class="section-text">—</p>';
     document.querySelectorAll("[data-asset]").forEach(function(b){
@@ -1111,6 +1288,7 @@
         state.asset = b.getAttribute("data-asset"); save();
         $("profileAsset").textContent = state.asset;
         renderAssets($("assetSearch").value);
+        syncVisionParams();
       });
     });
   }
@@ -1119,9 +1297,99 @@
       return '<button class="btn choice '+(v===state.duration?"active":"")+'" data-duration="'+v+'">'+durationText(v)+'</button>';
     }).join("");
     document.querySelectorAll("[data-duration]").forEach(function(b){
-      b.addEventListener("click", function(){ state.duration = Number(b.getAttribute("data-duration")); save(); renderDurations(); });
+      b.addEventListener("click", function(){ state.duration = Number(b.getAttribute("data-duration")); save(); renderDurations(); syncVisionParams(); });
     });
   }
+
+  /* ---------- Live chart ---------- */
+  var TV_INTERVAL = { 3:"1", 15:"1", 30:"1", 60:"1", 180:"3", 300:"5", 1800:"30", 3600:"60", 14400:"240" };
+  var chartSrcNow = "";
+  function tvSymbol(asset){
+    var m = String(asset||"").replace(" OTC","").split("/");
+    if(m.length !== 2) return "";
+    return "FX:" + m[0].toUpperCase() + m[1].toUpperCase();
+  }
+  // График всегда идёт за выбранной парой и длительностью
+  function refreshChart(){
+    var box = $("chartBox"); if(!box) return;
+    var pair = $("chartPair"); if(pair) pair.textContent = pairFlag(state.asset) + " " + state.asset;
+    var ct = $("chartTitle"); if(ct) ct.textContent = t("chartTitle");
+    var co = $("chartOffText"); if(co) co.textContent = t("chartOff");
+    var isOtc = String(state.asset||"").indexOf(" OTC") > -1;
+    var sym = tvSymbol(state.asset);
+    if(isOtc || !sym){
+      box.classList.add("off");
+      var fr0 = $("chartFrame");
+      if(fr0 && chartSrcNow){ fr0.removeAttribute("src"); chartSrcNow = ""; }
+      return;
+    }
+    box.classList.remove("off");
+    var iv = TV_INTERVAL[state.duration] || "1";
+    var theme = "dark";
+    var src = "https://s.tradingview.com/widgetembed/?symbol=" + encodeURIComponent(sym) +
+      "&interval=" + iv + "&theme=" + theme + "&style=1&locale=en&hide_top_toolbar=1&hide_legend=0" +
+      "&hidesidetoolbar=1&allow_symbol_change=0&saveimage=0&withdateranges=0&timezone=Etc%2FUTC";
+    if(src !== chartSrcNow){
+      var fr = $("chartFrame");
+      if(fr){ fr.src = src; chartSrcNow = src; }
+    }
+  }
+
+  /* ---------- Vision params ---------- */
+  var vpKind = "asset";
+  function syncVisionParams(){
+    var av = $("vAssetVal"), dv = $("vDurVal");
+    if(av) av.textContent = pairFlag(state.asset) + " " + state.asset;
+    if(dv) dv.textContent = durationText(state.duration);
+    var ac = $("vAssetCap"), dc = $("vDurCap");
+    if(ac) ac.textContent = t("asset");
+    if(dc) dc.textContent = t("duration");
+    var av2 = $("cAssetVal"), dv2 = $("cDurVal"), ac2 = $("cAssetCap"), dc2 = $("cDurCap");
+    if(av2) av2.textContent = pairFlag(state.asset) + " " + state.asset;
+    if(dv2) dv2.textContent = durationText(state.duration);
+    if(ac2) ac2.textContent = t("asset");
+    if(dc2) dc2.textContent = t("duration");
+    refreshChart();
+  }
+  function renderVpList(q){
+    var list = $("vpList"); if(!list) return;
+    if(vpKind === "asset"){
+      q = (q||"").trim().toLowerCase();
+      var items = ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; });
+      list.innerHTML = items.map(function(a){
+        var tag = a.indexOf(" OTC") > -1 ? "OTC" : "FX";
+        return '<button type="button" class="vp-item '+(a===state.asset?"selected":"")+'" data-vp="'+esc(a)+'">'+
+          '<span class="vp-flag">'+pairFlag(a)+'</span><span>'+esc(a)+'</span><span class="vp-tag">'+tag+'</span></button>';
+      }).join("") || '<p class="section-text">—</p>';
+    } else {
+      list.innerHTML = DURATIONS.map(function(v){
+        return '<button type="button" class="vp-item '+(v===state.duration?"selected":"")+'" data-vp="'+v+'"><span>'+durationText(v)+'</span></button>';
+      }).join("");
+    }
+    list.querySelectorAll("[data-vp]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var val = b.getAttribute("data-vp");
+        if(vpKind === "asset"){
+          state.asset = val; save();
+          if($("profileAsset")) $("profileAsset").textContent = state.asset;
+          renderAssets($("assetSearch").value);
+        } else {
+          state.duration = Number(val); save(); renderDurations();
+        }
+        syncVisionParams(); closeVp();
+      });
+    });
+  }
+  function openVp(kind){
+    vpKind = kind;
+    $("vpTitle").textContent = kind === "asset" ? t("vpAssetTitle") : t("vpDurTitle");
+    var srch = $("vpSearch");
+    srch.style.display = kind === "asset" ? "block" : "none";
+    srch.placeholder = t("searchPlaceholder"); srch.value = "";
+    renderVpList("");
+    $("vpOverlay").classList.add("show");
+  }
+  function closeVp(){ $("vpOverlay").classList.remove("show"); }
 
   /* ---------- Mode ---------- */
   function setMode(m){
@@ -1266,9 +1534,20 @@
   function setRing(pct){
     $("ringFg").style.strokeDasharray = RING_C;
     $("ringFg").style.strokeDashoffset = RING_C*(1-pct/100);
-    $("ringPct").textContent = Math.round(pct)+"%";
+    $("ringPct").innerHTML = Math.round(pct)+"%" + (pct>=100 ? '<small>'+esc(t("procDone"))+'</small>' : "");
   }
-  var procTimer=null, procRingTimer=null;
+  var procTimer=null, procRingTimer=null, procStages=[];
+  function setStage(i){
+    var el = $("procStage");
+    if(el){ el.innerHTML = '<i></i><i></i><i></i><span>'+esc(procStages[i]||"")+'</span>'; }
+    var st = $("procSteps");
+    if(st){ var sp = st.children; for(var k=0;k<sp.length;k++){ sp[k].classList.toggle("on", k<=i); } }
+  }
+  // Последний этап включается, только когда ответ реально пришёл
+  function procFinalPhase(){
+    clearInterval(procTimer);
+    setStage(procStages.length-1);
+  }
   function startProcessing(){
     var tm = timing();
     $("procAssetLabel").childNodes[0].nodeValue = t("asset")+" ";
@@ -1277,12 +1556,13 @@
     $("procDuration").textContent = tm.durationText;
     $("processing").classList.add("show");
     $("visionResult").classList.remove("show");
-    var stages = [t("stage1"),t("stage2"),t("stage3"),t("stage4")];
-    var si=0; $("procStage").textContent = stages[0]; setRing(6);
+    procStages = [t("stage1"),t("stage2"),t("stage3"),t("stage4")];
+    var stages = procStages;
+    var si=0; setStage(0); setRing(6);
     var pct=6;
     clearInterval(procRingTimer); clearInterval(procTimer);
     procRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*4 + 1, 92); setRing(pct); }, 300);
-    procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-1); $("procStage").textContent = stages[si]; }, 1400);
+    procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-2); setStage(si); }, 1800);
   }
   function stopProcessing(done){
     clearInterval(procRingTimer); clearInterval(procTimer);
@@ -1373,6 +1653,7 @@
         if(vr){
           vr.textContent = errTextFor(msg);
           vr.style.display="block";
+          if($("shotTip")) $("shotTip").classList.add("show");
         }
         if(window.console && console.warn) console.warn("[Pulse Vision]", msg, tech||"");
       }
@@ -1391,6 +1672,7 @@
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
         .then(function(r){
           clearTimeout(capTimer);
+          procFinalPhase();
           if(r.ok && r.data && r.data.direction){
             finishWith(r.data, true, r.data.degraded ? "degraded" : null);
           } else {
@@ -2086,6 +2368,11 @@
     $("visionAgain").textContent=t("newAnalysis"); $("visionHistory").textContent=t("openHistory");
     $("welcomeSub").textContent=t("welcomeSub"); if($("wStart")) $("wStart").textContent=t("btnStart");
     renderAssets($("assetSearch").value); renderDurations(); renderHistory(); renderStats();
+    syncVisionParams();
+    if($("shotTipTitle")) $("shotTipTitle").textContent = t("shotTipTitle");
+    if($("shotTip1")) $("shotTip1").textContent = t("shotTip1");
+    if($("shotTip2")) $("shotTip2").textContent = t("shotTip2");
+    if($("shotTip3")) $("shotTip3").textContent = t("shotTip3");
     if(state.isOwner) buildOwnerArea();
   }
 
@@ -2128,6 +2415,13 @@
   $("langBtn").addEventListener("click", openLang);
   $("langClose").addEventListener("click", closeLang);
   $("langOverlay").addEventListener("click", function(e){ if(e.target===this) closeLang(); });
+  $("vAssetBtn").addEventListener("click", function(){ openVp("asset"); });
+  $("cAssetBtn").addEventListener("click", function(){ openVp("asset"); });
+  $("cDurBtn").addEventListener("click", function(){ openVp("dur"); });
+  $("vDurBtn").addEventListener("click", function(){ openVp("dur"); });
+  $("vpClose").addEventListener("click", closeVp);
+  $("vpOverlay").addEventListener("click", function(e){ if(e.target===this) closeVp(); });
+  $("vpSearch").addEventListener("input", function(e){ renderVpList(e.target.value); });
   $("soundToggle").addEventListener("click",function(){ state.sound=!state.sound; save(); this.textContent=state.sound?t("on"):t("off"); this.classList.toggle("on", state.sound); });
   $("hapticToggle").addEventListener("click",function(){ state.haptic=!state.haptic; save(); this.textContent=state.haptic?t("on"):t("off"); this.classList.toggle("on", state.haptic); });
   $("wStart").addEventListener("click",function(){ closeLaunch("history"); });
