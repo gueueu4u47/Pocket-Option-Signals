@@ -484,7 +484,7 @@
         <div id="visionConfWrap"><span class="r-conf" id="visionConf">—</span></div>
         <div class="facts">
           <div class="fact"><small id="vL1">АКТИВ</small><b id="visionAsset">—</b></div>
-          <div class="fact"><small id="vL2">ДЛИ��ЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
+          <div class="fact"><small id="vL2">ДЛИ����ЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
           <div class="fact"><small id="vL3">ВХОД</small><b id="visionEntry">—</b></div>
           <div class="fact"><small id="vL4">ДО РЕЗУЛЬТАТА</small><b id="visionOutcome">—</b></div>
         </div>
@@ -564,7 +564,8 @@
   var OTC = ["AUD/CAD OTC","AUD/CHF OTC","AUD/NZD OTC","AUD/USD OTC","CAD/JPY OTC","EUR/JPY OTC","EUR/RUB OTC","GBP/USD OTC","JOD/CNY OTC","KES/USD OTC","LBP/USD OTC","MAD/USD OTC","NGN/USD OTC","NZD/JPY OTC","NZD/USD OTC","SAR/CNY OTC","UAH/USD OTC","USD/ARS OTC","USD/BDT OTC","USD/BRL OTC","USD/CAD OTC","USD/CHF OTC","USD/CNH OTC","USD/RUB OTC","YER/USD OTC","CHF/NOK OTC","EUR/HUF OTC","BHD/CNY OTC","USD/SGD OTC","CAD/CHF OTC","EUR/USD OTC","USD/EGP OTC","USD/MYR OTC","USD/THB OTC","AED/CNY OTC","USD/COP OTC","EUR/TRY OTC","OMR/CNY OTC","USD/VND OTC","EUR/NZD OTC","USD/INR OTC","CHF/JPY OTC","TND/USD OTC","AUD/JPY OTC","USD/MXN OTC","USD/DZD OTC","USD/JPY OTC","EUR/GBP OTC","GBP/JPY OTC","USD/IDR OTC","USD/PHP OTC","EUR/CHF OTC","ZAR/USD OTC","GBP/AUD OTC","USD/PKR OTC","USD/CLP OTC","QAR/CNY OTC"];
   var FX = ["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","EUR/GBP","EUR/JPY","GBP/JPY","CHF/JPY","CAD/JPY","AUD/JPY","AUD/CAD","AUD/CHF","CAD/CHF","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF"];
   var ASSETS = OTC.concat(FX);
-  var DURATIONS = [15,30,60,180,300,900];
+  // S3…H4, как в терминале брокера
+  var DURATIONS = [3,15,30,60,180,300,1800,3600,14400];
 
   var THEMES = {
     obsidian:{label:"Obsidian Silver",dot:"#2F80ED",vars:{"--bg":"#0A0A0A","--bg2":"#111111","--card":"#151515","--card2":"#1B1B1B","--line":"#2A2A2A","--text":"#F4F4F4","--muted":"#969696","--silver":"#D7D9DD","--accent":"#2F80ED","--accent-soft":"rgba(47,128,237,.14)"}},
@@ -763,8 +764,11 @@
     return new Intl.DateTimeFormat(state.language==="ru"?"ru-RU":"en-GB",{timeZone:"Asia/Oral",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ms));
   }
   function durationText(sec){
-    if(sec < 60) return sec + " " + (state.language==="ru"?"сек":"sec");
-    return (sec/60) + " " + (state.language==="ru"?"мин":"min");
+    var ru = state.language === "ru";
+    if(sec < 60) return sec + " " + (ru ? "сек" : "sec");
+    if(sec < 3600) return (sec/60) + " " + (ru ? "мин" : "min");
+    var h = sec/3600;
+    return (Math.round(h*10)/10) + " " + (ru ? "ч" : "h");
   }
   function timing(){
     var dur = state.duration, durMs = dur*1000;
