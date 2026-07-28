@@ -484,7 +484,7 @@
         <div id="visionConfWrap"><span class="r-conf" id="visionConf">—</span></div>
         <div class="facts">
           <div class="fact"><small id="vL1">АКТИВ</small><b id="visionAsset">—</b></div>
-          <div class="fact"><small id="vL2">ДЛИТЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
+          <div class="fact"><small id="vL2">ДЛИ��ЕЛЬНОСТЬ</small><b id="visionDuration">—</b></div>
           <div class="fact"><small id="vL3">ВХОД</small><b id="visionEntry">—</b></div>
           <div class="fact"><small id="vL4">ДО РЕЗУЛЬТАТА</small><b id="visionOutcome">—</b></div>
         </div>
@@ -604,7 +604,12 @@
       visionRisk:"Это анализ изображения, а не гарантия результата.",
       detailWhy:"Почему такой сигнал", detailStrategy:"Стратегия", detailTips:"Советы", detailSummary:"Кратко", detailTimeframe:"Таймфрейм", detailNoData:"Подробный разбор для это��о результата недоступен.",
       win:"Win", loss:"Loss", skip:"Пропустить",
-      errFailed:"Pulse Vision временно недоступен. Попробуйте позже.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
+      errFailed:"Pulse Vision временно недоступен. Попробуйте позже.",
+      errTimeout:"Анализ не успел завершиться. Повтори попытку.",
+      errNetwork:"Нет связи с сервером. Проверь интернет и повтори.",
+      errServer:"Сервис анализа ответил ошибкой. Повтори через минуту.",
+      errBusy:"Лимит запросов исчерпан. Подожди и повтори.",
+      errDegraded:"График не удалось прочитать. Сделай скриншот целиком: свечи, шкала времени и цены.", errTooLarge:"Изображение слишком большое. Выбери файл до 8 МБ.", errBadType:"Поддерживаются только PNG, JPG и WEBP.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Панель владельца", ownerSub:"Серверная статистика Signal Pulse. Доступ подтверждён через Telegram.",
       mUsers:"Пользователи", mResults:"Результаты", mEvents:"События", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Сегодня", refresh:"Обновить показатели",
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Оформление", designSub:"Тема и режим показа сохраняются на этом устройстве.",
@@ -640,7 +645,12 @@
       visionRisk:"This is image analysis, not a guarantee of any result.",
       detailWhy:"Why this signal", detailStrategy:"Strategy", detailTips:"Tips", detailSummary:"Summary", detailTimeframe:"Timeframe", detailNoData:"No detailed breakdown available for this result.",
       win:"Win", loss:"Loss", skip:"Skip",
-      errFailed:"Pulse Vision is unavailable right now. Try again later.", errTooLarge:"The image is too large. Choose a file up to 8 MB.", errBadType:"Only PNG, JPG and WEBP are supported.",
+      errFailed:"Pulse Vision is unavailable right now. Try again later.",
+      errTimeout:"The analysis did not finish in time. Try again.",
+      errNetwork:"No connection to the server. Check your internet and retry.",
+      errServer:"The analysis service returned an error. Retry in a minute.",
+      errBusy:"Request limit reached. Wait a moment and retry.",
+      errDegraded:"The chart could not be read. Take a full screenshot: candles, time axis and price levels.", errTooLarge:"The image is too large. Choose a file up to 8 MB.", errBadType:"Only PNG, JPG and WEBP are supported.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Owner panel", ownerSub:"Signal Pulse server statistics. Access verified via Telegram.",
       mUsers:"Users", mResults:"Results", mEvents:"Events", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Today", refresh:"Refresh metrics",
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Appearance", designSub:"Theme and display mode are stored on this device.",
@@ -1087,11 +1097,20 @@
     (function(){
       var settled=false;
       var controller = ("AbortController" in window) ? new AbortController() : null;
+      // Причины разные, поэтому и текст разный: общая фраза не подсказывает, что делать
+      function errTextFor(msg){
+        var m = String(msg||"");
+        if(m.indexOf("timeout") === 0) return t("errTimeout");
+        if(m.indexOf("NETWORK/ABORT") === 0) return t("errNetwork");
+        if(m.indexOf("HTTP 429") === 0) return t("errBusy");
+        if(m.indexOf("HTTP") === 0) return t("errServer");
+        if(m === "degraded") return t("errDegraded");
+        return t("errFailed");
+      }
       function showDiag(msg, tech){
         var vr=$("visionRisk");
         if(vr){
-          // tech приходит с сервера только владельцу — обычные пользователи видят просто текст ошибки
-          vr.textContent = t("errFailed") + (tech ? ("  [" + tech + "]") : "");
+          vr.textContent = errTextFor(msg);
           vr.style.display="block";
         }
         if(window.console && console.warn) console.warn("[Pulse Vision]", msg, tech||"");
@@ -1203,7 +1222,7 @@
              "Инициатива слегка у покупателя, борьба почти равная.",
              "Спрос чуть впереди — основание шаткое."]
           : ["Перевес продавца есть, но он едва заметен.",
-             "Инициатива слегка у продавца, борьба почти равная.",
+             "Инициатива слегка у ��родавца, борьба почти равная.",
              "Предложение чуть впереди — основание шаткое."]
       },
       en: {
@@ -1250,7 +1269,7 @@
                 "Основная торговля дня идёт ниже середины диапазона.",
                 "Цена держится ближе к нижней границе сессии."],
         atBottom: ["Цена прижимается к минимуму сессии — уровень тестируется.",
-                   "Работа идёт у дна дня, запаса хода вниз почти не осталось.",
+                   "Работа идёт у дн�� дня, запаса хода вниз почти не осталось.",
                    "Цена давит в нижнюю границу дневного диапазона."]
       },
       en: {
