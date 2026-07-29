@@ -466,6 +466,14 @@
   .vp-item .p-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .asset-option{justify-content:flex-start;}
   .vp-note{margin:2px 0 10px;color:var(--muted);font-size:11px;line-height:1.5;}
+  .p-when{margin-left:auto;flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.03em;
+    color:var(--muted);white-space:nowrap;text-transform:uppercase;}
+  .p-when.off{color:#e0575f;}
+  .asset-option.off,.vp-item.off{opacity:.5;}
+  .asset-option.off .p-name,.vp-item.off .p-name{text-decoration:line-through;}
+  .pair-notice{margin:12px 0 0;padding:13px 15px;border:1px solid rgba(224,87,95,.35);
+    border-radius:12px;background:rgba(224,87,95,.08);color:var(--text);
+    font-size:12px;line-height:1.55;font-weight:700;}
   /* ---------- Spacing ---------- */
   .chart-box{margin-bottom:16px;}
   .chart-head{padding:12px 15px;}
@@ -495,6 +503,38 @@
   .btn.primary{margin-top:18px;}
   .vp-list{gap:9px;}
   .vp-item{padding:13px 15px;}
+
+  /* ---------- Param cards v2 ---------- */
+  .v-params{gap:11px;margin-bottom:18px;}
+  .v-param{position:relative;overflow:hidden;padding:15px 36px 14px 16px;border-radius:17px;
+    border:1px solid rgba(255,255,255,.075);
+    background:linear-gradient(158deg,rgba(255,255,255,.062),rgba(255,255,255,.014) 52%,rgba(0,0,0,.2));
+    box-shadow:0 12px 26px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.07);
+    transition:transform .2s cubic-bezier(.22,.9,.24,1),border-color .2s ease,box-shadow .2s ease;
+    animation:vpIn .48s cubic-bezier(.22,.9,.24,1) both;}
+  .v-params .v-param:nth-child(2){animation-delay:.08s;}
+  .v-param::before{content:"";position:absolute;left:0;top:13px;bottom:13px;width:3px;
+    border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--accent),rgba(255,255,255,.1));
+    opacity:.85;transition:opacity .2s ease;}
+  .v-param small{margin-bottom:7px;color:rgba(255,255,255,.4);font-size:9.5px;letter-spacing:.11em;}
+  .v-param b{font-size:15px;letter-spacing:-.01em;}
+  .v-param .vp-hint{display:block;margin-top:8px;font-size:9.5px;line-height:1.4;
+    white-space:normal;letter-spacing:.02em;opacity:.7;}
+  .v-param::after{right:15px;opacity:.8;animation:vpChev 2.1s ease-in-out infinite;}
+  .v-param:active{transform:scale(.965);border-color:var(--accent);
+    box-shadow:0 6px 16px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.1);}
+  .v-param:active::before{opacity:1;}
+  .v-params .v-param:nth-child(2)::before{background:linear-gradient(180deg,#8f9dff,rgba(255,255,255,.1));}
+  .v-params .v-param:nth-child(2) .vp-hint{color:#8f9dff;}
+  .v-params .v-param:nth-child(2)::after{border-right-color:#8f9dff;border-bottom-color:#8f9dff;}
+  @keyframes vpIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+  @keyframes vpChev{0%,100%{transform:translate(0,-60%) rotate(45deg);opacity:.7;}
+    50%{transform:translate(3px,-60%) rotate(45deg);opacity:1;}}
+
+  /* График внизу таба */
+  .chart-wrap{margin-top:16px;animation:fadeUp .5s ease both;}
+  .chart-wrap .chart-box{margin-bottom:0;}
+  .pair-notice{animation:fadeUp .32s ease both;}
 
   /* ---------- In-app camera ---------- */
   .cam-ov{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;background:#000;}
@@ -563,15 +603,6 @@
       <p id="createText">Выбери OTC-актив, длительность, тип входа и режим.</p>
     </div>
     <div class="card">
-      <div class="chart-box" id="chartBox">
-        <div class="chart-head"><span class="c-live"><i class="c-dot"></i><span id="chartTitle">ЖИВОЙ ГРАФИК</span></span><b id="chartPair">—</b></div>
-        <div class="chart-frame">
-          <iframe id="chartFrame" title="chart" loading="lazy" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
-          <div class="chart-off" id="chartOff"><span id="chartOffText">Для OTC-пар график недоступен — эти активы есть только в терминале брокера.</span></div>
-        </div>
-        <p class="chart-note hide" id="chartNote"></p>
-      </div>
-
       <div class="v-params">
         <button class="v-param" id="cAssetBtn" type="button"><small id="cAssetCap">АКТИВ</small><b id="cAssetVal">—</b><span class="vp-hint" id="cAssetHint">Нажми, чтобы выбрать</span></button>
         <button class="v-param" id="cDurBtn" type="button"><small id="cDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="cDurVal">—</b><span class="vp-hint" id="cDurHint">Нажми, чтобы выбрать</span></button>
@@ -620,6 +651,8 @@
       </div>
     </div>
 
+    <div class="pair-notice" id="pairNotice" style="display:none">—</div>
+
     <div class="result" id="quickResult">
       <div id="quickGameBadge" style="display:none;margin:0 0 10px;padding:7px 11px;border:1px solid rgba(255,255,255,.16);border-radius:10px;font-size:11px;line-height:1.35;letter-spacing:.04em;text-transform:uppercase;opacity:.72;text-align:center">—</div>
       <div class="r-asset" id="quickAssetTop">—</div>
@@ -641,6 +674,17 @@
         <button class="btn secondary" id="quickHistory">Открыть историю</button>
       </div>
     </div>
+    <div class="chart-wrap">
+      <div class="chart-box" id="chartBox">
+        <div class="chart-head"><span class="c-live"><i class="c-dot"></i><span id="chartTitle">ЖИВОЙ ГРАФИК</span></span><b id="chartPair">—</b></div>
+        <div class="chart-frame">
+          <iframe id="chartFrame" title="chart" loading="lazy" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+          <div class="chart-off" id="chartOff"><span id="chartOffText">Для OTC-пар график недоступен — эти активы есть только в терминале брокера.</span></div>
+        </div>
+        <p class="chart-note hide" id="chartNote"></p>
+      </div>
+    </div>
+
   </section>
 
   <!-- VISION -->
@@ -1269,6 +1313,35 @@
   };
   for (var _lc9 in EXTRA_T9){ if(T[_lc9]){ for(var _ek9 in EXTRA_T9[_lc9]){ T[_lc9][_ek9] = EXTRA_T9[_lc9][_ek9]; } } }
 
+  var EXTRA_T10 = {
+    ru:{ detailLoading:"Разбор дописывается…" },
+    en:{ detailLoading:"Writing the breakdown…" },
+    uz:{ detailLoading:"Tahlil yozilmoqda…" },
+    hi:{ detailLoading:"विश्लेषण लिखा जा रहा है…" },
+    pt:{ detailLoading:"Escrevendo a análise…" },
+    ar:{ detailLoading:"جارٍ كتابة التحليل…" },
+    kk:{ detailLoading:"Талдау жазылуда…" }
+  };
+  for (var _lcA in EXTRA_T10){ if(T[_lcA]){ for(var _ekA in EXTRA_T10[_lcA]){ T[_lcA][_ekA] = EXTRA_T10[_lcA][_ekA]; } } }
+
+  var EXTRA_T12 = {
+    ru:{ pairOffTag:"сигналы с {TIME}", pairQuietTag:"тихо · с {TIME}",
+      pairOffMsg:"По этой паре сигналы будут доступны с {TIME}. Сейчас выберите другую пару." },
+    en:{ pairOffTag:"signals from {TIME}", pairQuietTag:"quiet · from {TIME}",
+      pairOffMsg:"Signals for this pair will be available from {TIME}. Please pick another pair for now." },
+    uz:{ pairOffTag:"signallar {TIME} dan", pairQuietTag:"sokin · {TIME}",
+      pairOffMsg:"Bu juft uchun signallar {TIME} dan mavjud bo‘ladi. Hozircha boshqa juftni tanlang." },
+    hi:{ pairOffTag:"संकेत {TIME} से", pairQuietTag:"शांत · {TIME}",
+      pairOffMsg:"इस जोड़ी के संकेत {TIME} से उपलब्ध होंगे। अभी दूसरी जोड़ी चुनें।" },
+    pt:{ pairOffTag:"sinais a partir de {TIME}", pairQuietTag:"calmo · {TIME}",
+      pairOffMsg:"Os sinais deste par estarão disponíveis a partir de {TIME}. Escolha outro par por agora." },
+    ar:{ pairOffTag:"الإشارات من {TIME}", pairQuietTag:"هادئ · {TIME}",
+      pairOffMsg:"إشارات هذا الزوج ستتوفر من {TIME}. اختر زوجًا آخر الآن." },
+    kk:{ pairOffTag:"сигналдар {TIME} бастап", pairQuietTag:"тыныш · {TIME}",
+      pairOffMsg:"Бұл жұп бойынша сигналдар {TIME} бастап қолжетімді. Әзірге басқа жұпты таңдаңыз." }
+  };
+  for (var _lcC in EXTRA_T12){ if(T[_lcC]){ for(var _ekC in EXTRA_T12[_lcC]){ T[_lcC][_ekC] = EXTRA_T12[_lcC][_ekC]; } } }
+
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1398,11 +1471,91 @@
     if(sec < 3600) return (sec/60) + " " + t("unitMin");
     return (Math.round((sec/3600)*10)/10) + " " + t("unitHour");
   }
+  /* ---------- Состояние пары ---------- */
+  var SESS_HOURS = { sydney:[21,6], tokyo:[0,9], london:[7,16], newyork:[12,21] };
+  var CUR_SESS = {
+    AUD:"sydney", NZD:"sydney",
+    JPY:"tokyo", CNH:"tokyo", CNY:"tokyo", SGD:"tokyo", HKD:"tokyo", IDR:"tokyo", MYR:"tokyo",
+    PHP:"tokyo", THB:"tokyo", VND:"tokyo", INR:"tokyo", BDT:"tokyo", PKR:"tokyo",
+    USD:"newyork", CAD:"newyork", MXN:"newyork", BRL:"newyork", ARS:"newyork", CLP:"newyork", COP:"newyork"
+  };
+  function sessOf(cur){ return CUR_SESS[cur] || "london"; }
+  function sessOpenAt(name, d){
+    var r = SESS_HOURS[name] || SESS_HOURS.london;
+    var h = d.getUTCHours() + d.getUTCMinutes() / 60;
+    return r[0] < r[1] ? (h >= r[0] && h < r[1]) : (h >= r[0] || h < r[1]);
+  }
+  function nextSessStart(name, d){
+    var r = SESS_HOURS[name] || SESS_HOURS.london;
+    var t0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), r[0], 0, 0);
+    if(t0 <= d.getTime()) t0 += 86400000;
+    return t0;
+  }
+  // Нерабочее окно: с вечера пятницы до вечера воскресенья
+  function weekClosed(d){
+    var w = d.getUTCDay(), h = d.getUTCHours();
+    return w === 6 || (w === 5 && h >= 21) || (w === 0 && h < 21);
+  }
+  function nextWeekOpen(d){
+    var x = new Date(d.getTime());
+    for(var i = 0; i < 9; i++){
+      if(x.getUTCDay() === 0){
+        var t0 = Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate(), 21, 0, 0);
+        if(t0 > d.getTime()) return t0;
+      }
+      x = new Date(x.getTime() + 86400000);
+    }
+    return d.getTime();
+  }
+  // OTC у брокера идут круглосуточно — закрывать их нельзя,
+  // иначе в приложении пара закрыта, а у брокера торгуется
+  function pairState(asset){
+    var s0 = String(asset || "");
+    var now = new Date();
+    if(s0.indexOf(" OTC") > -1) return { code:"open", at:null };
+    if(weekClosed(now)) return { code:"closed", at: nextWeekOpen(now) };
+    var m = s0.split("/");
+    if(m.length !== 2) return { code:"open", at:null };
+    var sa = sessOf(m[0].toUpperCase().trim()), sb = sessOf(m[1].toUpperCase().trim());
+    var oa = sessOpenAt(sa, now), ob = sessOpenAt(sb, now);
+    function major(n){ return n === "london" || n === "newyork"; }
+    if((oa && ob) || (oa && major(sa)) || (ob && major(sb))) return { code:"open", at:null };
+    var cand = [];
+    if(!oa) cand.push(nextSessStart(sa, now));
+    if(!ob) cand.push(nextSessStart(sb, now));
+    if(!major(sa) && !major(sb)) cand.push(nextSessStart("london", now));
+    return { code:"quiet", at: cand.length ? Math.min.apply(null, cand) : null };
+  }
+  function whenText(ms){
+    if(!ms) return "";
+    var hm = new Intl.DateTimeFormat(localeTag(), { timeZone:"Asia/Oral", hour:"2-digit", minute:"2-digit", hour12:false });
+    var dayOf = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Oral", day:"2-digit" });
+    var d = new Date(ms);
+    if(dayOf.format(d) === dayOf.format(new Date())) return hm.format(d);
+    var wd = new Intl.DateTimeFormat(localeTag(), { timeZone:"Asia/Oral", weekday:"short" }).format(d);
+    return wd + " " + hm.format(d);
+  }
+  function pairTagHtml(asset){
+    var ps = pairState(asset);
+    if(ps.code === "open") return "";
+    var txt = (ps.code === "closed" ? t("pairOffTag") : t("pairQuietTag")).split("{TIME}").join(whenText(ps.at));
+    return '<span class="p-when'+(ps.code === "closed" ? " off" : "")+'">'+esc(txt)+'</span>';
+  }
+  function showPairNotice(ps){
+    var el = $("pairNotice"); if(!el) return;
+    el.textContent = t("pairOffMsg").split("{TIME}").join(whenText(ps.at));
+    el.style.display = "block";
+  }
+  function hidePairNotice(){ var el = $("pairNotice"); if(el) el.style.display = "none"; }
+
   function timing(){
     var dur = state.duration, durMs = dur*1000;
-    var safety = state.entryMode === "nearest" ? 12 : dur;
+    // Запас до входа не должен быть длиннее самой сделки: на 3 секундах ждать 12 бессмысленно
+    var buffer = dur <= 5 ? 2 : (dur <= 15 ? 4 : (dur <= 60 ? 8 : 12));
+    var safety = state.entryMode === "nearest" ? buffer : dur;
     var target = Date.now() + safety*1000;
-    var entryMs = Math.ceil(target/durMs)*durMs;
+    // Короткие сделки не привязываем к сетке свечей - округление только добавляло ожидание
+    var entryMs = dur <= 15 ? target : Math.ceil(target/durMs)*durMs;
     var outcomeMs = entryMs + durMs;
     return {
       entryMs: entryMs, outcomeMs: outcomeMs,
@@ -1541,6 +1694,8 @@
   // Избранные сверху, далее по выплате
   function sortAssets(arr){
     return arr.slice().sort(function(x,y){
+      var ax = pairState(x).code === "closed" ? 1 : 0, ay = pairState(y).code === "closed" ? 1 : 0;
+      if(ax !== ay) return ax - ay;
       var fx = isFav(x) ? 0 : 1, fy = isFav(y) ? 0 : 1;
       if(fx !== fy) return fx - fy;
       var ix = ASSETS.indexOf(x), iy = ASSETS.indexOf(y);
@@ -1552,14 +1707,18 @@
     q = (q||"").trim().toLowerCase();
     var list = sortAssets(ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; }));
     var html = list.map(function(a){
-      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+'" data-asset="'+esc(a)+'">'+
-        favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+'</button>';
+      var ps = pairState(a);
+      return '<button class="btn asset-option '+(a===state.asset?"selected":"")+(ps.code==="closed"?" off":"")+'"'+
+        ' data-asset="'+esc(a)+'"'+(ps.code==="closed"?' data-off="1"':'')+'>'+
+        favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+pairTagHtml(a)+'</button>';
     }).join("");
     $("assetList").innerHTML = html || '<p class="section-text">—</p>';
     document.querySelectorAll("[data-asset]").forEach(function(b){
       b.addEventListener("click", function(ev){
         var st = ev.target && ev.target.closest ? ev.target.closest("[data-fav]") : null;
         if(st){ ev.preventDefault(); ev.stopPropagation(); toggleFav(st.getAttribute("data-fav")); renderAssets($("assetSearch").value); return; }
+        // Закрытую пару выбрать нельзя
+        if(b.getAttribute("data-off")){ ev.preventDefault(); showPairNotice(pairState(b.getAttribute("data-asset"))); return; }
         state.asset = b.getAttribute("data-asset"); save();
         $("profileAsset").textContent = state.asset;
         renderAssets($("assetSearch").value);
@@ -1659,6 +1818,7 @@
   /* ---------- Vision params ---------- */
   var vpKind = "asset";
   function syncVisionParams(){
+    if(pairState(state.asset).code !== "closed") hidePairNotice();
     var av = $("vAssetVal"), dv = $("vDurVal");
     if(av) av.textContent = pairFlag(state.asset) + " " + state.asset;
     if(dv) dv.textContent = durationText(state.duration);
@@ -1678,8 +1838,10 @@
       q = (q||"").trim().toLowerCase();
       var items = sortAssets(ASSETS.filter(function(a){ return a.toLowerCase().indexOf(q) > -1; }));
       list.innerHTML = (items.map(function(a){
-        return '<button type="button" class="vp-item '+(a===state.asset?"selected":"")+'" data-vp="'+esc(a)+'">'+
-          favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+'</button>';
+        var ps = pairState(a);
+        return '<button type="button" class="vp-item '+(a===state.asset?"selected":"")+(ps.code==="closed"?" off":"")+'"'+
+          ' data-vp="'+esc(a)+'"'+(ps.code==="closed"?' data-off="1"':'')+'>'+
+          favHtml(a)+pairFlags(a)+'<span class="p-name">'+esc(a)+'</span>'+pairTagHtml(a)+'</button>';
       }).join("") || '<p class="section-text">—</p>');
     } else {
       list.innerHTML = DURATIONS.map(function(v){
@@ -1691,6 +1853,7 @@
         var st = ev.target && ev.target.closest ? ev.target.closest("[data-fav]") : null;
         if(st){ ev.preventDefault(); ev.stopPropagation(); toggleFav(st.getAttribute("data-fav")); renderVpList($("vpSearch") ? $("vpSearch").value : ""); renderAssets($("assetSearch").value); return; }
         var val = b.getAttribute("data-vp");
+        if(b.getAttribute("data-off")){ ev.preventDefault(); showPairNotice(pairState(val)); return; }
         if(vpKind === "asset"){
           state.asset = val; save();
           if($("profileAsset")) $("profileAsset").textContent = state.asset;
@@ -1742,6 +1905,7 @@
     }
     save(); renderHistory(); renderStats();
     syncResult(item, rec);
+    return rec;
   }
   function renderHistory(){
     var list = $("historyList");
@@ -1896,6 +2060,54 @@
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 
+  function applyExplain(data, ex, rec){
+    var got = ex && ex.ok;
+    if(got && ex.reasons && ex.reasons.length){
+      data.reasons = ex.reasons;
+      $("visionReasons").innerHTML = ex.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
+      $("visionReasonsWrap").style.display = "block";
+      if(rec) rec.reasons = ex.reasons;
+    }
+    if(got && ex.summary){
+      data.summary = ex.summary;
+      $("visionSummary").textContent = ex.summary;
+      $("visionSummaryWrap").style.display = "block";
+      if(rec) rec.summary = ex.summary;
+    }
+    if(got && ex.strategy){
+      data.strategy = ex.strategy;
+      $("visionStrategy").textContent = ex.strategy;
+      $("visionStrategyWrap").style.display = "block";
+      if(rec) rec.strategy = ex.strategy;
+    } else {
+      $("visionStrategy").textContent = "";
+      $("visionStrategyWrap").style.display = "none";
+    }
+    if(got && ex.tips && ex.tips.length){
+      data.tips = ex.tips;
+      $("visionTips").innerHTML = ex.tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
+      $("visionTipsWrap").style.display = "block";
+      if(rec) rec.tips = ex.tips;
+    }
+    if(rec){ save(); renderHistory(); }
+  }
+
+  function fetchExplain(data, rec, assetOut){
+    if(!initData) return;
+    $("visionStrategyTitle").textContent = t("detailStrategy");
+    $("visionStrategy").textContent = t("detailLoading");
+    $("visionStrategyWrap").style.display = "block";
+    var ctl = null; try{ ctl = new AbortController(); }catch(e){}
+    var tmr = setTimeout(function(){ if(ctl){ try{ ctl.abort(); }catch(e){} } }, 27000);
+    fetch("/api/analyze",{ method:"POST", headers:{"Content-Type":"application/json"},
+      signal: ctl ? ctl.signal : undefined,
+      body: JSON.stringify({ initData:initData, mode:"explain", language:state.language,
+        direction:data.direction, reasons:data.reasons||[], asset:assetOut||"", timeframe:data.timeframe||"" })
+    }).then(function(r){ return r.json().catch(function(){ return null; }); })
+      .then(function(ex){ clearTimeout(tmr); applyExplain(data, ex, rec); })
+      .catch(function(){ clearTimeout(tmr); applyExplain(data, null, rec); });
+  }
+
   function showVisionResult(data){
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
@@ -1930,12 +2142,15 @@
     var vr=$("visionRisk"); if(vr){ vr.style.display="none"; vr.textContent=""; }
     $("visionResult").classList.add("show");
     tickCountdowns();
-    addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
+    var histRec = addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
       entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
       summary:data.summary||"", confidence:data.confidence||"",
       reasons:reasons, strategy:data.strategy||"", tips:Array.isArray(data.tips)?data.tips:[],
       timeframe:data.timeframe||"", entryWindow:data.entryWindow||"", expiry:data.expiry||"",
       image:state.image||null });
+
+    // Сигнал уже на экране, текст дописывается фоном
+    if(reasons.length && d.norm !== "none" && !data.strategy){ fetchExplain(data, histRec, assetOut); }
   }
 
   function fallbackVisionResult(){
@@ -1958,6 +2173,15 @@
   }
   function analyze(){
     if(!state.image || state.analyzing) return;
+    var psV = pairState(state.asset);
+    if(psV.code === "closed"){
+      var vrx = $("visionRisk");
+      if(vrx){
+        vrx.textContent = t("pairOffMsg").split("{TIME}").join(whenText(psV.at));
+        vrx.style.display = "block";
+      }
+      return;
+    }
     state.analyzing = true; $("analyzeBtn").disabled = true;
     startProcessing();
     (function(){
@@ -1992,7 +2216,7 @@
         finishWith(fallbackVisionResult(), false, "timeout 50s");
       }, 50000);
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
+        body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData, fast:true }),
         signal: controller?controller.signal:undefined })
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
         .then(function(r){
@@ -2051,6 +2275,11 @@
   function strengthBand(absPct){
     if(absPct >= 0.20) return "strong";
     if(absPct >= 0.08) return "moderate";
+    return "weak";
+  }
+  function tickStrength(absTick){
+    if(absTick >= 0.05) return "strong";
+    if(absTick >= 0.015) return "moderate";
     return "weak";
   }
   function positionBand(pos){
@@ -2370,7 +2599,7 @@
     };
   }
 
-  function buildQuickFromQuote(q){
+  function buildQuickFromQuote(q, prevPrice){
     var ru = state.language === "ru";
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
@@ -2381,9 +2610,14 @@
     // Тогда берём ход последней сессии (открытие -> закрытие): это реальные данные
     // рынка, а не случайное направление.
     if((pct === null || Math.abs(pct) < tiny) && close !== null && open) pct = ((close - open) / open) * 100;
-    if(close === null || pct === null) return quickGameSignal();
+    // Свежее движение: разница между двумя котировками одного запуска.
+    // Именно оно задаёт направление, если цена вообще шевелится.
+    var pv = qNum(prevPrice), tickPct = null;
+    if(pv !== null && pv !== 0 && close !== null && close !== pv) tickPct = ((close - pv) / pv) * 100;
+    if(close === null || (pct === null && tickPct === null)) return quickGameSignal();
+    if(pct === null) pct = tickPct;
 
-    var stale = q.is_market_open === false;
+    var stale = q.is_market_open === false && tickPct === null;
     var absPct = Math.abs(pct);
     var pos = (high !== null && low !== null && high > low) ? (close - low) / (high - low) : null;
     var posB = positionBand(pos);
@@ -2400,14 +2634,16 @@
     } else {
       flatLimit = 0.002;
     }
-    if(absPct < flatLimit) return quickGameSignal();
+    // Замершие данные лучше отдать демо-режиму, чем повторять один и тот же итог суток
+    if(tickPct === null && absPct < flatLimit) return quickGameSignal();
 
-    var up = pct > 0;
-    var strength = strengthBand(absPct);
+    var up = tickPct !== null ? tickPct > 0 : pct > 0;
+    var strength = tickPct !== null ? tickStrength(Math.abs(tickPct)) : strengthBand(absPct);
     // У зажатой пары небольшой ход не должен читаться как сильный перевес
     if(rangePct !== null && rangePct < 0.08 && strength === "strong") strength = "moderate";
 
-    var seed = absPct + (pos === null ? 0 : pos) + (rangePct === null ? 0 : rangePct);
+    var seed = absPct + (pos === null ? 0 : pos) + (rangePct === null ? 0 : rangePct)
+      + (tickPct === null ? 0 : Math.abs(tickPct) * 37);
     var reasons = [];
     var candidates = [
       factBias(up, strength, seed, ru),
@@ -2522,14 +2758,25 @@
   }
 
   function runQuick(){
+    var psQ = pairState(state.asset);
+    if(psQ.code === "closed"){ showPairNotice(psQ); return; }
+    hidePairNotice();
     $("quickResult").classList.remove("show");
     $("createAction").disabled = true;
     $("createAction").textContent = t("quickPreparing");
     startQuickProcessing();
-    Promise.all([fetchQuote(), wait(5400)]).then(function(res){
-      var q = res[0];
+    var q1 = null;
+    fetchQuote().then(function(a){
+      q1 = (a && !a.__error) ? a : null;
+      return wait(4300);
+    }).then(function(){
+      return fetchQuote();
+    }).then(function(b){
+      var q2 = (b && !b.__error) ? b : null;
+      var q = q2 || q1;
+      var prevPrice = (q1 && q2) ? qNum(q1.close != null ? q1.close : q1.price) : null;
       stopQuickProcessing();
-      var an = (q && !q.__error) ? buildQuickFromQuote(q) : quickGameSignal();
+      var an = q ? buildQuickFromQuote(q, prevPrice) : quickGameSignal();
       var tm = timing();
       var label = (q && q.display) ? q.display : state.asset;
       setTimeout(function(){
