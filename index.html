@@ -1269,17 +1269,6 @@
   };
   for (var _lc9 in EXTRA_T9){ if(T[_lc9]){ for(var _ek9 in EXTRA_T9[_lc9]){ T[_lc9][_ek9] = EXTRA_T9[_lc9][_ek9]; } } }
 
-  var EXTRA_T10 = {
-    ru:{ detailLoading:"Разбор дописывается…" },
-    en:{ detailLoading:"Writing the breakdown…" },
-    uz:{ detailLoading:"Tahlil yozilmoqda…" },
-    hi:{ detailLoading:"विश्लेषण लिखा जा रहा है…" },
-    pt:{ detailLoading:"Escrevendo a análise…" },
-    ar:{ detailLoading:"جارٍ كتابة التحليل…" },
-    kk:{ detailLoading:"Талдау жазылуда…" }
-  };
-  for (var _lcA in EXTRA_T10){ if(T[_lcA]){ for(var _ekA in EXTRA_T10[_lcA]){ T[_lcA][_ekA] = EXTRA_T10[_lcA][_ekA]; } } }
-
   var LANGS = [
     {code:"ru", label:"Русский", flag:"\uD83C\uDDF7\uD83C\uDDFA"},
     {code:"en", label:"English", flag:"\uD83C\uDDEC\uD83C\uDDE7"},
@@ -1411,12 +1400,9 @@
   }
   function timing(){
     var dur = state.duration, durMs = dur*1000;
-    // Запас до входа не должен быть длиннее самой сделки: на 3 секундах ждать 12 бессмысленно
-    var buffer = dur <= 5 ? 2 : (dur <= 15 ? 4 : (dur <= 60 ? 8 : 12));
-    var safety = state.entryMode === "nearest" ? buffer : dur;
+    var safety = state.entryMode === "nearest" ? 12 : dur;
     var target = Date.now() + safety*1000;
-    // Короткие сделки не привязываем к сетке свечей - округление только добавляло ожидание
-    var entryMs = dur <= 15 ? target : Math.ceil(target/durMs)*durMs;
+    var entryMs = Math.ceil(target/durMs)*durMs;
     var outcomeMs = entryMs + durMs;
     return {
       entryMs: entryMs, outcomeMs: outcomeMs,
@@ -1756,7 +1742,6 @@
     }
     save(); renderHistory(); renderStats();
     syncResult(item, rec);
-    return rec;
   }
   function renderHistory(){
     var list = $("historyList");
@@ -1911,54 +1896,6 @@
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 
-  function applyExplain(data, ex, rec){
-    var got = ex && ex.ok;
-    if(got && ex.reasons && ex.reasons.length){
-      data.reasons = ex.reasons;
-      $("visionReasons").innerHTML = ex.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
-      $("visionReasonsWrap").style.display = "block";
-      if(rec) rec.reasons = ex.reasons;
-    }
-    if(got && ex.summary){
-      data.summary = ex.summary;
-      $("visionSummary").textContent = ex.summary;
-      $("visionSummaryWrap").style.display = "block";
-      if(rec) rec.summary = ex.summary;
-    }
-    if(got && ex.strategy){
-      data.strategy = ex.strategy;
-      $("visionStrategy").textContent = ex.strategy;
-      $("visionStrategyWrap").style.display = "block";
-      if(rec) rec.strategy = ex.strategy;
-    } else {
-      $("visionStrategy").textContent = "";
-      $("visionStrategyWrap").style.display = "none";
-    }
-    if(got && ex.tips && ex.tips.length){
-      data.tips = ex.tips;
-      $("visionTips").innerHTML = ex.tips.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join("");
-      $("visionTipsWrap").style.display = "block";
-      if(rec) rec.tips = ex.tips;
-    }
-    if(rec){ save(); renderHistory(); }
-  }
-
-  function fetchExplain(data, rec, assetOut){
-    if(!initData) return;
-    $("visionStrategyTitle").textContent = t("detailStrategy");
-    $("visionStrategy").textContent = t("detailLoading");
-    $("visionStrategyWrap").style.display = "block";
-    var ctl = null; try{ ctl = new AbortController(); }catch(e){}
-    var tmr = setTimeout(function(){ if(ctl){ try{ ctl.abort(); }catch(e){} } }, 27000);
-    fetch("/api/analyze",{ method:"POST", headers:{"Content-Type":"application/json"},
-      signal: ctl ? ctl.signal : undefined,
-      body: JSON.stringify({ initData:initData, mode:"explain", language:state.language,
-        direction:data.direction, reasons:data.reasons||[], asset:assetOut||"", timeframe:data.timeframe||"" })
-    }).then(function(r){ return r.json().catch(function(){ return null; }); })
-      .then(function(ex){ clearTimeout(tmr); applyExplain(data, ex, rec); })
-      .catch(function(){ clearTimeout(tmr); applyExplain(data, null, rec); });
-  }
-
   function showVisionResult(data){
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
@@ -1993,15 +1930,12 @@
     var vr=$("visionRisk"); if(vr){ vr.style.display="none"; vr.textContent=""; }
     $("visionResult").classList.add("show");
     tickCountdowns();
-    var histRec = addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
+    addHistory({ type:"vision", direction:data.direction, asset:assetOut, duration:tm.durationText,
       entry:tm.entryText, outcomeTime:tm.outcomeText, entryISO:tm.entryISO, outcomeISO:tm.outcomeISO,
       summary:data.summary||"", confidence:data.confidence||"",
       reasons:reasons, strategy:data.strategy||"", tips:Array.isArray(data.tips)?data.tips:[],
       timeframe:data.timeframe||"", entryWindow:data.entryWindow||"", expiry:data.expiry||"",
       image:state.image||null });
-
-    // Сигнал уже на экране, текст дописывается фоном
-    if(reasons.length && d.norm !== "none" && !data.strategy){ fetchExplain(data, histRec, assetOut); }
   }
 
   function fallbackVisionResult(){
@@ -2058,7 +1992,7 @@
         finishWith(fallbackVisionResult(), false, "timeout 50s");
       }, 50000);
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData, fast:true }),
+        body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData }),
         signal: controller?controller.signal:undefined })
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
         .then(function(r){
