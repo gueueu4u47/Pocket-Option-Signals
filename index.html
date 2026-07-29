@@ -2278,8 +2278,10 @@
     return "weak";
   }
   function tickStrength(absTick){
-    if(absTick >= 0.05) return "strong";
-    if(absTick >= 0.015) return "moderate";
+    // Окно замера — пара секунд, а не сутки: пороги должны быть мельче,
+    // иначе любое шевеление читалось как слабое.
+    if(absTick >= 0.012) return "strong";
+    if(absTick >= 0.004) return "moderate";
     return "weak";
   }
   function positionBand(pos){
@@ -2636,9 +2638,13 @@
     }
     // Замершие данные лучше отдать демо-режиму, чем повторять один и тот же итог суток
     if(tickPct === null && absPct < flatLimit) return quickGameSignal();
+    // Главное: без свежего тика направление бралось из дневного изменения,
+    // а оно весь день одно и то же — оттуда одинаковые сигналы и высокая
+    // уверенность на короткой длительности. Такой путь закрыт.
+    if(tickPct === null) return quickGameSignal();
 
-    var up = tickPct !== null ? tickPct > 0 : pct > 0;
-    var strength = tickPct !== null ? tickStrength(Math.abs(tickPct)) : strengthBand(absPct);
+    var up = tickPct > 0;
+    var strength = tickStrength(Math.abs(tickPct));
     // У зажатой пары небольшой ход не должен читаться как сильный перевес
     if(rangePct !== null && rangePct < 0.08 && strength === "strong") strength = "moderate";
 
@@ -2672,6 +2678,9 @@
       : strength === "strong" ? (ru ? "высокая" : "high")
       : strength === "moderate" ? (ru ? "средняя" : "medium")
       : (ru ? "низкая" : "low");
+    // За 3–15 секунд цена проходит слишком мало, чтобы обещать высокую уверенность.
+    var durSec = Number(state.duration || 0);
+    if(durSec > 0 && durSec <= 15 && strength === "strong") conf = ru ? "средняя" : "medium";
 
     return {
       direction: up ? "UP" : "DOWN",
