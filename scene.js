@@ -359,10 +359,30 @@
     });
   }
 
+  function aiBeat() {
+    var raw = window.__pulseDialogue;
+    window.__pulseDialogue = null; // читаем один раз
+    if (!raw || !raw.length || typeof raw.length !== "number") return null;
+    var out = [];
+    for (var i = 0; i < raw.length && out.length < 5; i++) {
+      var it = raw[i];
+      if (!it) continue;
+      if (it.pause) { out.push({ pause: true }); continue; }
+      var w = it.who;
+      var who = (w === OPY || w === "opy" || w === "experience" || w === "\u041e\u041f\u042b\u0422") ? OPY
+        : (w === DOP || w === "dop" || w === "dopamine") ? DOP : null;
+      var text = (typeof it.text === "string") ? it.text.trim() : "";
+      if (!who || !text) continue;
+      if (text.length > 160) text = text.slice(0, 157) + "\u2026";
+      out.push({ who: who, text: text });
+    }
+    return out.length ? out : null;
+  }
+
   function finale(myGen) {
     if (myGen !== S.gen || S.inResolve) return;
     S.inResolve = true;
-    var beat = pickResolve() || [];
+    var beat = aiBeat() || pickResolve() || [];
     playBeat(beat, myGen, false).then(function () {
       return wait(750);
     }).then(function () {
