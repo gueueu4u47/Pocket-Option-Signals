@@ -1,8 +1,9 @@
 /*
  * Signal Pulse — «Сцена» (полный экран как в макете)
- * Карточка файла (превью + пара + ТФ + имя + размер·разрешение),
- * карточка анализа (прогресс + %), живой диалог Дофамина и Опыта,
- * футер «Почти готово…». Подключение: <script src="scene.js"></script>
+ * Во время анализа графика: карточка анализа (прогресс + %),
+ * живой диалог Дофамина и Опыта, футер «Почти готово…».
+ * Самодостаточно: подключается к Vision-флоу через наблюдение за DOM.
+ * Подключение: <script src="scene.js"></script>
  */
 (function () {
   "use strict";
@@ -45,9 +46,9 @@
         [{who:OPY,text:"Если пойдёт —\nя первый зайду.\nНо по плану. Всегда."},{who:DOP,text:"Вот теперь ты мне нравишься 😎"}]
       ],
       down: [
-        [{who:OPY,text:"Вот куда смотрит рынок.\nЭто низ."},{who:DOP,text:"Обидно."},{who:OPY,text:"Зато честно."}],
-        [{who:DOP,text:"Не туда, куда я хотел, да?"},{who:OPY,text:"Нет.\nЗато туда, где правда."},{who:DOP,text:"Ух... принято."}],
-        [{who:OPY,text:"Сторона понятна.\nРынок смотрит вниз."},{who:DOP,text:"Не мой сценарий.\nНо вижу 👀"}]
+        [{who:OPY,text:"Вот сюда бы я и смотрел.\nВниз."},{who:DOP,text:"Вниз так вниз."},{who:OPY,text:"Зато честно."}],
+        [{who:DOP,text:"Не туда, куда я хотел, да?"},{who:OPY,text:"Не туда.\nЗато туда, где правда."},{who:DOP,text:"Ух... принято."}],
+        [{who:OPY,text:"Сторона понятна.\nЭто низ."},{who:DOP,text:"Обидно.\nНо вижу 👀"}]
       ],
       none: [
         [{pause:true},{who:DOP,text:"...чё, вообще ничего? 😐"},{who:OPY,text:"Сегодня можно\nи не решать."}],
@@ -83,9 +84,9 @@
         [{who:OPY,text:"If it goes —\nI'm first in.\nBut by the plan. Always."},{who:DOP,text:"Now I like you 😎"}]
       ],
       down: [
-        [{who:OPY,text:"This is where the market looks.\nDownside."},{who:DOP,text:"That stings."},{who:OPY,text:"But honest."}],
-        [{who:DOP,text:"Not where I wanted, huh?"},{who:OPY,text:"No.\nBut where the truth is."},{who:DOP,text:"...noted."}],
-        [{who:OPY,text:"The side is clear.\nMarket leans down."},{who:DOP,text:"Not my script.\nBut I see it 👀"}]
+        [{who:OPY,text:"This is where I'd look.\nDown."},{who:DOP,text:"Down it is."},{who:OPY,text:"But honest."}],
+        [{who:DOP,text:"Not where I wanted, huh?"},{who:OPY,text:"Nope.\nBut where the truth is."},{who:DOP,text:"...noted."}],
+        [{who:DOP,text:"I'd risk the opposite!"},{who:OPY,text:"I know.\nToday you follow me, monkey."},{who:DOP,text:"Fine, old man."}]
       ],
       none: [
         [{pause:true},{who:DOP,text:"...wait, nothing? 😐"},{who:OPY,text:"Today you can\nnot decide."}],
@@ -107,13 +108,6 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  function fmtBytes(b) {
-    if (b == null || isNaN(b)) return "";
-    if (b < 1024) return b + " B";
-    if (b < 1048576) return Math.round(b / 1024) + " KB";
-    return (b / 1048576).toFixed(1) + " MB";
-  }
-  function txtOf(id) { var e = document.getElementById(id); return e ? (e.textContent || "").trim() : ""; }
 
   function Picker(getSet) {
     var used = [];
@@ -148,14 +142,6 @@
       "body.pulse-scene-on #visionResult{display:none !important;}",
       "#pulseScene{display:none;margin-top:16px;}",
       "#pulseScene.show{display:block;animation:viewIn .3s ease;}",
-      ".ps-file{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:color-mix(in srgb,var(--card2) 92%,transparent);padding:12px;margin-bottom:12px;}",
-      ".ps-file-thumb{flex:0 0 auto;width:112px;height:66px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--card);}",
-      ".ps-file-thumb img{width:100%;height:100%;object-fit:cover;display:block;}",
-      ".ps-file-info{min-width:0;flex:1 1 auto;}",
-      ".ps-file-pair{font-size:15px;font-weight:800;color:var(--text);}",
-      ".ps-file-tf{margin-top:2px;font-size:13px;font-weight:700;color:var(--text);}",
-      ".ps-file-name{margin-top:4px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
-      ".ps-file-dim{margin-top:2px;font-size:12px;color:var(--muted);}",
       ".ps-analysis{border:1px solid var(--line);border-radius:var(--radius);background:color-mix(in srgb,var(--card2) 92%,transparent);padding:16px 16px 15px;}",
       ".ps-an-title{font-size:15px;font-weight:800;letter-spacing:.03em;color:var(--text);}",
       ".ps-an-sub{margin-top:6px;font-size:13px;line-height:1.4;color:var(--muted);}",
@@ -200,15 +186,6 @@
     box = document.createElement("div");
     box.id = "pulseScene";
     box.innerHTML =
-      '<div class="ps-file">' +
-        '<div class="ps-file-thumb"><img alt="" draggable="false"></div>' +
-        '<div class="ps-file-info">' +
-          '<div class="ps-file-pair"></div>' +
-          '<div class="ps-file-tf"></div>' +
-          '<div class="ps-file-name"></div>' +
-          '<div class="ps-file-dim"></div>' +
-        '</div>' +
-      '</div>' +
       '<div class="ps-analysis">' +
         '<div class="ps-an-title" id="psAnTitle"></div>' +
         '<div class="ps-an-sub" id="psAnSub"></div>' +
@@ -231,37 +208,6 @@
     set("psNote", u.note);
     set("psFootTxt", u.almost);
     set("psFootEta", u.footEta);
-  }
-
-  function fillFileCard() {
-    var card = box.querySelector(".ps-file");
-    if (!card) return;
-    var pv = document.getElementById("previewImg");
-    var src = pv ? (pv.getAttribute("src") || pv.src) : "";
-    if (!src) { card.style.display = "none"; return; }
-    card.style.display = "";
-    var thumb = card.querySelector(".ps-file-thumb img");
-    if (thumb) thumb.src = src;
-    var file = null;
-    var ii = document.getElementById("imageInput");
-    var ci = document.getElementById("camInput");
-    if (ii && ii.files && ii.files[0]) file = ii.files[0];
-    else if (ci && ci.files && ci.files[0]) file = ci.files[0];
-    var pair = txtOf("procAsset") || txtOf("visionAsset");
-    var dur = txtOf("procDuration") || txtOf("visionDuration");
-    var w = pv.naturalWidth || 0, h = pv.naturalHeight || 0;
-    var dims = (w && h) ? (w + "\u00d7" + h) : "";
-    var meta = [dims, file ? fmtBytes(file.size) : ""].filter(Boolean).join(" \u00b7 ");
-    function set(sel, val) {
-      var e = card.querySelector(sel);
-      if (!e) return;
-      e.textContent = val || "";
-      e.style.display = val ? "" : "none";
-    }
-    set(".ps-file-pair", pair && pair !== "\u2014" ? pair : "");
-    set(".ps-file-tf", dur && dur !== "\u2014" ? dur : "");
-    set(".ps-file-name", file ? file.name : "");
-    set(".ps-file-dim", meta);
   }
 
   function startProgress(myGen) {
@@ -374,7 +320,6 @@
     S.running = true; S.resolving = false; S.inResolve = false; S.dir = "none";
     thread.innerHTML = "";
     fillUi();
-    fillFileCard();
     document.body.classList.add("pulse-scene-on");
     box.classList.add("show");
     autoscroll();
