@@ -2109,6 +2109,7 @@
   }
 
   function showVisionResult(data){
+    window.__pulseDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : null;
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
     $("visionAssetTop").textContent = esc(assetOut)+" · OTC";
