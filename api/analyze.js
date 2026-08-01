@@ -147,6 +147,21 @@ function sanitizeDialogue(v) {
   return out;
 }
 
+function sanitizeState(v) {
+  if (!v || typeof v !== "object") return null;
+  const s = (x) => {
+    let t = String(x == null ? "" : x).replace(/["\\]+$/, "").trim();
+    if (!t || looksTechnical(t)) return "";
+    if (t.length > 48) t = t.slice(0, 47) + "…";
+    return t;
+  };
+  const impulse = s(v.impulse);
+  const emotion = s(v.emotion || v.emotionRisk);
+  const verdict = s(v.verdict || v.experience);
+  if (!impulse && !emotion && !verdict) return null;
+  return { impulse, emotion, verdict };
+}
+
 function looksTruncated(rawText) {
   const t = String(rawText || "").replace(/```[a-z]*/gi, "").trim();
   if (!t) return true;
@@ -535,21 +550,27 @@ If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons expl
 reasons is required, 3 items.`;
 
 /* Развёрнутый текст + живой диалог запрашиваем вторым шагом, уже без скриншота */
-const ENRICH_RU = `Ты трейдер-наставник. По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}.
-Факты по графику: {REASONS}
-Объясни этот сигнал простым языком. Ответь ОДНИМ JSON без markdown:
-{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения: что сейчас происходит на рынке и почему сигнал именно такой","strategy":"3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет","практический совет"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."}]}
-В reasons перепиши переданные факты более полными фразами по 80-130 символов: сам факт и что он значит для входа. Факты бери только переданные, новых не добавляй.
-dialogue — короткая живая перепалка двух внутренних голосов трейдера по ЭТОМУ сигналу: "dop" (Дофамин: азарт, тянет в сделку) и "opy" (Опыт: холодный, за дисциплину). 3-4 реплики, чередуй голоса, начни с "dop". Каждая реплика КОРОТКАЯ, как удар, до 90 символов, без обучения и без воды. Дофамин не клоун, Опыт не зануда. Реагируй на направление {DIR}: BUY — Дофамин торжествует, Опыт ставит рамки и дисциплину; SELL — Опыт оказался прав, Дофамин признаёт; NO_SIGNAL — оба сдержанны, сегодня входа нет. Допустим один эмодзи в реплике.
-Не противоречь направлению {DIR}. Не выдумывай цифры, которых нет в фактах.`;
+const ENRICH_RU = `Ты — не советчик и не рыночный аналитик. Ты озвучиваешь ВНУТРЕННИЙ момент решения одного трейдера. Дофамин и Опыт — это две части ОДНОГО человека, его собственные мысли перед сделкой, а не два бота.
+По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты по графику: {REASONS}
+Кто говорит (оба про себя — «мы», «наш»):
+- "dop" (Дофамин): желание войти прямо сейчас, азарт, страх упустить движение, уверенность момента. Не клоун и не мем.
+- "opy" (Опыт): память прошлых решений и ошибок, дисциплина, холодная проверка. Не запрещает — проверяет.
+Ответь ОДНИМ JSON без markdown:
+{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения простым языком","strategy":"3 предложения: вход, подтверждение, отмена идеи","tips":["практический совет","практический совет"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"низкий|средний|высокий","emotion":"низкий|умеренный|повышенный|высокий","verdict":"вердикт Опыта, 2-5 слов"}}
+dialogue — 3-4 короткие реплики как внутренний монолог перед входом. Речь от «мы». Чередуй dop/opy, начни с dop. Каждая реплика короткая и живая, без обучения и без мемов, до 90 символов. Дофамин видит движение и тянет войти прямо сейчас; Опыт вспоминает похожие ситуации и холодно проверяет. Реагируй на {DIR}: BUY — структура подтверждает, входим по плану, а не на эмоции; SELL — рынок смотрит вниз, ждём подтверждение, не импульс; NO_SIGNAL — не запрещаем, но сегодня проверяем и ждём.
+state — оцени состояние трейдера: impulse (сила желания войти), emotion (риск действия на эмоции), verdict (что советует Опыт, например «дождаться подтверждения», «вход оправдан», «пропустить»).
+Не выдумывай цифры, которых нет в фактах. В reasons бери только переданные факты.`;
 
-const ENRICH_EN = `You are a trading mentor. A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}.
-Chart facts: {REASONS}
-Explain this signal in plain language. Answer with ONE JSON, no markdown:
-{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 sentences on what the market is doing and why the signal is this way","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip","practical tip"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."}]}
-In reasons rewrite the given facts as fuller phrases of 80-130 characters each: the fact itself and what it means for the entry. Use only the given facts, add none.
-dialogue — a short lively exchange between two inner voices of the trader about THIS signal: "dop" (Dopamine: excitement, wants the trade) and "opy" (Experience: cold, pro-discipline). 3-4 lines, alternate voices, start with "dop". Each line SHORT, like a punch, up to 90 chars, no teaching, no filler. Dopamine is not a clown, Experience is not a bore. React to direction {DIR}: BUY — Dopamine triumphs, Experience sets the rules; SELL — Experience was right, Dopamine admits it; NO_SIGNAL — both restrained, no entry today. One emoji per line is allowed.
-Do not contradict direction {DIR}. Do not invent numbers that are not in the facts.`;
+const ENRICH_EN = `You are not an advisor or a market analyst. You voice the INNER moment of one trader's decision. Dopamine and Experience are two parts of ONE person — the trader's own thoughts before a trade, not two bots.
+A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}. Chart facts: {REASONS}
+Who speaks (both say "we", "our"):
+- "dop" (Dopamine): the urge to enter right now, thrill, fear of missing the move, confidence of the moment. Not a clown, not a meme.
+- "opy" (Experience): memory of past decisions and mistakes, discipline, a cold check. Does not forbid — it verifies.
+Answer with ONE JSON, no markdown:
+{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 plain sentences","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"low|medium|high","emotion":"low|moderate|elevated|high","verdict":"Experience verdict, 2-5 words"}}
+dialogue — 3-4 short lines as an inner monologue before the entry. Speak as "we". Alternate dop/opy, start with dop. Each line short and alive, no teaching, no memes, up to 90 chars. Dopamine sees the move and wants in now; Experience recalls similar situations and coldly checks. React to {DIR}: BUY — structure confirms, we enter by the plan, not on emotion; SELL — market leans down, we wait for confirmation, not impulse; NO_SIGNAL — we don't forbid, but today we verify and wait.
+state — assess the trader's state: impulse (strength of the urge to enter), emotion (risk of acting on emotion), verdict (what Experience advises, e.g. "wait for confirmation", "entry justified", "skip").
+Do not invent numbers not in the facts. In reasons use only the given facts.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
 {"direction":"BUY|SELL|NO_SIGNAL","reasons":["до 50 символов","до 50 символов"],"confidence":"низкая|средняя|высокая"}
@@ -573,6 +594,7 @@ function softCard(res, lang, summary, reasons) {
     strategy: "",
     tips: [],
     dialogue: [],
+    state: null,
     degraded: false,
     notice: true
   });
@@ -603,6 +625,7 @@ module.exports = async (req, res) => {
       strategy: "",
       tips: [],
       dialogue: [],
+      state: null,
       degraded: true,
       diag: "missing api key"
     });
@@ -703,7 +726,7 @@ module.exports = async (req, res) => {
             reasons: lang === "ru"
               ? ["Сегодняшний объём анализов исчерпан.", "Возвращайся завтра — лимит обновится."]
               : ["Today's analysis volume is used up.", "Come back tomorrow when the limit resets."],
-            strategy: "", tips: [], dialogue: [], degraded: false, notice: true, limited: true
+            strategy: "", tips: [], dialogue: [], state: null, degraded: false, notice: true, limited: true
           });
         }
       } catch (e) { /* fail-open */ }
@@ -789,6 +812,8 @@ module.exports = async (req, res) => {
           const tp2 = cleanList(ex.tips, 3);
           const dlg = sanitizeDialogue(ex.dialogue);
           if (dlg.length) best.dialogue = dlg;
+          const stt = sanitizeState(ex.state);
+          if (stt) best.state = stt;
           if (sum2 && sum2.length > String((best && best.summary) || "").length) best.summary = sum2;
           if (st2) best.strategy = st2;
           if (tp2.length) best.tips = tp2;
@@ -821,6 +846,7 @@ module.exports = async (req, res) => {
       strategy: trimPartialText((best && best.strategy) || "", bestCut),
       tips: cleanList(best && best.tips, 3),
       dialogue: (best && Array.isArray(best.dialogue)) ? best.dialogue : [],
+      state: (best && best.state) || null,
       agents: [],
       degraded: degraded
     };
@@ -846,6 +872,7 @@ module.exports = async (req, res) => {
       strategy: "",
       tips: [],
       dialogue: [],
+      state: null,
       degraded: true
     });
   }
