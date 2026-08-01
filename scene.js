@@ -13,83 +13,86 @@
     ru: { dop: "ДОФАМИН", opy: "ОПЫТ" },
     en: { dop: "DOPAMINE", opy: "EXPERIENCE" }
   };
+  var GLYPH = { dop: "⚡", opy: "🧠" };
 
   /* ---------- Библиотека реплик ---------- */
   var LIB = {
     ru: {
       ui: {
-        analyzing: "АНАЛИЗ ГРАФИКА",
-        sub: "Разбираю структуру, импульс и контекст",
+        analyzing: "ANALYZING CHART…",
+        sub: "Читаю структуру, сравниваю с прошлым опытом, ловлю эмоциональный импульс",
         eta: "Осталось: 5–12 сек",
-        note: "Обычно быстрее на младших ТФ",
-        almost: "Почти готово…",
-        footEta: "2–5 сек"
+        note: "Смотрю не только на рынок — на твоё состояние",
+        almost: "Свожу картину…",
+        footEta: "2–5 сек",
+        head: "Два голоса в тебе перед входом. AI помогает их увидеть."
+      },
+      stateLabels: { title: "AI RESULT", impulse: "Импульс", emotion: "Риск эмоции", experience: "Опыт" },
+      state: {
+        up: { impulse: "высокий", emotion: "умеренный", verdict: "вход оправдан — по плану" },
+        down: { impulse: "высокий", emotion: "повышенный", verdict: "дождаться подтверждения" },
+        none: { impulse: "высокий", emotion: "повышенный", verdict: "рекомендует дождаться подтверждения" }
       },
       intro: [
-        [{who:DOP,text:"Осо, смотри какой импульс!\nЩас как заскочим 🚀\nСвеча просто конфетка!"},{who:OPY,text:"Не спеши, обезьяна.\nВерхняя зона сильная.\nСначала подтверждение."}],
-        [{who:DOP,text:"Ну красота же!\nТело свечи — как ракета 🚀"},{who:OPY,text:"Красиво.\nВот это меня и напрягает."}],
-        [{who:DOP,text:"Так, я всё.\nЯ в деле, погнали!"},{who:OPY,text:"Ты «в деле» ещё до того,\nкак открыл график."}],
-        [{who:DOP,text:"Чувствуешь, как разгоняется? 🔥"},{who:OPY,text:"Чувствую.\nПоэтому и смотрю на объём."}]
+        [{who:DOP,text:"Смотри — пошло движение.\nМожет, это наш момент?"},{who:OPY,text:"Я тоже это вижу.\nСначала проверю, что это на самом деле."}],
+        [{who:DOP,text:"Внутри уже тянет войти прямо сейчас."},{who:OPY,text:"Знаю это чувство.\nДай мне пару секунд."}],
+        [{who:DOP,text:"Мы можем успеть.\nОкно не будет ждать."},{who:OPY,text:"Помню, как мы уже спешили.\nСмотрю внимательно."}]
       ],
       middle: [
-        [{who:DOP,text:"Ну сколько можно пялиться?"},{who:OPY,text:"Ровно до того,\nкак станет ясно."}],
-        [{who:DOP,text:"Импульс!\nОбъём!\nВсё сходится!"},{who:OPY,text:"Импульс вижу.\nОбъём — так себе.\nДыши."}],
-        [{who:OPY,text:"Тут есть деталь."},{who:DOP,text:"Ты всегда находишь деталь 🙄"},{who:OPY,text:"Поэтому ты ещё цел."}],
-        [{who:DOP,text:"А если рванёт без нас?!"},{who:OPY,text:"Значит это был\nне наш поезд."}],
-        [{who:DOP,text:"Ладно, смотрю.\nНо сердце уже там 😎"},{who:OPY,text:"Сердце оставь.\nБери голову."}]
+        [{who:OPY,text:"Сравниваю с тем, что было в похожих моментах."},{who:DOP,text:"Только не тяни.\nДвижение живое."}],
+        [{who:DOP,text:"Ну что там? Кажется, всё сходится."},{who:OPY,text:"Импульс вижу.\nПроверяю, не эмоция ли это."}],
+        [{who:OPY,text:"В прошлый раз здесь мы вошли слишком рано."},{who:DOP,text:"Но сейчас всё выглядит иначе."}]
       ],
       up: [
-        [{who:DOP,text:"Ну?!\nЯ ГОВОРИЛ! 🚀"},{who:OPY,text:"Говорил.\nВходим — но по плану."},{who:DOP,text:"По плану, по плану 😎"}],
-        [{who:OPY,text:"Ладно.\nЗдесь я с тобой."},{who:DOP,text:"Запиши дату!"},{who:OPY,text:"Не начинай."}],
-        [{who:OPY,text:"Если пойдёт —\nя первый зайду.\nНо по плану. Всегда."},{who:DOP,text:"Вот теперь ты мне нравишься 😎"}]
+        [{who:DOP,text:"Вот оно.\nСтруктура за нас."},{who:OPY,text:"Согласен.\nЭто не только азарт — рынок подтверждает."},{who:DOP,text:"Значит, входим."},{who:OPY,text:"Входим. По плану, а не потому что хочется."}],
+        [{who:DOP,text:"Момент настоящий, я чувствую."},{who:OPY,text:"И я вижу то же.\nВ этот раз спешка ни при чём."}]
       ],
       down: [
-        [{who:OPY,text:"Вот куда смотрит рынок.\nЭто низ."},{who:DOP,text:"Обидно."},{who:OPY,text:"Зато честно."}],
-        [{who:DOP,text:"Не туда, куда я хотел, да?"},{who:OPY,text:"Нет.\nЗато туда, где правда."},{who:DOP,text:"Ух... принято."}],
-        [{who:OPY,text:"Сторона понятна.\nРынок смотрит вниз."},{who:DOP,text:"Не мой сценарий.\nНо вижу 👀"}]
+        [{who:DOP,text:"Тянет войти прямо сейчас."},{who:OPY,text:"Я помню такие входы.\nПоловина была на эмоции."},{who:DOP,text:"А если график прав?"},{who:OPY,text:"Тогда он подтвердит.\nЖдём подтверждение, не импульс."}],
+        [{who:DOP,text:"Движение вниз, а рука тянется войти."},{who:OPY,text:"Вижу. Но сначала — подтверждение.\nНе на эмоции."}]
       ],
       none: [
-        [{pause:true},{who:DOP,text:"...чё, вообще ничего? 😐"},{who:OPY,text:"Сегодня можно\nи не решать."}],
-        [{who:DOP,text:"А выглядело как конфетка..."},{who:OPY,text:"Выглядело.\nЗначит сегодня просто смотрим."}],
-        [{pause:true},{who:DOP,text:"Оба молчим?"},{who:OPY,text:"Оба."},{pause:true}]
+        [{who:DOP,text:"Вот оно. Движение началось.\nМы можем успеть."},{who:OPY,text:"Подожди.\nЯ уже видел этот момент. В прошлый раз мы вошли слишком рано."},{who:DOP,text:"Но сейчас всё выглядит иначе."},{who:OPY,text:"Возможно.\nПоэтому мы не запрещаем. Мы проверяем."}],
+        [{who:DOP,text:"Внутри всё ещё тянет."},{who:OPY,text:"Знаю.\nСегодня решение — подождать. Это тоже решение."}]
       ]
     },
     en: {
       ui: {
-        analyzing: "ANALYZING CHART\u2026",
-        sub: "Breaking down structure, momentum and context",
-        eta: "Estimated time: 5–12 sec",
-        note: "Usually faster on lower TF",
-        almost: "Almost ready\u2026",
-        footEta: "2–5 sec"
+        analyzing: "ANALYZING CHART…",
+        sub: "Reading structure, comparing with past, catching the emotional impulse",
+        eta: "Left: 5–12 sec",
+        note: "Watching not just the market — your state",
+        almost: "Putting it together…",
+        footEta: "2–5 sec",
+        head: "Two voices in you before the entry. AI helps you see them."
+      },
+      stateLabels: { title: "AI RESULT", impulse: "Impulse", emotion: "Emotion risk", experience: "Experience" },
+      state: {
+        up: { impulse: "high", emotion: "moderate", verdict: "entry justified — by the plan" },
+        down: { impulse: "high", emotion: "elevated", verdict: "wait for confirmation" },
+        none: { impulse: "high", emotion: "elevated", verdict: "recommends waiting for confirmation" }
       },
       intro: [
-        [{who:DOP,text:"Yo, look at that push!\nWe're jumping in 🚀\nThat candle's candy!"},{who:OPY,text:"Slow down, monkey.\nThe top zone is strong.\nConfirmation first."}],
-        [{who:DOP,text:"It's beautiful!\nBody's like a rocket 🚀"},{who:OPY,text:"Beautiful.\nThat's exactly what worries me."}],
-        [{who:DOP,text:"That's it, I'm in.\nLet's gooo!"},{who:OPY,text:"You were 'in' before\nyou even opened the chart."}],
-        [{who:DOP,text:"Feel it speeding up? 🔥"},{who:OPY,text:"I feel it.\nThat's why I watch the volume."}]
+        [{who:DOP,text:"Look — it started moving.\nMaybe this is our moment?"},{who:OPY,text:"I see it too.\nFirst I check what it really is."}],
+        [{who:DOP,text:"Something in me already wants in."},{who:OPY,text:"I know that feeling.\nGive me a couple seconds."}],
+        [{who:DOP,text:"We can still make it.\nThe window won't wait."},{who:OPY,text:"I remember us rushing before.\nWatching closely."}]
       ],
       middle: [
-        [{who:DOP,text:"How long do we stare?"},{who:OPY,text:"Right up until\nit gets clear."}],
-        [{who:DOP,text:"Impulse!\nVolume!\nIt all lines up!"},{who:OPY,text:"Impulse, yes.\nVolume, meh.\nBreathe."}],
-        [{who:OPY,text:"There's a detail here."},{who:DOP,text:"You always find a detail 🙄"},{who:OPY,text:"That's why you're still alive."}],
-        [{who:DOP,text:"What if it flies without us?!"},{who:OPY,text:"Then it wasn't\nour train."}],
-        [{who:DOP,text:"Fine, I'm watching.\nBut my heart's already there 😎"},{who:OPY,text:"Leave the heart.\nBring the head."}]
+        [{who:OPY,text:"Comparing this with similar past moments."},{who:DOP,text:"Just don't stall.\nThe move is alive."}],
+        [{who:DOP,text:"So? It all seems to line up."},{who:OPY,text:"I see the impulse.\nChecking if it's just emotion."}],
+        [{who:OPY,text:"Last time here we entered too early."},{who:DOP,text:"But now it looks different."}]
       ],
       up: [
-        [{who:DOP,text:"Well?!\nI TOLD you! 🚀"},{who:OPY,text:"You did.\nWe go — by the plan."},{who:DOP,text:"By the plan, by the plan 😎"}],
-        [{who:OPY,text:"Alright.\nI'm with you here."},{who:DOP,text:"Mark the date!"},{who:OPY,text:"Don't."}],
-        [{who:OPY,text:"If it goes —\nI'm first in.\nBut by the plan. Always."},{who:DOP,text:"Now I like you 😎"}]
+        [{who:DOP,text:"There it is.\nStructure is with us."},{who:OPY,text:"Agreed.\nNot just the thrill — the market confirms."},{who:DOP,text:"So we enter."},{who:OPY,text:"We enter. By the plan, not because we want to."}],
+        [{who:DOP,text:"The moment is real, I feel it."},{who:OPY,text:"I see the same.\nNo rush involved this time."}]
       ],
       down: [
-        [{who:OPY,text:"This is where the market looks.\nDownside."},{who:DOP,text:"That stings."},{who:OPY,text:"But honest."}],
-        [{who:DOP,text:"Not where I wanted, huh?"},{who:OPY,text:"No.\nBut where the truth is."},{who:DOP,text:"...noted."}],
-        [{who:OPY,text:"The side is clear.\nMarket leans down."},{who:DOP,text:"Not my script.\nBut I see it 👀"}]
+        [{who:DOP,text:"Something wants in right now."},{who:OPY,text:"I remember these entries.\nHalf were emotion."},{who:DOP,text:"And if the chart is right?"},{who:OPY,text:"Then it will confirm.\nWe wait for confirmation, not impulse."}],
+        [{who:DOP,text:"It's dropping, and the hand reaches to enter."},{who:OPY,text:"I see it. But confirmation first.\nNot on emotion."}]
       ],
       none: [
-        [{pause:true},{who:DOP,text:"...wait, nothing? 😐"},{who:OPY,text:"Today you can\nnot decide."}],
-        [{who:DOP,text:"But it looked like candy..."},{who:OPY,text:"It did.\nSo today we just watch."}],
-        [{pause:true},{who:DOP,text:"Both quiet?"},{who:OPY,text:"Both."},{pause:true}]
+        [{who:DOP,text:"There it is. It started moving.\nWe can make it."},{who:OPY,text:"Wait.\nI've seen this moment. Last time we entered too early."},{who:DOP,text:"But now it looks different."},{who:OPY,text:"Maybe.\nThat's why we don't forbid. We verify."}],
+        [{who:DOP,text:"Something still pulls."},{who:OPY,text:"I know.\nToday the decision is to wait. That's a decision too."}]
       ]
     }
   };
@@ -169,7 +172,7 @@
       ".ps-thread{display:flex;flex-direction:column;gap:12px;margin-top:16px;}",
       ".ps-row{display:flex;align-items:flex-start;gap:10px;animation:psIn .34s cubic-bezier(.22,.9,.32,1) both;}",
       ".ps-row.dop{flex-direction:row;}",
-      ".ps-row.opy{flex-direction:row-reverse;}",
+      ".ps-row.opy{flex-direction:row;}",
       ".ps-av{flex:0 0 auto;width:56px;display:flex;flex-direction:column;align-items:center;}",
       ".ps-face{width:56px;height:56px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--card);}",
       ".ps-face img{width:100%;height:100%;object-fit:cover;display:block;}",
@@ -178,7 +181,7 @@
       ".ps-row.opy .ps-name{color:var(--accent);}",
       ".ps-bubble{max-width:76%;padding:12px 15px;border-radius:18px;font-size:15px;line-height:1.5;color:var(--text);}",
       ".ps-row.dop .ps-bubble{border:1px solid color-mix(in srgb,var(--down) 40%,var(--line));background:color-mix(in srgb,var(--down) 12%,var(--card));border-top-left-radius:6px;}",
-      ".ps-row.opy .ps-bubble{border:1px solid var(--line);background:var(--card);border-top-right-radius:6px;}",
+      ".ps-row.opy .ps-bubble{border:1px solid var(--line);background:var(--card);border-top-left-radius:6px;}",
       ".ps-bubble.typing{display:inline-flex;gap:5px;padding:15px 16px;}",
       ".ps-bubble.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:dotBlink 1.1s ease-in-out infinite;}",
       ".ps-bubble.typing i:nth-child(2){animation-delay:.16s;}",
@@ -191,6 +194,20 @@
       ".ps-foot-dots i:nth-child(2){animation-delay:.16s;}",
       ".ps-foot-dots i:nth-child(3){animation-delay:.32s;}",
       ".ps-foot-eta{margin-left:auto;}",
+      ".ps-scenehead{display:flex;align-items:center;gap:10px;margin-top:16px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--card2) 70%,transparent);}",
+      ".ps-sh-faces{display:inline-flex;flex:0 0 auto;}",
+      ".ps-sh-face{width:26px;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--card);}",
+      ".ps-sh-face+.ps-sh-face{margin-left:-8px;}",
+      ".ps-sh-face img{width:100%;height:100%;object-fit:cover;display:block;}",
+      ".ps-sh-cap{font-size:12px;line-height:1.35;color:var(--muted);}",
+      ".ps-state{display:none;margin-top:16px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:var(--radius);background:color-mix(in srgb,var(--accent) 8%,var(--card2));animation:psIn .34s ease both;}",
+      ".ps-state.show{display:block;}",
+      ".ps-state-title{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent);margin-bottom:9px;}",
+      ".ps-state-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);}",
+      ".ps-state-row:first-of-type{border-top:0;}",
+      ".ps-state-row > span{font-size:13px;color:var(--muted);}",
+      ".ps-state-row > b{font-size:14px;font-weight:800;color:var(--text);text-align:right;}",
+      ".ps-state-row > b.warn{color:var(--down);}",
       "@keyframes psIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}"
     ].join("");
     document.head.appendChild(css);
@@ -218,7 +235,12 @@
         '<div class="ps-an-barrow"><div class="ps-an-bar"><span id="psBarFill"></span></div><div class="ps-an-pct" id="psPct">0%</div></div>' +
         '<div class="ps-an-meta"><span id="psEta"></span><span id="psNote"></span></div>' +
       '</div>' +
+      '<div class="ps-scenehead" id="psSceneHead">' +
+        '<div class="ps-sh-faces"><span class="ps-sh-face"><img src="' + FACE[DOP] + '" alt="" draggable="false"></span><span class="ps-sh-face"><img src="' + FACE[OPY] + '" alt="" draggable="false"></span></div>' +
+        '<div class="ps-sh-cap" id="psSceneCap"></div>' +
+      '</div>' +
       '<div class="ps-thread" id="psThread"></div>' +
+      '<div class="ps-state" id="psState"></div>' +
       '<div class="ps-foot"><span class="ps-foot-dots"><i></i><i></i><i></i></span><span id="psFootTxt"></span><span class="ps-foot-eta" id="psFootEta"></span></div>';
     proc.parentNode.insertBefore(box, proc);
     thread = box.querySelector("#psThread");
@@ -234,6 +256,7 @@
     set("psNote", u.note);
     set("psFootTxt", u.almost);
     set("psFootEta", u.footEta);
+    set("psSceneCap", u.head || "");
   }
 
   function fillFileCard() {
@@ -291,7 +314,7 @@
     row.className = "ps-row " + who;
     row.innerHTML =
       '<div class="ps-av"><div class="ps-face"><img src="' + FACE[who] + '" alt="" draggable="false"></div>' +
-      '<div class="ps-name">' + esc(nm[who]) + '</div></div>' +
+      '<div class="ps-name">' + (GLYPH[who] || "") + " " + esc(nm[who]) + '</div></div>' +
       '<div class="ps-bubble typing"><i></i><i></i><i></i></div>';
     return row;
   }
@@ -379,12 +402,42 @@
     return out.length ? out : null;
   }
 
+  function curLib() { return LIB[lang()] || LIB.ru; }
+
+  function aiState() {
+    var raw = window.__pulseState;
+    window.__pulseState = null;
+    if (!raw || typeof raw !== "object") return null;
+    function s(v) { v = String(v == null ? "" : v).trim(); if (!v) return ""; if (v.length > 48) v = v.slice(0, 47) + "…"; return v; }
+    var impulse = s(raw.impulse), emotion = s(raw.emotion || raw.emotionRisk), verdict = s(raw.verdict || raw.experience);
+    if (!impulse && !emotion && !verdict) return null;
+    return { impulse: impulse || "—", emotion: emotion || "—", verdict: verdict || "—" };
+  }
+
+  function renderState() {
+    var el = document.getElementById("psState");
+    if (!el) return;
+    var L = curLib();
+    var st = aiState() || (L.state && L.state[S.dir]) || null;
+    if (!st) return;
+    var lb = L.stateLabels || { title: "AI RESULT", impulse: "Импульс", emotion: "Риск эмоции", experience: "Опыт" };
+    el.innerHTML =
+      '<div class="ps-state-title">' + esc(lb.title) + '</div>' +
+      '<div class="ps-state-row"><span>' + esc(lb.impulse) + '</span><b>' + esc(st.impulse) + '</b></div>' +
+      '<div class="ps-state-row"><span>' + esc(lb.emotion) + '</span><b class="warn">' + esc(st.emotion) + '</b></div>' +
+      '<div class="ps-state-row"><span>' + esc(lb.experience) + '</span><b>' + esc(st.verdict) + '</b></div>';
+    el.classList.add("show");
+    if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   function finale(myGen) {
     if (myGen !== S.gen || S.inResolve) return;
     S.inResolve = true;
     var beat = aiBeat() || pickResolve() || [];
     playBeat(beat, myGen, false).then(function () {
-      return wait(750);
+      if (myGen !== S.gen) return;
+      renderState();
+      return wait(2100);
     }).then(function () {
       if (myGen !== S.gen) return;
       reveal();
@@ -399,6 +452,7 @@
     S.gen++;
     S.running = true; S.resolving = false; S.inResolve = false; S.dir = "none";
     thread.innerHTML = "";
+    var stEl0 = document.getElementById("psState"); if (stEl0) { stEl0.classList.remove("show"); stEl0.innerHTML = ""; }
     fillUi();
     fillFileCard();
     document.body.classList.add("pulse-scene-on");
