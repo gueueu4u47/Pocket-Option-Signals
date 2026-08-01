@@ -550,26 +550,28 @@ If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons expl
 reasons is required, 3 items.`;
 
 /* Развёрнутый текст + живой диалог запрашиваем вторым шагом, уже без скриншота */
-const ENRICH_RU = `Ты — не советчик и не рыночный аналитик. Ты озвучиваешь ВНУТРЕННИЙ момент решения одного трейдера. Дофамин и Опыт — это две части ОДНОГО человека, его собственные мысли перед сделкой, а не два бота.
+const ENRICH_RU = `Ты режиссёр короткой КОМИКС-СЦЕНЫ, а не аналитик. Не делай «AI-анализ графика» и не делай «диалог помощника». Покажи внутренний конфликт трейдера как сценку двух живых персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Юмор рождается из контраста: один рвётся нажать кнопку СЕЙЧАС, второй его холодно осаживает.
 По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты по графику: {REASONS}
-Кто говорит (оба про себя — «мы», «наш»):
-- "dop" (Дофамин): желание войти прямо сейчас, азарт, страх упустить движение, уверенность момента. Не клоун и не мем.
-- "opy" (Опыт): память прошлых решений и ошибок, дисциплина, холодная проверка. Не запрещает — проверяет.
+Персонажи:
+- "dop" (Дофамин): обезьяна в очках, импульсивный азарт, FOMO, «бери сейчас!». Говорит громко, эмоционально, с восклицаниями и мемными словечками, иногда эмодзи (🚀🔥😎😤👆). Забавный, но живой.
+- "opy" (Опыт): седой ветеран в тёмных очках, видел 1000 таких ошибок. Говорит сухо, коротко, с иронией, может назвать Дофамин «обезьяна» или «чемпион». Не запрещает — осаживает: «сначала подтверждение», «по плану. всегда».
 Ответь ОДНИМ JSON без markdown:
 {"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения простым языком","strategy":"3 предложения: вход, подтверждение, отмена идеи","tips":["практический совет","практический совет"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"низкий|средний|высокий","emotion":"низкий|умеренный|повышенный|высокий","verdict":"вердикт Опыта, 2-5 слов"}}
-dialogue — 3-4 короткие реплики как внутренний монолог перед входом. Речь от «мы». Чередуй dop/opy, начни с dop. Каждая реплика короткая и живая, без обучения и без мемов, до 90 символов. Дофамин видит движение и тянет войти прямо сейчас; Опыт вспоминает похожие ситуации и холодно проверяет. Реагируй на {DIR}: BUY — структура подтверждает, входим по плану, а не на эмоции; SELL — рынок смотрит вниз, ждём подтверждение, не импульс; NO_SIGNAL — не запрещаем, но сегодня проверяем и ждём.
-state — оцени состояние трейдера: impulse (сила желания войти), emotion (риск действия на эмоции), verdict (что советует Опыт, например «дождаться подтверждения», «вход оправдан», «пропустить»).
-Не выдумывай цифры, которых нет в фактах. В reasons бери только переданные факты.`;
+dialogue — 4 короткие живые реплики, как в комиксе. Чередуй dop/opy, начни с dop. Дофамин — громко и азартно тянет войти; Опыт — сухо и иронично тормозит. Каждая реплика до 90 символов, можно в 2-3 короткие строки через 
+. Мемы и эмодзи разрешены, но без обучения и без воды. Реагируй на {DIR}: BUY — импульс есть, входим по плану, а не на эмоциях; SELL — рынок вниз, ждём подтверждение; NO_SIGNAL — сегодня наш вход подождать.
+state — оцени состояние: impulse (сила желания войти), emotion (риск действия на эмоциях), verdict (что советует Опыт).
+Не выдумывай цифр, которых нет в фактах. В reasons бери только переданные факты.`;
 
-const ENRICH_EN = `You are not an advisor or a market analyst. You voice the INNER moment of one trader's decision. Dopamine and Experience are two parts of ONE person — the trader's own thoughts before a trade, not two bots.
-A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}. Chart facts: {REASONS}
-Who speaks (both say "we", "our"):
-- "dop" (Dopamine): the urge to enter right now, thrill, fear of missing the move, confidence of the moment. Not a clown, not a meme.
-- "opy" (Experience): memory of past decisions and mistakes, discipline, a cold check. Does not forbid — it verifies.
+const ENRICH_EN = `You direct a short COMIC SCENE, not an analysis. Do not make an "AI chart analysis" or an "assistant dialogue". Show the trader's inner conflict as a scene of two living characters with OPPOSITE personalities. The humor comes from contrast: one wants to hit the button NOW, the other coldly holds him back.
+A signal is already produced: direction {DIR}, asset {ASSET}, timeframe {TF}. Chart facts: {REASONS}
+Characters:
+- "dop" (Dopamine): a monkey in shades, impulsive thrill, FOMO, "buy now!". Loud, emotional, exclamations and memey words, sometimes emoji (🚀🔥😎😤👆). Funny but alive.
+- "opy" (Experience): a grey-haired veteran in dark glasses who has seen 1000 such mistakes. Dry, short, ironic, may call Dopamine "monkey" or "champ". Does not forbid — he holds back: "confirmation first", "by the plan. always".
 Answer with ONE JSON, no markdown:
 {"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 plain sentences","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"low|medium|high","emotion":"low|moderate|elevated|high","verdict":"Experience verdict, 2-5 words"}}
-dialogue — 3-4 short lines as an inner monologue before the entry. Speak as "we". Alternate dop/opy, start with dop. Each line short and alive, no teaching, no memes, up to 90 chars. Dopamine sees the move and wants in now; Experience recalls similar situations and coldly checks. React to {DIR}: BUY — structure confirms, we enter by the plan, not on emotion; SELL — market leans down, we wait for confirmation, not impulse; NO_SIGNAL — we don't forbid, but today we verify and wait.
-state — assess the trader's state: impulse (strength of the urge to enter), emotion (risk of acting on emotion), verdict (what Experience advises, e.g. "wait for confirmation", "entry justified", "skip").
+dialogue — 4 short living lines like a comic. Alternate dop/opy, start with dop. Dopamine loudly wants in; Experience dryly and ironically holds back. Each line up to 90 chars, may be 2-3 short lines via 
+. Memes and emoji allowed, but no teaching and no filler. React to {DIR}: BUY — momentum is there, we enter by the plan not on emotion; SELL — market leans down, wait for confirmation; NO_SIGNAL — today our entry is to wait.
+state — assess: impulse (urge to enter), emotion (risk of acting on emotion), verdict (what Experience advises).
 Do not invent numbers not in the facts. In reasons use only the given facts.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
