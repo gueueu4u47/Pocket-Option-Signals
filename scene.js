@@ -248,7 +248,7 @@
     o.frequency.setValueAtTime(base, tt);
     o.frequency.exponentialRampToValueAtTime(base * 0.7, tt + 0.12);
     g.gain.setValueAtTime(0.0001, tt);
-    g.gain.exponentialRampToValueAtTime(0.06, tt + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.16, tt + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.18);
     duck(true);
     setTimeout(function () { duck(false); }, 260);
@@ -281,11 +281,33 @@
     duck(false);
   }
 
+  function confirmBeep() {
+    ensureAudio();
+    if (!VOICE.actx) return;
+    var ac = VOICE.actx, base = ac.currentTime + 0.03;
+    var steps = [[330, 0], [494, 0.12]];
+    for (var i = 0; i < steps.length; i++) {
+      var g = ac.createGain(); g.connect(VOICE.master);
+      var o = ac.createOscillator(); o.type = "sine"; o.connect(g);
+      var s = base + steps[i][1];
+      o.frequency.setValueAtTime(steps[i][0], s);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(0.18, s + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + 0.18);
+      o.start(s); o.stop(s + 0.2);
+    }
+  }
+
   function voiceToggle(btn) {
     VOICE.on = !VOICE.on;
+    try { localStorage.setItem("ps_voice", VOICE.on ? "1" : "0"); } catch (e) {}
     if (VOICE.on) {
-      ensureAudio(); pickVoices(); bgStart();
-      try { var w = new SpeechSynthesisUtterance(" "); w.volume = 0; window.speechSynthesis.speak(w); } catch (e) {}
+      ensureAudio(); pickVoices();
+      var go = function () { bgStart(); confirmBeep(); };
+      if (VOICE.actx && VOICE.actx.state === "suspended" && VOICE.actx.resume) {
+        try { VOICE.actx.resume().then(go).catch(go); } catch (e) { go(); }
+      } else { go(); }
+      if (VOICE.supported) { try { var w = new SpeechSynthesisUtterance(" "); w.volume = 0; window.speechSynthesis.speak(w); } catch (e) {} }
     } else { voiceStopAll(); bgStop(); }
     if (btn) {
       btn.textContent = VOICE.on ? "\u{1F50A}" : "\u{1F507}";
@@ -294,17 +316,37 @@
     }
   }
 
+  function restoreVoicePref() {
+    var saved = null;
+    try { saved = localStorage.getItem("ps_voice"); } catch (e) {}
+    if (saved === "1") {
+      VOICE.on = true;
+      var unlock = function () {
+        ensureAudio();
+        if (VOICE.actx && VOICE.actx.state === "suspended" && VOICE.actx.resume) { try { VOICE.actx.resume(); } catch (e) {} }
+        pickVoices(); bgStart();
+      };
+      document.addEventListener("pointerdown", unlock, { once: true });
+      document.addEventListener("touchstart", unlock, { once: true });
+    }
+  }
+
   function ensureVoiceBtn() {
-    if (!box) return;
-    if (box.querySelector(".ps-voice-btn")) return;
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "ps-voice-btn";
-    b.textContent = "\u{1F507}";
-    b.setAttribute("aria-label", "Voice");
-    b.setAttribute("aria-pressed", "false");
-    b.addEventListener("click", function () { voiceToggle(b); });
-    box.appendChild(b);
+    injectStyle();
+    if (!document.body) return;
+    var b = document.getElementById("psVoiceBtn");
+    if (!b) {
+      b = document.createElement("button");
+      b.type = "button";
+      b.id = "psVoiceBtn";
+      b.className = "ps-voice-btn";
+      b.setAttribute("aria-label", "Voice");
+      b.addEventListener("click", function () { voiceToggle(b); });
+      document.body.appendChild(b);
+    }
+    b.textContent = VOICE.on ? "\u{1F50A}" : "\u{1F507}";
+    b.setAttribute("aria-pressed", VOICE.on ? "true" : "false");
+    b.classList.toggle("on", VOICE.on);
   }
 
   if (VOICE.supported && typeof window.speechSynthesis.onvoiceschanged !== "undefined") {
@@ -380,7 +422,7 @@
       ".ps-verdict{margin-top:16px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.02em;padding:11px 14px;border-radius:14px;animation:psIn .4s ease both;}",
       ".ps-verdict.dop{color:var(--ps-dop);border:1px solid rgba(255,92,114,.4);background:rgba(255,70,92,.1);text-shadow:0 0 10px rgba(255,92,114,.5);}",
       ".ps-verdict.opy{color:var(--ps-opy);border:1px solid rgba(90,166,255,.4);background:rgba(34,44,72,.5);text-shadow:0 0 10px rgba(90,166,255,.45);}",
-      ".ps-voice-btn{position:absolute;top:0;right:0;z-index:5;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.85;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
+      ".ps-voice-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 12px);right:12px;z-index:9999;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.85;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
       ".ps-voice-btn:active{transform:scale(.94);}",
       ".ps-voice-btn.on{opacity:1;border-color:rgba(90,166,255,.5);box-shadow:0 0 16px rgba(90,166,255,.4);}",
       "@keyframes psIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}",
@@ -699,6 +741,7 @@
   }
 
   function wire() {
+    if (!VOICE.uiInit) { VOICE.uiInit = true; restoreVoicePref(); ensureVoiceBtn(); }
     var proc = document.getElementById("processing");
     var res = document.getElementById("visionResult");
     if (!proc || !res) { return setTimeout(wire, 400); }
