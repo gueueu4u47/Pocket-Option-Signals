@@ -1,8 +1,6 @@
 /*
- * Signal Pulse — «Вкладка анализа» (полный экран как в макете)
- * После «Анализировать» сцена занимает весь экран: шапка (Signal Pulse +
- * таймер + UTC), карточка файла, карточка анализа, живой диалог, футер.
- * На время анализа загрузка/подсказки/параметры скрыты — листать не нужно.
+ * Signal Pulse — встроенная сцена анализа (как в макете-чате)
+ * Карточка файла + карточка анализа + живой диалог Дофамин/Опыт + футер.
  * Подключение: <script src="scene.js"></script>
  */
 (function () {
@@ -20,7 +18,6 @@
   var LIB = {
     ru: {
       ui: {
-        brand: "Личный ассистент по графику",
         analyzing: "АНАЛИЗ ГРАФИКА",
         sub: "Разбираю структуру, импульс и контекст",
         eta: "Осталось: 5–12 сек",
@@ -59,7 +56,6 @@
     },
     en: {
       ui: {
-        brand: "Personal chart assistant",
         analyzing: "ANALYZING CHART\u2026",
         sub: "Breaking down structure, momentum and context",
         eta: "Estimated time: 5–12 sec",
@@ -110,7 +106,6 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  function pad2(n) { n = String(n); return n.length < 2 ? "0" + n : n; }
   function fmtBytes(b) {
     if (b == null || isNaN(b)) return "";
     if (b < 1024) return b + " B";
@@ -118,11 +113,6 @@
     return (b / 1048576).toFixed(1) + " MB";
   }
   function txtOf(id) { var e = document.getElementById(id); return e ? (e.textContent || "").trim() : ""; }
-  function utcLabel() {
-    var off = -new Date().getTimezoneOffset() / 60;
-    var sign = off >= 0 ? "+" : "\u2212";
-    return "UTC" + sign + Math.abs(off);
-  }
 
   function Picker(getSet) {
     var used = [];
@@ -138,7 +128,7 @@
     };
   }
 
-  var S = { gen: 0, running: false, resolving: false, inResolve: false, dir: "none", prog: 0, progTimer: 0, headTimer: 0 };
+  var S = { gen: 0, running: false, resolving: false, inResolve: false, dir: "none", prog: 0, progTimer: 0 };
   var pickIntro = Picker(function () { return LIB[lang()].intro; });
   var pickMiddle = Picker(function () { return LIB[lang()].middle; });
   var pickUp = Picker(function () { return LIB[lang()].up; });
@@ -153,24 +143,10 @@
     var css = document.createElement("style");
     css.id = "pulseSceneCss";
     css.textContent = [
-      // На время анализа — весь экран отдаём сцене, остальное прячем.
       "body.pulse-scene-on #processing{display:none !important;}",
       "body.pulse-scene-on #visionResult{display:none !important;}",
-      "body.pulse-scene-on #visionView > .hero{display:none !important;}",
-      "body.pulse-scene-on #visionView > .card{border-color:transparent !important;background:transparent !important;box-shadow:none !important;}",
-      "body.pulse-scene-on #visionView > .card > *:not(#pulseScene){display:none !important;}",
-      "#pulseScene{display:none;}",
+      "#pulseScene{display:none;margin-top:16px;}",
       "#pulseScene.show{display:block;animation:viewIn .3s ease;}",
-      // Шапка
-      ".ps-head{display:flex;align-items:center;gap:12px;padding:2px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px;}",
-      ".ps-head-ic{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--card2) 90%,transparent);display:flex;align-items:center;justify-content:center;color:var(--accent);}",
-      ".ps-head-ic svg{width:22px;height:22px;}",
-      ".ps-head-txt{flex:1 1 auto;min-width:0;}",
-      ".ps-head-title{font-size:17px;font-weight:800;color:var(--text);}",
-      ".ps-head-sub{margin-top:2px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
-      ".ps-head-right{flex:0 0 auto;text-align:right;}",
-      ".ps-head-timer{font-size:17px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;}",
-      ".ps-head-utc{margin-top:2px;font-size:11px;color:var(--muted);letter-spacing:.04em;}",
       // Карточка файла
       ".ps-file{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:color-mix(in srgb,var(--card2) 92%,transparent);padding:12px;margin-bottom:12px;}",
       ".ps-file-thumb{flex:0 0 auto;width:112px;height:66px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--card);}",
@@ -227,11 +203,6 @@
     box = document.createElement("div");
     box.id = "pulseScene";
     box.innerHTML =
-      '<div class="ps-head">' +
-        '<div class="ps-head-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></div>' +
-        '<div class="ps-head-txt"><div class="ps-head-title">Signal Pulse</div><div class="ps-head-sub" id="psBrand"></div></div>' +
-        '<div class="ps-head-right"><div class="ps-head-timer" id="psTimer">00:00</div><div class="ps-head-utc" id="psUtc"></div></div>' +
-      '</div>' +
       '<div class="ps-file">' +
         '<div class="ps-file-thumb"><img alt="" draggable="false"></div>' +
         '<div class="ps-file-info">' +
@@ -257,8 +228,6 @@
   function fillUi() {
     var u = ui();
     function set(id, val) { var e = document.getElementById(id); if (e) e.textContent = val; }
-    set("psBrand", u.brand);
-    set("psUtc", utcLabel());
     set("psAnTitle", u.analyzing);
     set("psAnSub", u.sub);
     set("psEta", u.eta);
@@ -296,19 +265,6 @@
     set(".ps-file-tf", dur && dur !== "\u2014" ? dur : "");
     set(".ps-file-name", file ? file.name : "");
     set(".ps-file-dim", meta);
-  }
-
-  function startHeadTimer(myGen) {
-    var t0 = Date.now();
-    if (S.headTimer) clearInterval(S.headTimer);
-    var upd = function () {
-      if (myGen !== S.gen) { clearInterval(S.headTimer); return; }
-      var s = Math.floor((Date.now() - t0) / 1000);
-      var e = document.getElementById("psTimer");
-      if (e) e.textContent = pad2(Math.floor(s / 60)) + ":" + pad2(s % 60);
-    };
-    upd();
-    S.headTimer = setInterval(upd, 1000);
   }
 
   function startProgress(myGen) {
@@ -427,8 +383,6 @@
     fillFileCard();
     document.body.classList.add("pulse-scene-on");
     box.classList.add("show");
-    try { window.scrollTo({ top: 0, behavior: "auto" }); } catch (e) { try { window.scrollTo(0, 0); } catch (e2) {} }
-    startHeadTimer(S.gen);
     startProgress(S.gen);
     driver(S.gen);
   }
@@ -442,11 +396,8 @@
   function reveal() {
     S.running = false; S.resolving = false; S.inResolve = false;
     if (S.progTimer) clearInterval(S.progTimer);
-    if (S.headTimer) clearInterval(S.headTimer);
     document.body.classList.remove("pulse-scene-on");
     if (box) box.classList.remove("show");
-    var vr = document.getElementById("visionResult");
-    if (vr) vr.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   /* ---------- Само-подключение ---------- */
