@@ -151,7 +151,6 @@
       "#pulseScene{--ps-dop:#C46BFF;--ps-dop2:#FF5C8A;--ps-opy:#5AA6FF;--ps-glass:rgba(255,255,255,.05);--ps-brd:rgba(255,255,255,.09);--ps-r:26px;display:none;margin-top:16px;}",
       "#pulseScene.show{display:block;animation:viewIn .35s ease;}",
       "#pulseScene *{box-sizing:border-box;}",
-      // Файл (вторично, glass, приглушён)
       ".ps-file{display:flex;gap:13px;align-items:center;border:1px solid var(--ps-brd);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);padding:11px;margin-bottom:14px;}",
       ".ps-file-thumb{flex:0 0 auto;width:104px;height:62px;border-radius:14px;overflow:hidden;border:1px solid var(--ps-brd);background:var(--card);}",
       ".ps-file-thumb img{width:100%;height:100%;object-fit:cover;display:block;}",
@@ -160,47 +159,42 @@
       ".ps-file-tf{margin-top:2px;font-size:12.5px;font-weight:700;color:var(--muted);}",
       ".ps-file-name{margin-top:5px;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85;}",
       ".ps-file-dim{margin-top:2px;font-size:11.5px;color:var(--muted);opacity:.7;}",
-      // Анализ — герой
       ".ps-analysis{position:relative;overflow:hidden;border:1px solid var(--ps-brd);border-radius:var(--ps-r);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 20px 60px -30px rgba(0,0,0,.9);padding:22px 20px 20px;}",
-      '.ps-analysis::before{content:"";position:absolute;left:-20%;right:-20%;top:-70px;height:200px;background:radial-gradient(60% 100% at 35% 0%,rgba(90,166,255,.20),rgba(196,107,255,.10) 45%,transparent 72%);pointer-events:none;}',
+      ".ps-analysis::before{content:\"\";position:absolute;left:-20%;right:-20%;top:-70px;height:200px;background:radial-gradient(60% 100% at 35% 0%,rgba(90,166,255,.20),rgba(196,107,255,.10) 45%,transparent 72%);pointer-events:none;}",
       ".ps-an-title{position:relative;font-size:17px;font-weight:800;letter-spacing:.16em;color:var(--text);display:flex;align-items:center;gap:10px;}",
-      '.ps-an-title::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--ps-opy);box-shadow:0 0 14px var(--ps-opy);animation:psPulse 1.6s ease-in-out infinite;}',
+      ".ps-an-title::before{content:\"\";width:9px;height:9px;border-radius:50%;background:var(--ps-opy);box-shadow:0 0 14px var(--ps-opy);animation:psPulse 1.6s ease-in-out infinite;}",
       ".ps-an-sub{position:relative;margin-top:9px;font-size:13px;line-height:1.5;color:var(--muted);max-width:94%;}",
       ".ps-an-barrow{position:relative;display:flex;align-items:center;gap:13px;margin-top:18px;}",
       ".ps-an-bar{position:relative;flex:1 1 auto;height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}",
       ".ps-an-bar > span{position:absolute;left:0;top:0;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--ps-opy),var(--ps-dop));box-shadow:0 0 18px rgba(120,150,255,.6);transition:width .3s ease;}",
       ".ps-an-pct{font-size:16px;font-weight:800;color:var(--text);min-width:50px;text-align:right;}",
       ".ps-an-meta{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;font-size:12px;color:var(--muted);}",
-      // Шапка сцены — «AI-система»
-      ".ps-scenehead{display:flex;align-items:center;gap:12px;margin-top:20px;padding:12px 15px;border:1px solid var(--ps-brd);border-radius:18px;background:var(--ps-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}",
-      ".ps-sh-faces{display:inline-flex;flex:0 0 auto;}",
-      ".ps-sh-face{width:30px;height:30px;border-radius:10px;overflow:hidden;border:1px solid var(--ps-brd);background:var(--card);}",
-      ".ps-sh-face:first-child{box-shadow:0 0 16px rgba(196,107,255,.65);border-color:rgba(196,107,255,.55);}",
-      ".ps-sh-face:last-child{margin-left:-8px;box-shadow:0 0 16px rgba(90,166,255,.6);border-color:rgba(90,166,255,.5);}",
-      ".ps-sh-face img{width:100%;height:100%;object-fit:cover;display:block;}",
-      ".ps-sh-cap{font-size:12px;line-height:1.4;color:var(--muted);}",
-      // Сцена диалога
-      ".ps-thread{display:flex;flex-direction:column;gap:18px;margin-top:20px;}",
-      ".ps-row{display:flex;align-items:flex-start;gap:12px;animation:psIn .4s cubic-bezier(.22,.9,.32,1) both;}",
-      ".ps-row.dop{flex-direction:row;}",
-      ".ps-row.opy{flex-direction:row-reverse;}",
-      ".ps-av{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;}",
-      ".ps-face{width:56px;height:56px;border-radius:18px;overflow:hidden;border:1px solid var(--ps-brd);background:var(--card);}",
-      ".ps-row.dop .ps-face{width:62px;height:62px;border-color:rgba(196,107,255,.5);box-shadow:0 0 24px rgba(196,107,255,.55),0 0 0 1px rgba(255,92,138,.3);}",
-      ".ps-row.opy .ps-face{border-color:rgba(90,166,255,.45);box-shadow:0 0 22px rgba(90,166,255,.5);}",
-      ".ps-face img{width:100%;height:100%;object-fit:cover;display:block;}",
-      ".ps-name{margin-top:7px;font-size:9.5px;font-weight:800;letter-spacing:.1em;}",
-      ".ps-row.dop .ps-name{color:var(--ps-dop);text-shadow:0 0 10px rgba(196,107,255,.5);}",
-      ".ps-row.opy .ps-name{color:var(--ps-opy);text-shadow:0 0 10px rgba(90,166,255,.45);}",
-      ".ps-bubble{max-width:74%;padding:14px 16px;border-radius:22px;font-size:15px;line-height:1.55;color:var(--text);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 14px 34px -22px rgba(0,0,0,.9);}",
-      ".ps-row.dop .ps-bubble{border:1px solid rgba(196,107,255,.4);background:linear-gradient(180deg,rgba(196,107,255,.17),rgba(255,92,138,.06));border-top-left-radius:8px;}",
-      ".ps-row.opy .ps-bubble{border:1px solid rgba(90,166,255,.33);background:linear-gradient(180deg,rgba(90,166,255,.13),rgba(90,166,255,.04));border-top-right-radius:8px;}",
-      ".ps-bubble.typing{display:inline-flex;gap:6px;padding:16px 18px;align-items:center;}",
-      ".ps-bubble.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:dotBlink 1.1s ease-in-out infinite;}",
-      ".ps-bubble.typing i:nth-child(2){animation-delay:.16s;}",
-      ".ps-bubble.typing i:nth-child(3){animation-delay:.32s;}",
-      ".ps-pause{align-self:center;color:var(--muted);font-size:20px;letter-spacing:6px;padding:2px 0;animation:psIn .3s ease both;}",
-      // AI RESULT
+      ".ps-council{margin-top:20px;border:1px solid var(--ps-brd);border-radius:var(--ps-r);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);padding:16px 15px 15px;}",
+      ".ps-council-hd{margin-bottom:14px;}",
+      ".ps-council-t{display:block;font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--text);}",
+      ".ps-council-s{display:block;margin-top:5px;font-size:12px;line-height:1.45;color:var(--muted);}",
+      ".ps-forces{display:flex;flex-direction:column;gap:12px;position:relative;}",
+      ".ps-force{display:flex;gap:13px;align-items:flex-start;padding:13px 14px;border-radius:18px;border:1px solid var(--ps-brd);background:rgba(255,255,255,.02);transition:border-color .35s ease,box-shadow .35s ease,opacity .35s ease,background .35s ease;}",
+      ".ps-force.idle{opacity:.5;}",
+      ".ps-force.active{opacity:1;}",
+      ".ps-force.dop.active{border-color:rgba(196,107,255,.5);box-shadow:0 0 26px -4px rgba(196,107,255,.5),inset 0 1px 0 rgba(255,255,255,.05);background:linear-gradient(180deg,rgba(196,107,255,.10),rgba(255,92,138,.03));}",
+      ".ps-force.opy.active{border-color:rgba(90,166,255,.45);box-shadow:0 0 26px -4px rgba(90,166,255,.45),inset 0 1px 0 rgba(255,255,255,.05);background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(90,166,255,.02));}",
+      ".ps-force-av{flex:0 0 auto;width:52px;height:52px;border-radius:15px;overflow:hidden;border:1px solid var(--ps-brd);background:var(--card);}",
+      ".ps-force.dop .ps-force-av{border-color:rgba(196,107,255,.5);box-shadow:0 0 18px rgba(196,107,255,.5);}",
+      ".ps-force.opy .ps-force-av{border-color:rgba(90,166,255,.45);box-shadow:0 0 16px rgba(90,166,255,.45);}",
+      ".ps-force-av img{width:100%;height:100%;object-fit:cover;display:block;}",
+      ".ps-force-body{min-width:0;flex:1 1 auto;}",
+      ".ps-force-label{display:flex;align-items:baseline;gap:8px;}",
+      ".ps-force-label b{font-size:11px;font-weight:800;letter-spacing:.1em;}",
+      ".ps-force-label span{font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--muted);opacity:.8;}",
+      ".ps-force.dop .ps-force-label b{color:var(--ps-dop);text-shadow:0 0 10px rgba(196,107,255,.5);}",
+      ".ps-force.opy .ps-force-label b{color:var(--ps-opy);text-shadow:0 0 10px rgba(90,166,255,.45);}",
+      ".ps-force-think{margin-top:6px;font-size:15px;line-height:1.5;color:var(--text);min-height:22px;}",
+      ".ps-force.idle .ps-force-think{color:var(--muted);}",
+      ".ps-dots{display:inline-flex;gap:5px;padding:5px 0;}",
+      ".ps-dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:dotBlink 1.1s ease-in-out infinite;}",
+      ".ps-dots i:nth-child(2){animation-delay:.16s;}",
+      ".ps-dots i:nth-child(3){animation-delay:.32s;}",
       ".ps-state{display:none;margin-top:20px;position:relative;overflow:hidden;padding:18px 18px 16px;border:1px solid rgba(120,150,255,.28);border-radius:var(--ps-r);background:linear-gradient(180deg,rgba(120,150,255,.10),rgba(255,255,255,.02));backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 20px 60px -30px rgba(0,0,0,.9);animation:psIn .4s ease both;}",
       ".ps-state.show{display:block;}",
       ".ps-state-title{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--ps-opy);margin-bottom:12px;}",
@@ -209,7 +203,6 @@
       ".ps-state-row > span{font-size:13px;color:var(--muted);}",
       ".ps-state-row > b{font-size:14px;font-weight:800;color:var(--text);text-align:right;}",
       ".ps-state-row > b.warn{color:var(--ps-dop);text-shadow:0 0 12px rgba(196,107,255,.4);}",
-      // Футер — ожидание следующего шага
       ".ps-foot{display:flex;align-items:center;gap:12px;margin-top:20px;color:var(--muted);font-size:13px;}",
       ".ps-foot-dots{display:inline-flex;gap:6px;}",
       ".ps-foot-dots i{width:6px;height:6px;border-radius:50%;background:var(--ps-opy);box-shadow:0 0 8px var(--ps-opy);animation:dotBlink 1.1s ease-in-out infinite;}",
@@ -222,6 +215,11 @@
     document.head.appendChild(css);
   }
 
+  var ROLE = { ru: { dop: "ИМПУЛЬС", opy: "КОНТРОЛЬ" }, en: { dop: "IMPULSE", opy: "CONTROL" } };
+  var COUNCIL = {
+    ru: { t: "ВНУТРЕННИЙ СЧЁТ ПЕРЕД ВХОДОМ", s: "AI остановил тебя на секунду — прежде чем нажмёшь. Две стороны одного решения." },
+    en: { t: "INNER CHECK BEFORE ENTRY", s: "AI paused you for a second before you act. Two sides of one decision." }
+  };
   function build() {
     if (box) return true;
     var proc = document.getElementById("processing");
@@ -244,20 +242,31 @@
         '<div class="ps-an-barrow"><div class="ps-an-bar"><span id="psBarFill"></span></div><div class="ps-an-pct" id="psPct">0%</div></div>' +
         '<div class="ps-an-meta"><span id="psEta"></span><span id="psNote"></span></div>' +
       '</div>' +
-      '<div class="ps-scenehead" id="psSceneHead">' +
-        '<div class="ps-sh-faces"><span class="ps-sh-face"><img src="' + FACE[DOP] + '" alt="" draggable="false"></span><span class="ps-sh-face"><img src="' + FACE[OPY] + '" alt="" draggable="false"></span></div>' +
-        '<div class="ps-sh-cap" id="psSceneCap"></div>' +
+      '<div class="ps-council" id="psCouncil">' +
+        '<div class="ps-council-hd"><span class="ps-council-t" id="psCouncilT"></span><span class="ps-council-s" id="psCouncilS"></span></div>' +
+        '<div class="ps-forces">' +
+          '<div class="ps-force dop idle" id="psForceDop">' +
+            '<div class="ps-force-av"><img src="' + FACE[DOP] + '" alt="" draggable="false"></div>' +
+            '<div class="ps-force-body"><div class="ps-force-label"><b id="psForceDopName"></b><span id="psForceDopRole"></span></div><div class="ps-force-think" id="psThinkDop"><span class="ps-dots"><i></i><i></i><i></i></span></div></div>' +
+          '</div>' +
+          '<div class="ps-force opy idle" id="psForceOpy">' +
+            '<div class="ps-force-av"><img src="' + FACE[OPY] + '" alt="" draggable="false"></div>' +
+            '<div class="ps-force-body"><div class="ps-force-label"><b id="psForceOpyName"></b><span id="psForceOpyRole"></span></div><div class="ps-force-think" id="psThinkOpy"><span class="ps-dots"><i></i><i></i><i></i></span></div></div>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
-      '<div class="ps-thread" id="psThread"></div>' +
       '<div class="ps-state" id="psState"></div>' +
       '<div class="ps-foot"><span class="ps-foot-dots"><i></i><i></i><i></i></span><span id="psFootTxt"></span><span class="ps-foot-eta" id="psFootEta"></span></div>';
     proc.parentNode.insertBefore(box, proc);
-    thread = box.querySelector("#psThread");
     return true;
   }
 
   function fillUi() {
     var u = ui();
+    var lg = lang();
+    var C = COUNCIL[lg] || COUNCIL.ru;
+    var R = ROLE[lg] || ROLE.ru;
+    var nm = names();
     function set(id, val) { var e = document.getElementById(id); if (e) e.textContent = val; }
     set("psAnTitle", u.analyzing);
     set("psAnSub", u.sub);
@@ -265,7 +274,12 @@
     set("psNote", u.note);
     set("psFootTxt", u.almost);
     set("psFootEta", u.footEta);
-    set("psSceneCap", u.head || "");
+    set("psCouncilT", C.t);
+    set("psCouncilS", C.s);
+    set("psForceDopName", (GLYPH[DOP] || "") + " " + nm[DOP]);
+    set("psForceOpyName", (GLYPH[OPY] || "") + " " + nm[OPY]);
+    set("psForceDopRole", R.dop);
+    set("psForceOpyRole", R.opy);
   }
 
   function fillFileCard() {
@@ -317,43 +331,25 @@
   }
 
   /* ---------- Отрисовка реплики ---------- */
-  function rowEl(who) {
-    var nm = names();
-    var row = document.createElement("div");
-    row.className = "ps-row " + who;
-    row.innerHTML =
-      '<div class="ps-av"><div class="ps-face"><img src="' + FACE[who] + '" alt="" draggable="false"></div>' +
-      '<div class="ps-name">' + (GLYPH[who] || "") + " " + esc(nm[who]) + '</div></div>' +
-      '<div class="ps-bubble typing"><i></i><i></i><i></i></div>';
-    return row;
-  }
-  function autoscroll() {
-    var last = thread && thread.lastElementChild;
-    if (last && last.scrollIntoView) last.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
   function typingMs(t) { return Math.min(1200, 340 + String(t).length * 20); }
   function readMs(t) { return Math.min(2100, 640 + String(t).length * 28); }
 
   function showLine(line, myGen) {
     return new Promise(function (resolve) {
       if (myGen !== S.gen) return resolve();
-      if (line.pause) {
-        var p = document.createElement("div");
-        p.className = "ps-pause";
-        p.textContent = "•  •  •";
-        thread.appendChild(p);
-        autoscroll();
-        return wait(1100).then(resolve);
-      }
-      var row = rowEl(line.who);
-      thread.appendChild(row);
-      autoscroll();
-      var bubble = row.querySelector(".ps-bubble");
+      if (line.pause) return wait(650).then(resolve);
+      var isDop = (line.who === DOP);
+      var panel = document.getElementById(isDop ? "psForceDop" : "psForceOpy");
+      var think = document.getElementById(isDop ? "psThinkDop" : "psThinkOpy");
+      var other = document.getElementById(isDop ? "psForceOpy" : "psForceDop");
+      if (!panel || !think) return resolve();
+      panel.classList.remove("idle"); panel.classList.add("active");
+      if (other) { other.classList.remove("active"); other.classList.add("idle"); }
+      think.innerHTML = '<span class="ps-dots"><i></i><i></i><i></i></span>';
+      if (panel.scrollIntoView) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
       wait(typingMs(line.text)).then(function () {
         if (myGen !== S.gen) return resolve();
-        bubble.classList.remove("typing");
-        bubble.innerHTML = esc(line.text).replace(/\n/g, "<br>");
-        autoscroll();
+        think.innerHTML = esc(line.text).replace(/\n/g, "<br>");
         return wait(readMs(line.text)).then(resolve);
       });
     });
@@ -460,7 +456,12 @@
     if (!build()) return;
     S.gen++;
     S.running = true; S.resolving = false; S.inResolve = false; S.dir = "none";
-    thread.innerHTML = "";
+    var _fd = document.getElementById("psForceDop"), _fo = document.getElementById("psForceOpy");
+    if (_fd) { _fd.classList.remove("active"); _fd.classList.add("idle"); }
+    if (_fo) { _fo.classList.remove("active"); _fo.classList.add("idle"); }
+    var _dots = '<span class="ps-dots"><i></i><i></i><i></i></span>';
+    var _td = document.getElementById("psThinkDop"); if (_td) _td.innerHTML = _dots;
+    var _to = document.getElementById("psThinkOpy"); if (_to) _to.innerHTML = _dots;
     var stEl0 = document.getElementById("psState"); if (stEl0) { stEl0.classList.remove("show"); stEl0.innerHTML = ""; }
     fillUi();
     fillFileCard();
