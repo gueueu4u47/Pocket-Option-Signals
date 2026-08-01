@@ -14,6 +14,22 @@
     en: { dop: "DOPAMINE", opy: "EXPERIENCE" }
   };
 
+  /* Финальный спор + итог */
+  var SPAR = {
+    ru: {
+      q: "Ну что, сигнал зашёл?",
+      yes: "✅ Зашёл", no: "❌ Слился",
+      win:  { dop: "ХА! Я ЖЕ ГОВОРИЛ! 🚀\nКто тут гений, а?", opy: "Повезло. В этот раз.\nДисциплина всё равно решает.", verdict: "🐒 В этот раз прав был Дофамин" },
+      lose: { opy: "Вот поэтому мы ждём.\nЯ это кино уже видел.", dop: "Ну... статистика — жестокая штука 😤", verdict: "🧠 В этот раз прав был Опыт" }
+    },
+    en: {
+      q: "So, did the signal hit?",
+      yes: "✅ It hit", no: "❌ It missed",
+      win:  { dop: "HA! I TOLD YOU! 🚀\nWho's the genius now?", opy: "Lucky. This time.\nDiscipline still wins.", verdict: "🐒 This time Dopamine was right" },
+      lose: { opy: "That's why we wait.\nSeen this movie before.", dop: "Well... stats are brutal 😤", verdict: "🧠 This time Experience was right" }
+    }
+  };
+
   /* ---------- Библиотека реплик ---------- */
   var LIB = {
     ru: {
@@ -177,6 +193,20 @@
       ".ps-foot-dots i:nth-child(2){animation-delay:.16s;}",
       ".ps-foot-dots i:nth-child(3){animation-delay:.32s;}",
       ".ps-foot-eta{margin-left:auto;}",
+      ".ps-spar{margin-top:24px;padding-top:20px;border-top:1px solid var(--ps-brd);animation:psIn .4s ease both;}",
+      ".ps-spar-q{font-size:15px;font-weight:800;color:var(--text);text-align:center;letter-spacing:.01em;}",
+      ".ps-spar-btns{display:flex;gap:12px;margin-top:14px;}",
+      ".ps-spar-btn{flex:1 1 0;padding:13px 10px;border-radius:16px;font-size:14px;font-weight:800;color:var(--text);cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .12s ease,box-shadow .15s ease;}",
+      ".ps-spar-btn:active{transform:scale(.97);}",
+      ".ps-spar-btn.yes{border-color:rgba(57,200,121,.5);}",
+      ".ps-spar-btn.no{border-color:rgba(239,91,104,.5);}",
+      ".ps-spar-btn.yes.chosen{background:linear-gradient(180deg,rgba(57,200,121,.25),rgba(57,200,121,.08));box-shadow:0 0 20px rgba(57,200,121,.4);}",
+      ".ps-spar-btn.no.chosen{background:linear-gradient(180deg,rgba(239,91,104,.25),rgba(239,91,104,.08));box-shadow:0 0 20px rgba(239,91,104,.4);}",
+      ".ps-spar-btn[disabled]{opacity:.5;cursor:default;}",
+      ".ps-spar-btn.chosen{opacity:1;}",
+      ".ps-verdict{margin-top:16px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.02em;padding:11px 14px;border-radius:14px;animation:psIn .4s ease both;}",
+      ".ps-verdict.dop{color:var(--ps-dop);border:1px solid rgba(255,92,114,.4);background:rgba(255,70,92,.1);text-shadow:0 0 10px rgba(255,92,114,.5);}",
+      ".ps-verdict.opy{color:var(--ps-opy);border:1px solid rgba(90,166,255,.4);background:rgba(34,44,72,.5);text-shadow:0 0 10px rgba(90,166,255,.45);}",
       "@keyframes psIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}",
       "@keyframes psPulse{0%,100%{opacity:.5;transform:scale(.85);}50%{opacity:1;transform:scale(1.15);}}"
     ].join("");
@@ -388,6 +418,9 @@
     S.gen++;
     S.running = true; S.resolving = false; S.inResolve = false; S.dir = "none";
     thread.innerHTML = "";
+    var oldSpar = box.querySelector("#psSpar"); if (oldSpar && oldSpar.parentNode) oldSpar.parentNode.removeChild(oldSpar);
+    var an = box.querySelector(".ps-analysis"); if (an) an.style.display = "";
+    var ft = box.querySelector(".ps-foot"); if (ft) ft.style.display = "";
     fillUi();
     fillFileCard();
     document.body.classList.add("pulse-scene-on");
@@ -402,11 +435,74 @@
     S.resolving = true;
   }
 
+  /* Спор: диалог остаётся, добавляем вопрос + кнопки */
+  function pushBubble(who, text) {
+    if (!thread) return;
+    var row = rowEl(who);
+    thread.appendChild(row);
+    var b = row.querySelector(".ps-bubble");
+    if (b) { b.classList.remove("typing"); b.innerHTML = esc(text).replace(/\n/g, "<br>"); }
+    autoscroll();
+  }
+  function spar() { return SPAR[lang()] || SPAR.en; }
+  function showVerdict(text, who) {
+    if (!box) return;
+    var host = box.querySelector("#psSpar") || box;
+    var v = document.createElement("div");
+    v.className = "ps-verdict " + who;
+    v.textContent = text;
+    host.appendChild(v);
+    autoscroll();
+  }
+  function resolveSpar(outcome) {
+    var sp = spar();
+    var el = box && box.querySelector("#psSpar");
+    if (el) {
+      var btns = el.querySelectorAll(".ps-spar-btn");
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].disabled = true;
+        if (btns[i].getAttribute("data-o") === outcome) btns[i].classList.add("chosen");
+      }
+    }
+    if (outcome === "yes") {
+      pushBubble(DOP, sp.win.dop);
+      setTimeout(function () { pushBubble(OPY, sp.win.opy); showVerdict(sp.win.verdict, "dop"); }, 700);
+    } else {
+      pushBubble(OPY, sp.lose.opy);
+      setTimeout(function () { pushBubble(DOP, sp.lose.dop); showVerdict(sp.lose.verdict, "opy"); }, 700);
+    }
+  }
+  function renderSpar() {
+    if (!box) return;
+    var old = box.querySelector("#psSpar");
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var sp = spar();
+    var el = document.createElement("div");
+    el.id = "psSpar";
+    el.className = "ps-spar";
+    el.innerHTML =
+      '<div class="ps-spar-q">' + esc(sp.q) + '</div>' +
+      '<div class="ps-spar-btns">' +
+        '<button type="button" class="ps-spar-btn yes" data-o="yes">' + esc(sp.yes) + '</button>' +
+        '<button type="button" class="ps-spar-btn no" data-o="no">' + esc(sp.no) + '</button>' +
+      '</div>';
+    box.appendChild(el);
+    var btns = el.querySelectorAll(".ps-spar-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function () { resolveSpar(this.getAttribute("data-o")); });
+    }
+    autoscroll();
+  }
+
   function reveal() {
     S.running = false; S.resolving = false; S.inResolve = false;
     if (S.progTimer) clearInterval(S.progTimer);
     document.body.classList.remove("pulse-scene-on");
-    if (box) box.classList.remove("show");
+    if (box) {
+      var an = box.querySelector(".ps-analysis"); if (an) an.style.display = "none";
+      var ft = box.querySelector(".ps-foot"); if (ft) ft.style.display = "none";
+      renderSpar();
+    }
   }
 
   function dirFromResult() {
