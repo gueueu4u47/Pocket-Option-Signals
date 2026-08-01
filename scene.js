@@ -141,6 +141,65 @@
   /* ---------- Озвучка (голос-пассажир: обрывается на каждой новой реплике, не диктует тайминг) ---------- */
   var VOICE = { on: false, supported: (typeof window !== "undefined" && "speechSynthesis" in window), voices: [], vDop: null, vOpy: null, actx: null, master: null, bg: null, bgGain: null };
 
+  /* ---------- Звук через <audio> (WAV data-URI): работает там, где WebAudio/TTS заблокированы ---------- */
+  var AUDIO = { pool: [], idx: 0, cache: {}, unlocked: false };
+
+  function toneWav(freq, ms, vol) {
+    var key = freq + "_" + ms + "_" + vol;
+    if (AUDIO.cache[key]) return AUDIO.cache[key];
+    var sr = 8000;
+    var n = Math.max(1, Math.floor(sr * ms / 1000));
+    var total = 44 + n * 2;
+    var buf = new ArrayBuffer(total);
+    var dv = new DataView(buf);
+    function wS(off, s) { for (var i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); }
+    wS(0, "RIFF"); dv.setUint32(4, total - 8, true); wS(8, "WAVE");
+    wS(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+    wS(36, "data"); dv.setUint32(40, n * 2, true);
+    var amp = 32767 * (vol == null ? 0.5 : vol);
+    for (var i = 0; i < n; i++) {
+      var env = Math.min(1, i / (sr * 0.008)) * Math.min(1, (n - i) / (sr * 0.03));
+      var v = Math.sin(2 * Math.PI * freq * i / sr) * amp * env;
+      dv.setInt16(44 + i * 2, v, true);
+    }
+    var b = new Uint8Array(buf), bin = "";
+    for (var j = 0; j < b.length; j++) bin += String.fromCharCode(b[j]);
+    var uri = "data:audio/wav;base64," + btoa(bin);
+    AUDIO.cache[key] = uri;
+    return uri;
+  }
+
+  function unlockAudioPool() {
+    if (AUDIO.unlocked) return;
+    AUDIO.unlocked = true;
+    var silent = toneWav(1, 24, 0);
+    for (var i = 0; i < 6; i++) {
+      var a = new Audio(silent);
+      AUDIO.pool.push(a);
+      try { var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+    }
+  }
+
+  function audioEl() {
+    if (!AUDIO.pool.length) { for (var i = 0; i < 6; i++) AUDIO.pool.push(new Audio()); }
+    var a = AUDIO.pool[AUDIO.idx];
+    AUDIO.idx = (AUDIO.idx + 1) % AUDIO.pool.length;
+    return a;
+  }
+
+  function playTone(freq, ms, vol) {
+    try {
+      var uri = toneWav(freq, ms, vol);
+      var a = audioEl();
+      a.src = uri;
+      try { a.currentTime = 0; } catch (e) {}
+      a.volume = 1;
+      var pr = a.play();
+      if (pr && pr.catch) pr.catch(function () {});
+    } catch (e) {}
+  }
+
   function voiceStripText(s) {
     return String(s || "")
       .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\uFE0F]/gu, " ")
@@ -196,28 +255,8 @@
 
   function sfx(kind) {
     if (!VOICE.on) return;
-    ensureAudio();
-    if (!VOICE.actx) return;
-    var ac = VOICE.actx, tt = ac.currentTime;
-    var g = ac.createGain(); g.connect(VOICE.master);
-    var o = ac.createOscillator(); o.connect(g);
-    if (kind === "rise") {
-      o.type = "triangle";
-      o.frequency.setValueAtTime(220, tt);
-      o.frequency.exponentialRampToValueAtTime(660, tt + 0.28);
-      g.gain.setValueAtTime(0.0001, tt);
-      g.gain.exponentialRampToValueAtTime(0.09, tt + 0.04);
-      g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.38);
-      o.start(tt); o.stop(tt + 0.4);
-    } else {
-      o.type = "sine";
-      o.frequency.setValueAtTime(180, tt);
-      o.frequency.exponentialRampToValueAtTime(70, tt + 0.22);
-      g.gain.setValueAtTime(0.0001, tt);
-      g.gain.exponentialRampToValueAtTime(0.11, tt + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.3);
-      o.start(tt); o.stop(tt + 0.32);
-    }
+    if (kind === "rise") { playTone(523, 150, 0.5); setTimeout(function () { playTone(784, 180, 0.5); }, 120); }
+    else { playTone(140, 200, 0.55); }
   }
 
   function voiceProfile(who, kind) {
@@ -237,22 +276,11 @@
   }
 
   function blip(who, kind) {
-    ensureAudio();
-    if (!VOICE.actx) return;
-    var ac = VOICE.actx, tt = ac.currentTime;
-    var g = ac.createGain(); g.connect(VOICE.master);
-    var o = ac.createOscillator(); o.connect(g);
-    o.type = "sine";
-    var base = (who === OPY) ? 150 : 320;
-    if (kind === "key") base *= 0.8; else if (kind === "react") base *= 1.15;
-    o.frequency.setValueAtTime(base, tt);
-    o.frequency.exponentialRampToValueAtTime(base * 0.7, tt + 0.12);
-    g.gain.setValueAtTime(0.0001, tt);
-    g.gain.exponentialRampToValueAtTime(0.16, tt + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.18);
-    duck(true);
-    setTimeout(function () { duck(false); }, 260);
-    o.start(tt); o.stop(tt + 0.2);
+    var base = (who === OPY) ? 210 : 400;
+    var ms = 150;
+    if (kind === "key") { base *= 0.8; ms = 230; }
+    else if (kind === "react") { base *= 1.15; ms = 95; }
+    playTone(base, ms, 0.55);
   }
 
   function speak(who, text, kind) {
@@ -282,31 +310,18 @@
   }
 
   function confirmBeep() {
-    ensureAudio();
-    if (!VOICE.actx) return;
-    var ac = VOICE.actx, base = ac.currentTime + 0.03;
-    var steps = [[330, 0], [494, 0.12]];
-    for (var i = 0; i < steps.length; i++) {
-      var g = ac.createGain(); g.connect(VOICE.master);
-      var o = ac.createOscillator(); o.type = "sine"; o.connect(g);
-      var s = base + steps[i][1];
-      o.frequency.setValueAtTime(steps[i][0], s);
-      g.gain.setValueAtTime(0.0001, s);
-      g.gain.exponentialRampToValueAtTime(0.18, s + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, s + 0.18);
-      o.start(s); o.stop(s + 0.2);
-    }
+    playTone(330, 130, 0.6);
+    setTimeout(function () { playTone(494, 150, 0.6); }, 130);
   }
 
   function voiceToggle(btn) {
     VOICE.on = !VOICE.on;
     try { localStorage.setItem("ps_voice", VOICE.on ? "1" : "0"); } catch (e) {}
     if (VOICE.on) {
-      ensureAudio(); pickVoices();
-      var go = function () { bgStart(); confirmBeep(); };
-      if (VOICE.actx && VOICE.actx.state === "suspended" && VOICE.actx.resume) {
-        try { VOICE.actx.resume().then(go).catch(go); } catch (e) { go(); }
-      } else { go(); }
+      unlockAudioPool();
+      confirmBeep();
+      ensureAudio(); pickVoices(); bgStart();
+      if (VOICE.actx && VOICE.actx.state === "suspended" && VOICE.actx.resume) { try { VOICE.actx.resume(); } catch (e) {} }
       if (VOICE.supported) { try { var w = new SpeechSynthesisUtterance(" "); w.volume = 0; window.speechSynthesis.speak(w); } catch (e) {} }
     } else { voiceStopAll(); bgStop(); }
     if (btn) {
@@ -322,6 +337,7 @@
     if (saved === "1") {
       VOICE.on = true;
       var unlock = function () {
+        unlockAudioPool();
         ensureAudio();
         if (VOICE.actx && VOICE.actx.state === "suspended" && VOICE.actx.resume) { try { VOICE.actx.resume(); } catch (e) {} }
         pickVoices(); bgStart();
