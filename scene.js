@@ -139,7 +139,7 @@
   var box, thread;
 
   /* ---------- Озвучка (голос-пассажир: обрывается на каждой новой реплике, не диктует тайминг) ---------- */
-  var VOICE = { on: false, supported: (typeof window !== "undefined" && "speechSynthesis" in window), voices: [], vDop: null, vOpy: null, actx: null, master: null, bg: null, bgGain: null };
+  var VOICE = { on: false, talkGen: 0, supported: (typeof window !== "undefined" && "speechSynthesis" in window), voices: [], vDop: null, vOpy: null, actx: null, master: null, bg: null, bgGain: null };
 
   /* ---------- Звук через <audio> (WAV data-URI): работает там, где WebAudio/TTS заблокированы ---------- */
   var AUDIO = { pool: [], idx: 0, cache: {}, unlocked: false };
@@ -288,6 +288,8 @@
     var clean = voiceStripText(text);
     if (!clean) return;
     var k = kind || classifyLine(who, clean);
+    VOICE.talkGen++;
+    var gen = VOICE.talkGen;
     var prof = voiceProfile(who, k);
     var synth = VOICE.supported ? window.speechSynthesis : null;
     if (synth && prof.voice) {
@@ -297,14 +299,35 @@
       u.voice = prof.voice; u.lang = prof.voice.lang;
       u.pitch = prof.pitch; u.rate = prof.rate; u.volume = prof.volume;
       u.onend = function () { duck(false); };
-      u.onerror = function () { duck(false); blip(who, k); };
-      try { synth.speak(u); } catch (e) { duck(false); blip(who, k); }
-    } else {
-      blip(who, k);
+      u.onerror = function () { duck(false); talkBlips(who, k, clean, gen); };
+      try { synth.speak(u); } catch (e) { duck(false); talkBlips(who, k, clean, gen); }
+      return;
+    }
+    talkBlips(who, k, clean, gen);
+  }
+
+  /* Ретро-озвучка: очередь коротких тонов на реплику = иллюзия речи (когда нет системных голосов) */
+  function talkBlips(who, kind, clean, gen) {
+    var letters = clean.replace(/[^A-Za-z\u0400-\u04FF0-9]/g, "");
+    var count = Math.max(2, Math.min(22, Math.round(letters.length / 2)));
+    var baseFreq = (who === OPY) ? 200 : 360;
+    var step = (who === OPY) ? 92 : 66;
+    var dur = (who === OPY) ? 70 : 50;
+    if (kind === "key") { baseFreq *= 0.85; step += 18; }
+    else if (kind === "react") { baseFreq *= 1.12; step -= 10; }
+    for (var i = 0; i < count; i++) {
+      (function (i) {
+        setTimeout(function () {
+          if (!VOICE.on || gen !== VOICE.talkGen) return;
+          var jitter = 1 + (Math.random() * 0.16 - 0.08);
+          playTone(baseFreq * jitter, dur, 0.32);
+        }, i * step);
+      })(i);
     }
   }
 
   function voiceStopAll() {
+    VOICE.talkGen++;
     if (VOICE.supported) { try { window.speechSynthesis.cancel(); } catch (e) {} }
     duck(false);
   }
