@@ -236,20 +236,44 @@
     return "normal";
   }
 
+  function blip(who, kind) {
+    ensureAudio();
+    if (!VOICE.actx) return;
+    var ac = VOICE.actx, tt = ac.currentTime;
+    var g = ac.createGain(); g.connect(VOICE.master);
+    var o = ac.createOscillator(); o.connect(g);
+    o.type = "sine";
+    var base = (who === OPY) ? 150 : 320;
+    if (kind === "key") base *= 0.8; else if (kind === "react") base *= 1.15;
+    o.frequency.setValueAtTime(base, tt);
+    o.frequency.exponentialRampToValueAtTime(base * 0.7, tt + 0.12);
+    g.gain.setValueAtTime(0.0001, tt);
+    g.gain.exponentialRampToValueAtTime(0.06, tt + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.18);
+    duck(true);
+    setTimeout(function () { duck(false); }, 260);
+    o.start(tt); o.stop(tt + 0.2);
+  }
+
   function speak(who, text, kind) {
-    if (!VOICE.on || !VOICE.supported) return;
+    if (!VOICE.on) return;
     var clean = voiceStripText(text);
     if (!clean) return;
-    var synth = window.speechSynthesis;
-    try { synth.cancel(); } catch (e) {}
-    duck(true);
-    var prof = voiceProfile(who, kind || classifyLine(who, clean));
-    var u = new SpeechSynthesisUtterance(clean);
-    if (prof.voice) { u.voice = prof.voice; u.lang = prof.voice.lang; } else { u.lang = (lang() === "ru" ? "ru-RU" : "en-US"); }
-    u.pitch = prof.pitch; u.rate = prof.rate; u.volume = prof.volume;
-    u.onend = function () { duck(false); };
-    u.onerror = function () { duck(false); };
-    try { synth.speak(u); } catch (e) { duck(false); }
+    var k = kind || classifyLine(who, clean);
+    var prof = voiceProfile(who, k);
+    var synth = VOICE.supported ? window.speechSynthesis : null;
+    if (synth && prof.voice) {
+      try { synth.cancel(); } catch (e) {}
+      duck(true);
+      var u = new SpeechSynthesisUtterance(clean);
+      u.voice = prof.voice; u.lang = prof.voice.lang;
+      u.pitch = prof.pitch; u.rate = prof.rate; u.volume = prof.volume;
+      u.onend = function () { duck(false); };
+      u.onerror = function () { duck(false); blip(who, k); };
+      try { synth.speak(u); } catch (e) { duck(false); blip(who, k); }
+    } else {
+      blip(who, k);
+    }
   }
 
   function voiceStopAll() {
@@ -271,7 +295,7 @@
   }
 
   function ensureVoiceBtn() {
-    if (!box || !VOICE.supported) return;
+    if (!box) return;
     if (box.querySelector(".ps-voice-btn")) return;
     var b = document.createElement("button");
     b.type = "button";
@@ -356,7 +380,7 @@
       ".ps-verdict{margin-top:16px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.02em;padding:11px 14px;border-radius:14px;animation:psIn .4s ease both;}",
       ".ps-verdict.dop{color:var(--ps-dop);border:1px solid rgba(255,92,114,.4);background:rgba(255,70,92,.1);text-shadow:0 0 10px rgba(255,92,114,.5);}",
       ".ps-verdict.opy{color:var(--ps-opy);border:1px solid rgba(90,166,255,.4);background:rgba(34,44,72,.5);text-shadow:0 0 10px rgba(90,166,255,.45);}",
-      ".ps-voice-btn{position:absolute;top:0;right:0;z-index:5;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.7;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
+      ".ps-voice-btn{position:absolute;top:0;right:0;z-index:5;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.85;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
       ".ps-voice-btn:active{transform:scale(.94);}",
       ".ps-voice-btn.on{opacity:1;border-color:rgba(90,166,255,.5);box-shadow:0 0 16px rgba(90,166,255,.4);}",
       "@keyframes psIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}",
