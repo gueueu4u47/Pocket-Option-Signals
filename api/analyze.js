@@ -3,13 +3,6 @@ const crypto = require("crypto");
 /* ============================================================
    Signal Pulse — /api/analyze
    Анализ ОДНОГО загруженного скриншота графика.
-
-   Главное отличие от прежней версии:
-   - Никогда не отдаёт 502 во фронт.
-   - reasons (почему ВВЕРХ / ВНИЗ / НЕТ СИГНАЛА) не может прийти пустым:
-     сначала берём из JSON модели, затем спасаем из summary/strategy,
-     затем из сырого текста, и только потом честный NO_SIGNAL с объяснением.
-   - Повтор запроса с упрощённым промптом, если модель вернула мусор.
    ============================================================ */
 
 function validateTelegramInitData(initData, botToken) {
@@ -80,7 +73,6 @@ function cacheSet(key, payload) {
 
 /* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
-// Рабочая модель первой, вторая — только резерв при сбое
 const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview")
   .split(",")
   .map((s) => s.trim())
@@ -116,12 +108,11 @@ function parseJsonLoose(text) {
   catch (e) { try { return JSON.parse(repairJson(clean)); } catch (e2) { return null; } }
 }
 
-/* Технический мусор никогда не должен попасть на экран пользователю */
 function looksTechnical(s) {
   const t = String(s || "");
   if (/^[\s{\[]/.test(t)) return true;
   if (/"\s*:\s*"/.test(t)) return true;
-  if (/\b(direction|confidence|entryWindow|expiry|timeframe|summary|strategy|reasons|tips|asset)\b\s*"?\s*:/i.test(t)) return true;
+  if (/\b(direction|confidence|entryWindow|expiry|timeframe|summary|strategy|reasons|tips|asset|dialogue)\b\s*"?\s*:/i.test(t)) return true;
   if (/(BUY|SELL|NO_SIGNAL)\s*"/.test(t)) return true;
   return false;
 }
@@ -136,25 +127,40 @@ function cleanList(v, max) {
   return out.slice(0, max || 4);
 }
 
-/* Ответ модели оборвался на середине? */
+/* Живой диалог Дофамин/Опыт: жёсткая валидация, мусор на экран не пускаем */
+function sanitizeDialogue(v) {
+  const arr = Array.isArray(v) ? v : [];
+  const out = [];
+  for (let i = 0; i < arr.length && out.length < 5; i++) {
+    const it = arr[i];
+    if (!it || typeof it !== "object") continue;
+    const w = String(it.who || "").toLowerCase().trim();
+    let who = "";
+    if (["dop", "dopamine", "дофамин"].indexOf(w) > -1) who = "dop";
+    else if (["opy", "experience", "опыт"].indexOf(w) > -1) who = "opy";
+    if (!who) continue;
+    let text = String(it.text == null ? "" : it.text).replace(/["\\]+$/, "").trim();
+    if (!text || text.length < 2 || looksTechnical(text)) continue;
+    if (text.length > 120) text = text.slice(0, 117) + "\u2026";
+    out.push({ who, text });
+  }
+  return out;
+}
+
 function looksTruncated(rawText) {
   const t = String(rawText || "").replace(/```[a-z]*/gi, "").trim();
   if (!t) return true;
   return !/}\s*$/.test(t);
 }
 
-/* Недописанный последний пункт не показываем пользователю */
 function dropPartialTail(reasons, rawText) {
   const arr = Array.isArray(reasons) ? reasons.slice() : [];
   if (!arr.length || !looksTruncated(rawText)) return arr;
   const last = String(arr[arr.length - 1] || "").trim();
   if (/[.!?\u2026\u00bb)]$/.test(last)) return arr;
-
-  // Обрезаем оборванную фразу до последнего целого слова
   const words = last.split(/\s+/);
   if (words.length > 2) words.pop();
   const fixed = words.join(" ").replace(/[\s,;:\-\u2014]+$/, "");
-
   if (fixed.length >= 20 && fixed.split(/\s+/).length >= 3) {
     arr[arr.length - 1] = fixed + "\u2026";
   } else if (arr.length > 1) {
@@ -163,7 +169,6 @@ function dropPartialTail(reasons, rawText) {
   return arr;
 }
 
-/* Оборванный абзац тоже подрезаем до целого слова */
 function trimPartialText(s, cut) {
   const t = String(s == null ? "" : s).trim();
   if (!t || !cut) return t;
@@ -175,11 +180,9 @@ function trimPartialText(s, cut) {
   return "";
 }
 
-/* Собираем поля даже из оборванного JSON, который не разобрался целиком */
 function extractFields(rawText) {
   const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
   const out = {};
-
   const str = (key) => {
     const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)"', "i"));
     return m && m[1] ? m[1].trim() : "";
@@ -192,26 +195,20 @@ function extractFields(rawText) {
       .map((s) => s.replace(/^[\s"]+|[\s",]+$/g, "").trim())
       .filter(Boolean);
   };
-
   ["direction", "confidence", "entryWindow", "expiry", "asset", "timeframe", "summary", "strategy"].forEach((k) => {
     const v = str(k);
     if (v) out[k] = v;
   });
-
   const reasons = list("reasons");
   if (reasons.length) out.reasons = reasons;
   const tips = list("tips");
   if (tips.length) out.tips = tips;
-
   return out;
 }
 
-/* Спасаем причины из чего угодно, что вернула модель */
 function salvageReasons(parsed, rawText, lang) {
   let reasons = cleanList(parsed && parsed.reasons, 4);
   if (reasons.length) return reasons;
-
-  // 1. из summary / strategy / note
   const textBlocks = [parsed && parsed.summary, parsed && parsed.strategy, parsed && parsed.note]
     .filter(Boolean)
     .join(" ");
@@ -219,19 +216,13 @@ function salvageReasons(parsed, rawText, lang) {
     reasons = cleanList(String(textBlocks).split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 12), 3);
     if (reasons.length) return reasons;
   }
-
-  // 2. из сырого ответа модели (включая недописанный или битый JSON)
   let raw = String(rawText || "").replace(/```[a-z]*/gi, "");
-
-  // вытаскиваем содержимое массива reasons даже из невалидного JSON
   const rm = raw.match(/"reasons"\s*:\s*\[([\s\S]*?)(\]|$)/i);
   if (rm && rm[1]) {
     const items = rm[1].split(/"\s*,\s*"/).map((s) => s.replace(/^[\s"]+|[\s",]+$/g, ""));
     reasons = cleanList(items, 3);
     if (reasons.length) return reasons;
   }
-
-  // снимаем JSON-обвязку и берём осмысленные фразы
   const lines = raw
     .split(/\n|(?<=[.!?])\s+/)
     .map((l) =>
@@ -244,7 +235,6 @@ function salvageReasons(parsed, rawText, lang) {
     .filter((l) => l.length > 14 && /[а-яёa-z]{4}/i.test(l));
   reasons = cleanList(lines, 3);
   if (reasons.length) return reasons;
-
   return [];
 }
 
@@ -262,7 +252,6 @@ function noDataReasons(lang) {
       ];
 }
 
-/* Направление из сырого текста, если JSON не собрался */
 function directionFromText(rawText) {
   const s = String(rawText || "");
   const m = s.match(/"direction"\s*:\s*"?(BUY|SELL|NO_SIGNAL|UP|DOWN|CALL|PUT)"?/i);
@@ -279,13 +268,11 @@ function normDirection(d) {
   return "NO_SIGNAL";
 }
 
-/* Извлекаем текст из любой формы ответа (строка, массив частей, reasoning_content) */
 function extractText(data) {
   const ch = data && data.choices && data.choices[0];
   if (!ch) return "";
   const msg = ch.message || {};
   let out = "";
-
   if (typeof msg.content === "string") out = msg.content;
   else if (Array.isArray(msg.content)) {
     out = msg.content
@@ -299,8 +286,6 @@ function extractText(data) {
   if (!out.trim() && typeof msg.reasoning === "string") out = msg.reasoning;
   if (!out.trim() && typeof ch.text === "string") out = ch.text;
   if (!out.trim() && typeof data.output_text === "string") out = data.output_text;
-
-  // Родной формат Gemini, если прокси отдал его без преобразования
   if (!out.trim() && data && Array.isArray(data.candidates)) {
     out = data.candidates
       .map((c) => (c && c.content && Array.isArray(c.content.parts) ? c.content.parts.map((p) => (p && p.text) || "").join("\n") : ""))
@@ -328,17 +313,14 @@ async function postAI(apiKey, payload, timeoutMs) {
   }
 }
 
-/* ---------- Прямой Google Gemini, без посредника ---------- */
 const GOOGLE_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-/* Ключи Google: старый формат AIza... и новый AQ.... */
 function isGoogleKey(key) {
   if (process.env.AI_BASE_URL) return false;
   const k = String(key || "").trim();
   return /^AIza[0-9A-Za-z_\-]{20,}$/.test(k) || /^AQ\.[0-9A-Za-z._\-]{20,}$/.test(k);
 }
 
-/* У шлюза и у Google разные имена моделей */
 function googleModel(model) {
   const m = String(model || "").trim();
   if (!m || /^gemini-3/.test(m)) return "gemini-2.5-flash";
@@ -354,30 +336,23 @@ function googleText(data) {
 async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson) {
   const mdl = googleModel(model);
   const cap = Number(process.env.AI_MAX_TOKENS || 6000);
-
   const gParts = parts.map((p) => {
     if (p && p.inline_data) {
       return { inline_data: { mime_type: p.inline_data.mime_type, data: p.inline_data.data } };
     }
     return { text: (p && p.text) || "" };
   });
-
   const cfg = { temperature: temperature, maxOutputTokens: cap };
   if (forceJson) cfg.responseMimeType = "application/json";
-
-  // Сначала без внутренних рассуждений — это быстрее и дешевле
   const bodies = [
     { contents: [{ role: "user", parts: gParts }], generationConfig: Object.assign({ thinkingConfig: { thinkingBudget: 0 } }, cfg) },
     { contents: [{ role: "user", parts: gParts }], generationConfig: cfg }
   ];
-
   const deadline = Date.now() + (timeoutMs || 24000);
   let lastErr = "no answer";
-
   for (let i = 0; i < bodies.length; i++) {
     const remaining = deadline - Date.now();
     if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
-
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), remaining);
     try {
@@ -389,19 +364,15 @@ async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJso
         signal: ctrl.signal
       });
       const data = await resp.json().catch(() => null);
-
       if (!resp.ok) {
         const msg = String((data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status));
         lastErr = msg;
-        // Некоторые модели не знают этих полей — пробуем вариант попроще
         if (/thinking|responseMimeType|unknown|invalid argument|not supported/i.test(msg)) continue;
         return { ok: false, error: msg };
       }
-
       const text = googleText(data);
       const cand = (data && Array.isArray(data.candidates) && data.candidates[0]) || {};
       const fin = String(cand.finishReason || "");
-
       if (text) {
         return {
           ok: true,
@@ -423,9 +394,7 @@ async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJso
 }
 
 async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
-  // Ключ Google — идём напрямую; иначе работаем через шлюз, как раньше
   if (isGoogleKey(apiKey)) return callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson);
-
   const content = parts.map((p) => {
     if (p && p.text) return { type: "text", text: p.text };
     if (p && p.inline_data) {
@@ -433,18 +402,13 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
     }
     return { type: "text", text: "" };
   });
-
-  // Потолок токенов — это лимит, а не расход. Платим только за фактический ответ.
   const cap = Number(process.env.AI_MAX_TOKENS || 6000);
-
   const base = {
     model,
     messages: [{ role: "user", content }],
     temperature,
     max_tokens: cap
   };
-
-  // Глушим внутренние рассуждения: именно они съедали весь лимит и давали пустой ответ
   const attempts = [];
   attempts.push(Object.assign({}, base, {
     reasoning_effort: "none",
@@ -456,28 +420,20 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
     extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
   }, forceJson ? { response_format: { type: "json_object" } } : {}));
   attempts.push(Object.assign({}, base));
-
-  // Общий бюджет времени на все попытки этой модели
   const deadline = Date.now() + (timeoutMs || 24000);
-
   let lastErr = "no answer";
   for (let i = 0; i < attempts.length; i++) {
     const remaining = deadline - Date.now();
     if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
-
-    // Первой попытке даём ограниченное окно, чтобы простой запрос без JSON-режима успел выполниться
     const attemptMs = i === 0 ? Math.min(remaining, 18000) : remaining;
     const r = await postAI(apiKey, attempts[i], attemptMs);
     if (r.netError) { lastErr = r.netError; continue; }
-
     if (!r.httpOk) {
       const msg = String((r.data && r.data.error && (r.data.error.message || r.data.error)) || ("HTTP " + r.status));
       lastErr = msg;
-      // Неизвестный параметр или нет поддержки JSON-режима — пробуем следующий вариант
       if (/unknown|unsupported|invalid|not support|response_format|reasoning|thinking|extra_body/i.test(msg)) continue;
       return { ok: false, error: msg };
     }
-
     const finish = String((r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "");
     const text = extractText(r.data);
     if (text) {
@@ -489,14 +445,13 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
         truncated: finish === "length" || looksTruncated(text)
       };
     }
-
     const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
     lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
   }
   return { ok: false, error: lastErr };
 }
 
-/* ---------- Supabase (дневной лимит, best-effort / fail-open) ---------- */
+/* ---------- Supabase ---------- */
 async function supaGet(path) {
   const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
   if (!base || !key) return null;
@@ -563,7 +518,6 @@ const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, n
 {"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
 reasons is required and cannot be empty.`;
 
-/* ---------- Мягкий ответ: пользователь никогда не видит кодов ошибок ---------- */
 const FAST_RU = `Ты опытный трейдер-аналитик. По скриншоту графика бинарных опционов дай короткий разбор.
 Отвечай ТОЛЬКО одним JSON-объектом, без markdown и без пояснений вокруг.
 Пиши живо и по делу: каждая причина - законченная фраза на 60-110 символов.
@@ -580,19 +534,21 @@ Keep the key order exactly, direction first.
 If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
 reasons is required, 3 items.`;
 
-/* Развёрнутый текст запрашиваем вторым шагом, уже без скриншота */
+/* Развёрнутый текст + живой диалог запрашиваем вторым шагом, уже без скриншота */
 const ENRICH_RU = `Ты трейдер-наставник. По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}.
 Факты по графику: {REASONS}
 Объясни этот сигнал простым языком. Ответь ОДНИМ JSON без markdown:
-{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения: что сейчас происходит на рынке и почему сигнал именно такой","strategy":"3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет","практический совет"]}
+{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения: что сейчас происходит на рынке и почему сигнал именно такой","strategy":"3 предложения: где вход, что подтверждает вход, что отменяет идею","tips":["практический совет","практический совет","практический совет"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."}]}
 В reasons перепиши переданные факты более полными фразами по 80-130 символов: сам факт и что он значит для входа. Факты бери только переданные, новых не добавляй.
+dialogue — короткая живая перепалка двух внутренних голосов трейдера по ЭТОМУ сигналу: "dop" (Дофамин: азарт, тянет в сделку) и "opy" (Опыт: холодный, за дисциплину). 3-4 реплики, чередуй голоса, начни с "dop". Каждая реплика КОРОТКАЯ, как удар, до 90 символов, без обучения и без воды. Дофамин не клоун, Опыт не зануда. Реагируй на направление {DIR}: BUY — Дофамин торжествует, Опыт ставит рамки и дисциплину; SELL — Опыт оказался прав, Дофамин признаёт; NO_SIGNAL — оба сдержанны, сегодня входа нет. Допустим один эмодзи в реплике.
 Не противоречь направлению {DIR}. Не выдумывай цифры, которых нет в фактах.`;
 
 const ENRICH_EN = `You are a trading mentor. A signal is already produced from the chart: direction {DIR}, asset {ASSET}, timeframe {TF}.
 Chart facts: {REASONS}
 Explain this signal in plain language. Answer with ONE JSON, no markdown:
-{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 sentences on what the market is doing and why the signal is this way","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip","practical tip"]}
+{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 sentences on what the market is doing and why the signal is this way","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip","practical tip"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."}]}
 In reasons rewrite the given facts as fuller phrases of 80-130 characters each: the fact itself and what it means for the entry. Use only the given facts, add none.
+dialogue — a short lively exchange between two inner voices of the trader about THIS signal: "dop" (Dopamine: excitement, wants the trade) and "opy" (Experience: cold, pro-discipline). 3-4 lines, alternate voices, start with "dop". Each line SHORT, like a punch, up to 90 chars, no teaching, no filler. Dopamine is not a clown, Experience is not a bore. React to direction {DIR}: BUY — Dopamine triumphs, Experience sets the rules; SELL — Experience was right, Dopamine admits it; NO_SIGNAL — both restrained, no entry today. One emoji per line is allowed.
 Do not contradict direction {DIR}. Do not invent numbers that are not in the facts.`;
 
 const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
@@ -616,6 +572,7 @@ function softCard(res, lang, summary, reasons) {
     reasons: (reasons && reasons.length) ? reasons : noDataReasons(ru ? "ru" : "en"),
     strategy: "",
     tips: [],
+    dialogue: [],
     degraded: false,
     notice: true
   });
@@ -635,7 +592,6 @@ module.exports = async (req, res) => {
   const body0 = typeof req.body === "string" ? (JSON.parse(req.body || "{}") || {}) : (req.body || {});
   const lang0 = body0.language === "en" ? "en" : "ru";
 
-  // Даже без ключа не роняем фронт 500-кой — отдаём честный NO_SIGNAL
   if (!apiKey) {
     return res.status(200).json({
       direction: "NO_SIGNAL",
@@ -646,6 +602,7 @@ module.exports = async (req, res) => {
       reasons: noDataReasons(lang0),
       strategy: "",
       tips: [],
+      dialogue: [],
       degraded: true,
       diag: "missing api key"
     });
@@ -712,7 +669,6 @@ module.exports = async (req, res) => {
 
     const base64Image = image.indexOf(",") > -1 ? image.split(",").pop() : image;
 
-    // Экономия 1: пауза между анализами одного человека
     const COOLDOWN_SEC = Number(process.env.ANALYZE_COOLDOWN_SEC || 25);
     if (!isOwner && COOLDOWN_SEC > 0 && !rateLimit("cooldown:" + user.id, 1, COOLDOWN_SEC * 1000)) {
       return softCard(res, lang,
@@ -724,7 +680,6 @@ module.exports = async (req, res) => {
           : ["Analyses are coming in too fast.", "Wait a moment and upload the screenshot again."]);
     }
 
-    // Экономия 2: тот же скриншот — ответ из кэша, без затрат на ИИ
     const cacheKey = imageKey(base64Image, lang);
     const cached = cacheGet(cacheKey);
     if (cached) {
@@ -732,7 +687,6 @@ module.exports = async (req, res) => {
       return res.status(200).json(Object.assign({}, cached, { cached: true }));
     }
 
-    // Экономия 3: общий дневной потолок по всем пользователям
     const GLOBAL_LIMIT = Number(process.env.DAILY_GLOBAL_ANALYZE_LIMIT || 0);
     if (!isOwner && GLOBAL_LIMIT > 0) {
       try {
@@ -749,7 +703,7 @@ module.exports = async (req, res) => {
             reasons: lang === "ru"
               ? ["Сегодняшний объём анализов исчерпан.", "Возвращайся завтра — лимит обновится."]
               : ["Today's analysis volume is used up.", "Come back tomorrow when the limit resets."],
-            strategy: "", tips: [], degraded: false, notice: true, limited: true
+            strategy: "", tips: [], dialogue: [], degraded: false, notice: true, limited: true
           });
         }
       } catch (e) { /* fail-open */ }
@@ -767,37 +721,26 @@ module.exports = async (req, res) => {
     let rawSeen = "";
     const diag = [];
 
-    // Общий бюджет времени на весь анализ — фронт ждёт не дольше 50 секунд
     const overallDeadline = Date.now() + 46000;
     const budget = (want) => Math.max(0, Math.min(want, overallDeadline - Date.now()));
-    // Шагам по картинке не даём съесть всё время: разбор словами тоже должен успеть
     const budgetKeep = (want, reserve) => Math.max(0, Math.min(want, overallDeadline - (reserve || 0) - Date.now()));
 
-    // Проход 1: основной промпт по всем моделям
     for (const model of MODELS) {
       const ms = budgetKeep(22000, 13000);
       if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
-
       const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true);
       if (!r.ok) { diag.push(model + ": " + r.error); continue; }
-
       rawSeen = r.text;
-      // Сначала честный JSON, сверху — всё, что удалось вытащить из оборванного ответа
       const parsed = Object.assign(extractFields(r.text), r.parsed || {});
       const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
       const dir = parsed.direction || directionFromText(r.text);
-
       const cut = !!r.truncated;
-
-      // Готовым считаем только дописанный ответ с направлением и причинами
       if (dir && reasons.length && !cut) {
         best = Object.assign({}, parsed, { direction: dir });
         bestReasons = reasons;
         bestCut = false;
         break;
       }
-
-      // Обрывок держим как запасной вариант и пробуем получить цельный
       if ((dir || reasons.length) && (!best || bestCut)) {
         best = Object.assign({}, parsed, dir ? { direction: dir } : {});
         bestReasons = reasons;
@@ -806,20 +749,16 @@ module.exports = async (req, res) => {
       diag.push(model + (cut ? ": truncated (" + (r.finish || "cut") + ")" : ": weak answer"));
     }
 
-    // Проход 2: ОДИН короткий повтор без JSON-режима
     if (!best || !bestReasons.length || !best.direction || bestCut) {
       for (const model of MODELS) {
         const ms = budgetKeep(10000, 13000);
         if (ms < 7000) { diag.push("retry skipped (time)"); break; }
-
         const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, ms, false);
         if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
-
         rawSeen = rawSeen || r.text;
         const parsed = Object.assign(extractFields(r.text), r.parsed || {});
         const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
         const dir = parsed.direction || directionFromText(r.text);
-
         if (reasons.length || dir) {
           const keep = bestReasons.slice();
           const keepDir = (best && best.direction) || "";
@@ -832,7 +771,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Шаг 3: развёрнутый текст отдельным запросом без картинки - сигнал уже в руках и не пострадает
     if (best && best.direction && bestReasons.length) {
       const ms = budget(13000);
       if (ms >= 5000) {
@@ -849,6 +787,8 @@ module.exports = async (req, res) => {
           const sum2 = trimPartialText(String(ex.summary || ""), cut2);
           const st2 = trimPartialText(String(ex.strategy || ""), cut2);
           const tp2 = cleanList(ex.tips, 3);
+          const dlg = sanitizeDialogue(ex.dialogue);
+          if (dlg.length) best.dialogue = dlg;
           if (sum2 && sum2.length > String((best && best.summary) || "").length) best.summary = sum2;
           if (st2) best.strategy = st2;
           if (tp2.length) best.tips = tp2;
@@ -880,6 +820,7 @@ module.exports = async (req, res) => {
       reasons: reasonsOut,
       strategy: trimPartialText((best && best.strategy) || "", bestCut),
       tips: cleanList(best && best.tips, 3),
+      dialogue: (best && Array.isArray(best.dialogue)) ? best.dialogue : [],
       agents: [],
       degraded: degraded
     };
@@ -887,7 +828,6 @@ module.exports = async (req, res) => {
     if (degraded) {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
     }
-
     if (!degraded && bestCut) {
       console.error("ANALYZE_CUT " + diag.join(" | ") + " reasons=" + bestReasons.length + " raw=" + String(rawSeen).slice(0, 600));
     }
@@ -896,7 +836,6 @@ module.exports = async (req, res) => {
     return res.status(200).json(payload);
   } catch (error) {
     console.error("Analyze error:", error);
-    // Фронт всегда получает готовую карточку с объяснением, а не пустой экран
     return res.status(200).json({
       direction: "NO_SIGNAL",
       confidence: lang0 === "ru" ? "низкая" : "low",
@@ -906,6 +845,7 @@ module.exports = async (req, res) => {
       reasons: noDataReasons(lang0),
       strategy: "",
       tips: [],
+      dialogue: [],
       degraded: true
     });
   }
