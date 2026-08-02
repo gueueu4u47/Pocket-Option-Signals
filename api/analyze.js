@@ -216,6 +216,14 @@ function localizePayload(payload, language) {
   return payload;
 }
 
+function sanitizePublicPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  ["diag", "dlgDiag", "ttsDiag", "debug", "stack", "raw", "error", "netError", "internal", "provider", "model"].forEach(function (key) {
+    try { delete payload[key]; } catch (_) {}
+  });
+  return payload;
+}
+
 module.exports = async function localizedAnalyze(req, res) {
   let body;
   try {
@@ -244,7 +252,7 @@ module.exports = async function localizedAnalyze(req, res) {
     return res.end(...args);
   };
   innerRes.json = function json(payload) {
-    return res.json(completeDialogue(localizePayload(payload, language), language));
+    return res.json(sanitizePublicPayload(completeDialogue(localizePayload(payload, language), language)));
   };
 
   const corePath = require.resolve("./analyze-core");
