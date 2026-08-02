@@ -714,7 +714,7 @@
         <button class="v-param" id="vDurBtn" type="button"><small id="vDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="vDurVal">—</b><span class="vp-hint" id="vDurHint">Нажми, чтобы выбрать</span></button>
       </div>
       <label class="upload" for="imageInput">
-        <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <input id="imageInput" type="file" accept="image/*,.png,.jpg,.jpeg,.webp" />
         <span class="upload-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></span>
         <strong id="uploadTitle">Выбрать скриншот</strong>
         <span id="uploadHint">PNG, JPG или WEBP · до 8 МБ</span>
@@ -765,7 +765,7 @@
       <div class="processing" id="processing">
         <div class="proc-meta">
           <div id="procAssetLabel">Актив<b id="procAsset">—</b></div>
-          <div id="procDurationLabel">Длительность<b id="procDuration">—</b></div>
+          <div id="procDurationLabel">Длительность<b id="procDuration">��</b></div>
         </div>
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 132 132"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="55%" stop-color="var(--silver)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
@@ -1059,7 +1059,7 @@
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
       dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
-      newAnalysis:"नया विश्लेषण", newQuick:"नया Pulse Quick", openHistory:"इतिहास खोलें",
+      newAnalysis:"नया विश्लेषण", newQuick:"नय�� Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
       hapticTitle:"कंपन प्रतिक्रिया", hapticHint:"टैप पर Telegram कंपन", on:"चालू", off:"बंद",
@@ -1300,7 +1300,7 @@
 
   var EXTRA_T8 = {
     ru:{ camAskTitle:"Снять график камерой", camAskNo:"Не сейчас", camAskYes:"Продолжить",
-      camAskText:"Сейчас телефон спросит разрешение на камеру — нажми «Разрешить». Кадр нужен только для анализа графика и никуда не сохраняется. Камера выключается сразу после снимка." },
+      camAskText:"Сей��ас телефон спросит разрешение на камеру — нажми «Разрешить». Кадр нужен только для анализа графика и никуда не сохраняется. Камера выключается сразу после снимка." },
     en:{ camAskTitle:"Capture the chart", camAskNo:"Not now", camAskYes:"Continue",
       camAskText:"Your phone will now ask for camera access — tap Allow. The frame is used only to analyse the chart and is never saved. The camera turns off right after the shot." },
     uz:{ camAskTitle:"Grafikni suratga olish", camAskNo:"Hozir emas", camAskYes:"Davom etish",
@@ -3010,10 +3010,15 @@
   $("visionHistory").addEventListener("click",function(){ setTab("history"); });
   $("detailClose").addEventListener("click", closeDetail);
   $("detailOverlay").addEventListener("click", function(e){ if(e.target===this) closeDetail(); });
-  // Один обработчик на галерею и камеру; с камеры тип может быть любым image/*
+  // Android/Telegram may return an empty MIME type or application/octet-stream
+  // even for a valid JPG. Validate gently, then let the browser decode the image.
   function handlePickedFile(file){
     if(!file) return;
-    if(String(file.type||"").indexOf("image/") !== 0){ alert(t("errBadType")); return; }
+    var type=String(file.type||"").toLowerCase();
+    var name=String(file.name||"").toLowerCase();
+    var knownImage=/\.(png|jpe?g|webp)$/i.test(name);
+    var genericType=!type || type==="application/octet-stream";
+    if(!genericType && type.indexOf("image/")!==0 && !knownImage){ alert(t("errBadType")); return; }
     if(file.size > 8*1024*1024){ alert(t("errTooLarge")); return; }
     compressImage(file).then(function(data){ state.image=data; $("previewImg").src=data; $("preview").classList.add("show"); $("analyzeBtn").disabled=false; }).catch(function(){ alert(t("errBadType")); });
   }
