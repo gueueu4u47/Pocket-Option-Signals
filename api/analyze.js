@@ -33,7 +33,8 @@ if (!global.__pulseOriginalFetch) {
           ". This includes reasons, confidence, summary, strategy, tips, " +
           "entryWindow, expiry, state and every dialogue text. Keep JSON keys, " +
           "direction values BUY/SELL/NO_SIGNAL and who values dop/opy unchanged. " +
-          "Never use Russian or English unless the selected language is Russian or English.";
+          "Never use Russian or English unless the selected language is Russian or English. " +
+          "When dialogue is requested, return exactly 6 alternating lines, starting with dop.";
 
         let inserted = false;
         const content = body?.messages?.[0]?.content;
@@ -123,7 +124,7 @@ const FALLBACK = {
     NONE: ["Vamos apertar alguma coisa? Que tédio! 😎", "Sem sinal, sem operação.", "Minha mão tá coçando! 😤", "Tédio custa menos que prejuízo."]
   },
   ar: {
-    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سيهرب من دوننا! 😤", "تذهب فرصة وتأتي أخرى. التزم بالخطة."],
+    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سيهرب من دوننا! 😤", "ت��هب فرصة وتأتي أخرى. التزم بالخطة."],
     SELL: ["ينهار للأسفل! بِع الآن! 🔥", "لا تتعجل. ليس كل هبوط إشارة.", "واضح أنه هابط! 😤", "من دون تأكيد قد يكون فخًا."],
     NONE: ["ألا نضغط أي شيء؟ ممل! 😎", "لا إشارة، لا صفقة.", "يدي تريد الضغط! 😤", "الملل أرخص من الخسارة."]
   },
@@ -133,6 +134,29 @@ const FALLBACK = {
     NONE: ["Бірдеңе басайықшы? Іш пысты! 😎", "Сигнал жоқ болса, мәміле де жоқ.", "Қолым қышып тұр! 😤", "Іш пысу шығыннан арзан."]
   }
 };
+
+// Preserve the AI scene and complete short 2–5 line answers to exactly six.
+const DIALOGUE_TAILS = {
+  ru:{dop:"ЛАДНО, ЕЩЁ СЕКУНДУ СМОТРИМ... но палец уже готов. 👀",opy:"Палец пусть готовится. Решение всё равно принимает голова."},
+  en:{dop:"FINE, ONE MORE LOOK... but my finger is ready. 👀",opy:"Let the finger wait. The head still makes the decision."},
+  uz:{dop:"XO‘P, YANA BIR QARAYMIZ... barmog‘im tayyor. 👀",opy:"Barmoq kutsin. Qarorni baribir bosh qabul qiladi."},
+  hi:{dop:"ठीक है, एक नज़र और... उंगली तैयार है। 👀",opy:"उंगली रुके। फैसला फिर भी दिमाग करेगा।"},
+  pt:{dop:"TÁ, MAIS UMA OLHADA... meu dedo já está pronto. 👀",opy:"O dedo espera. A cabeça ainda decide."},
+  ar:{dop:"حسنًا، نظرة أخيرة... إصبعي جاهز. 👀",opy:"دع الإصبع ينتظر. العقل هو من يقرر."},
+  kk:{dop:"ЖАРАЙДЫ, ТАҒЫ БІР ҚАРАЙЫҚ... саусағым дайын. 👀",opy:"Саусақ күтсін. Шешімді бәрібір бас қабылдайды."}
+};
+
+function completeDialogue(payload, language) {
+  if (!payload || payload.degraded || !Array.isArray(payload.dialogue)) return payload;
+  if (!payload.dialogue.length || payload.dialogue.length >= 6) return payload;
+  const tail = DIALOGUE_TAILS[language] || DIALOGUE_TAILS.en;
+  while (payload.dialogue.length < 6) {
+    const who = payload.dialogue.length % 2 ? "opy" : "dop";
+    payload.dialogue.push({ who, text: tail[who] });
+  }
+  payload.dlgSource = String(payload.dlgSource || "ai") + "+completed";
+  return payload;
+}
 
 function cleanBrokenText(value) {
   if (typeof value === "string") {
@@ -220,7 +244,7 @@ module.exports = async function localizedAnalyze(req, res) {
     return res.end(...args);
   };
   innerRes.json = function json(payload) {
-    return res.json(localizePayload(payload, language));
+    return res.json(completeDialogue(localizePayload(payload, language), language));
   };
 
   const corePath = require.resolve("./analyze-core");
