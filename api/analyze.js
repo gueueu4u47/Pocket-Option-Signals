@@ -628,68 +628,36 @@ function edgeXmlEscape(v) {
 }
 
 async function edgeTTS(text, voiceName, timeoutMs, who) {
-  var WS = globalThis.WebSocket;
-  if (typeof WS !== "function") return { err: "no_websocket" };
+  var WebSocket;
+  try { WebSocket = require("ws"); } catch (e) { return { err: "no_ws_module" }; }
   var voice = voiceName || "ru-RU-DmitryNeural";
   var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
   var rate = (who === "opy") ? "-6%" : "+12%";
   var url = EDGE_WSS + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
   return await new Promise(function (resolve) {
-    var done = false;
-    var chunks = [];
-    var ws = null;
+    var done = false, chunks = [], status = 0, ws = null;
     var to = setTimeout(function () { finish({ err: "timeout" }); }, Math.max(2500, timeoutMs || 9000));
-    function pack() {
-      if (!chunks.length) return null;
-      return "data:audio/mpeg;base64," + Buffer.concat(chunks).toString("base64");
-    }
-    function finish(result) {
-      if (done) return;
-      done = true;
-      clearTimeout(to);
-      try { if (ws && ws.readyState <= 1) ws.close(); } catch (e) {}
-      resolve(result);
-    }
+    function pack() { return chunks.length ? ("data:audio/mpeg;base64," + Buffer.concat(chunks).toString("base64")) : null; }
+    function finish(result) { if (done) return; done = true; clearTimeout(to); try { if (ws) ws.terminate(); } catch (e) {} resolve(result); }
     try {
-      ws = new WS(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" } });
-    } catch (e) {
-      try { ws = new WS(url); } catch (e2) { return finish({ err: "ws_ctor:" + ((e2 && e2.message) || "x") }); }
-    }
-    try { ws.binaryType = "arraybuffer"; } catch (e) {}
-    ws.onopen = function () {
-      var cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" +
-        JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
-      var ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'>" +
-        "<voice name='" + voice + "'><prosody pitch='" + pitch + "' rate='" + rate + "' volume='+0%'>" +
-        edgeXmlEscape(text) + "</prosody></voice></speak>";
+      ws = new WebSocket(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" }, perMessageDeflate: false, handshakeTimeout: 10000 });
+    } catch (e) { return finish({ err: "ws_ctor:" + ((e && e.message) || "x") }); }
+    ws.on("unexpected-response", function (req, res) { status = res && res.statusCode; });
+    ws.on("open", function () {
+      var cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" + JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
+      var ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'><voice name='" + voice + "'><prosody pitch='" + pitch + "' rate='" + rate + "' volume='+0%'>" + edgeXmlEscape(text) + "</prosody></voice></speak>";
       var msg = "X-RequestId:" + edgeUuid() + "\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:" + new Date().toString() + "Z\r\nPath:ssml\r\n\r\n" + ssml;
       try { ws.send(cfg); ws.send(msg); } catch (e) { finish({ err: "send:" + ((e && e.message) || "x") }); }
-    };
-    ws.onmessage = function (ev) {
-      var data = ev.data;
-      if (typeof data === "string") {
-        if (data.indexOf("Path:turn.end") !== -1) {
-          var u = pack();
-          return finish(u ? { uri: u } : { err: "empty audio" });
-        }
-        return;
-      }
-      try {
-        var b = Buffer.from(data);
-        if (b.length < 2) return;
-        var headerLen = (b[0] << 8) | b[1];
-        var audio = b.subarray(2 + headerLen);
-        if (audio.length) chunks.push(Buffer.from(audio));
-      } catch (e) {}
-    };
-    ws.onerror = function (ev) { finish({ err: "ws_error:" + ((ev && (ev.message || ev.error)) || "conn") }); };
-    ws.onclose = function (ev) {
-      var u = pack();
-      if (u) return finish({ uri: u });
-      finish({ err: "closed:" + ((ev && ev.code) || "?") });
-    };
+    });
+    ws.on("message", function (data, isBinary) {
+      if (!isBinary) { var s = data.toString(); if (s.indexOf("Path:turn.end") !== -1) { var u = pack(); finish(u ? { uri: u } : { err: "empty audio" }); } return; }
+      try { var b = Buffer.isBuffer(data) ? data : Buffer.from(data); var hl = (b[0] << 8) | b[1]; var audio = b.subarray(2 + hl); if (audio.length) chunks.push(Buffer.from(audio)); } catch (e) {}
+    });
+    ws.on("error", function (err) { finish({ err: status ? ("http " + status) : ("ws_error:" + ((err && err.message) || "conn")) }); });
+    ws.on("close", function (code) { var u = pack(); if (u) finish({ uri: u }); else finish({ err: "closed:" + code + (status ? ("/" + status) : "") }); });
   });
 }
+
 
 async function synthDialogueAudio(dialogue, apiKey, opts) {
   const diag = { tried: 0, ok: 0, errs: [] };
