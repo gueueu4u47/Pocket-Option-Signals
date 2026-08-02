@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+/* Production: never render internal diagnostics in the user interface. */
+#psDbg{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
   :root{
     --bg:#0A0A0A; --bg2:#111111; --card:#151515; --card2:#1B1B1B; --line:#2A2A2A;
     --text:#F4F4F4; --muted:#969696; --silver:#D7D9DD;
@@ -548,6 +550,18 @@
   .cam-txt{min-width:78px;color:#fff;font-size:13px;font-weight:800;background:none;border:0;cursor:pointer;}
   .cam-txt.right{text-align:right;}
 </style>
+<script>
+/* Production guard: permanently remove any legacy diagnostics overlay. */
+(function(){
+  function removeInternalDiagnostics(){
+    var node=document.getElementById("psDbg");
+    if(node&&node.parentNode) node.parentNode.removeChild(node);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",removeInternalDiagnostics);
+  else removeInternalDiagnostics();
+  new MutationObserver(removeInternalDiagnostics).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 </head>
 <body>
 <video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
@@ -667,7 +681,7 @@
       <div class="countdown" id="quickCountdown">—</div>
       <div class="sd-block" id="quickSummaryWrap" style="display:none"><h4 id="quickSummaryTitle">Кратко</h4><p id="quickSummary"></p></div>
       <div class="sd-block" id="quickReasonsWrap" style="display:none"><h4 id="quickReasonsTitle">Почему такой сигнал</h4><ul class="reasons" id="quickReasons"></ul></div>
-      <div class="sd-block" id="quickStrategyWrap" style="display:none"><h4 id="quickStrategyTitle">Стратегия</h4><p id="quickStrategy"></p></div>
+      <div class="sd-block" id="quickStrategyWrap" style="display:none"><h4 id="quickStrategyTitle">Стратеги��</h4><p id="quickStrategy"></p></div>
       <div class="sd-block" id="quickTipsWrap" style="display:none"><h4 id="quickTipsTitle">Советы</h4><ul class="sd-list" id="quickTips"></ul></div>
       <div class="r-actions">
         <button class="btn primary" id="quickAgain">Новый Pulse Quick</button>
@@ -1033,7 +1047,7 @@
       navHistory:"इतिहास", navCreate:"बनाएँ", navVision:"Vision", navProfile:"प्रोफ़ाइल",
       historyEyebrow:"इतिहास", historyTitle:"परिणामों का इतिहास", historyText:"Pulse Vision और Pulse Quick के परिणाम यहाँ दिखते हैं।",
       emptyTitle:"इतिहास अभी खाली है", emptyText:"Pulse Vision में चार्ट अपलोड करें या तेज़ परिणाम बनाएँ।", goVision:"Pulse Vision खोलें",
-      createEyebrow:"बनाएँ", createTitle:"परिणाम की सेटिंग", createText:"OTC एसेट, अवधि, एंट्री प्रकार और मोड चुनें।",
+      createEyebrow:"बनाएँ", createTitle:"परिणाम की सेटिंग", createText:"OTC एसेट, अवधि, एंट्री प्रकार और मोड चुनें��",
       assetLabel:"OTC एसेट", searchPlaceholder:"एसेट खोजें", durationLabel:"अवधि", entryLabel:"एंट्री प्रकार",
       entryNearest:"निकटतम बिंदु", entryLater:"अवधि के बाद", modeLabel:"मोड",
       visionModeText:"अपलोड किए चार्ट का विश्लेषण", quickModeText:"जोड़ी की चाल और बाज़ार सक्रियता पर संकेत",
@@ -1056,7 +1070,7 @@
       detailWhy:"यह संकेत क्यों", detailStrategy:"रणनीति", detailTips:"सुझाव", detailSummary:"संक्षेप", detailTimeframe:"टाइमफ़्रेम", detailNoData:"इस परिणाम के लिए विस्तृत विवरण नहीं है।",
       win:"Win", loss:"Loss", skip:"छोड़ें",
       errFailed:"Pulse Vision अभी उपलब्ध नहीं है। बाद में कोशिश करें।",
-      errTimeout:"विश्लेषण समय पर पूरा नहीं हुआ। दोबारा कोशिश करें।",
+      errTimeout:"विश्लेषण समय पर पूरा नहीं हुआ। दो��ारा कोशिश करें।",
       errNetwork:"सर्वर से संपर्क नहीं है। इंटरनेट जाँचें और दोबारा कोशिश करें।",
       errServer:"विश्लेषण सेवा ने त्रुटि दी। एक मिनट बाद कोशिश करें।",
       errBusy:"अनुरोध सीमा पूरी हो गई। रुककर दोबारा कोशिश करें।",
@@ -1147,7 +1161,7 @@
       errServer:"أعادت خدمة التحليل خطأً. حاول بعد دقيقة.",
       errBusy:"تم استهلاك حد الطلبات. انتظر ثم حاول مرة أخرى.",
       errDegraded:"لم نتمكن من قراءة الرسم. خذ لقطة كاملة: الشموع ومقياس الوقت والسعر.",
-      errTooLarge:"الصورة كبيرة جدًا. اختر ملفًا حتى 8 ميغابايت.", errBadType:"المدعوم فقط PNG و JPG و WEBP.",
+      errTooLarge:"الصورة كبير�� جدًا. اختر ملفًا حتى 8 ميغابايت.", errBadType:"المدعوم فقط PNG و JPG و WEBP.",
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"لوحة المالك", ownerSub:"إحصاءات خادم Signal Pulse. تم التحقق من الوصول عبر Telegram.",
       mUsers:"المستخدمون", mResults:"النتائج", mEvents:"الأحداث", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"اليوم", refresh:"تحديث المؤشرات",
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"المظهر", designSub:"يُحفظ المظهر ووضع العرض على هذا الجهاز.",
@@ -1550,7 +1564,7 @@
 
   function timing(){
     var dur = state.duration, durMs = dur*1000;
-    // Запас до входа не должен быть длиннее самой сделки: на 3 секундах ждать 12 бессмысленно
+    // Запас до входа не должен быть длинне�� самой сделки: на 3 секундах ждать 12 бессмысленно
     var buffer = dur <= 5 ? 2 : (dur <= 15 ? 4 : (dur <= 60 ? 8 : 12));
     var safety = state.entryMode === "nearest" ? buffer : dur;
     var target = Date.now() + safety*1000;
@@ -2110,9 +2124,8 @@
 
   function showVisionResult(data){
     window.__pulseDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : null;
-    window.__pulseDlgSource = (data && data.dlgSource) ? String(data.dlgSource) : null;
-    window.__pulseDlgDiag = (data && data.dlgDiag) ? String(data.dlgDiag) : null;
-    if (data && data.ttsDiag) { try { console.warn("[TTS]", JSON.stringify(data.ttsDiag)); } catch(e){} var __td=data.ttsDiag; if(__td.key===false||__td.fatal||(__td.tried&&!__td.ok)){ var __vr=document.getElementById("visionRisk"); if(__vr){ __vr.textContent="TTS: "+JSON.stringify(__td); __vr.style.display="block"; } } }
+    window.__pulseDlgSource = null;
+    window.__pulseDlgDiag = null;
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
     $("visionAssetTop").textContent = esc(assetOut)+" · OTC";
@@ -2208,7 +2221,6 @@
           vr.style.display="block";
           if($("shotTip")) $("shotTip").classList.add("show");
         }
-        if(window.console && console.warn) console.warn("[Pulse Vision]", msg, tech||"");
       }
       function finishWith(data, done, diag){
         if(settled) return; settled=true;
@@ -2222,17 +2234,17 @@
       fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData, fast:true }),
         signal: controller?controller.signal:undefined })
-        .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
+        .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j}; }); })
         .then(function(r){
           clearTimeout(capTimer);
           procFinalPhase();
           if(r.ok && r.data && r.data.direction){
             finishWith(r.data, true, r.data.degraded ? "degraded" : null);
           } else {
-            finishWith(fallbackVisionResult(), true, "HTTP "+r.status+" -> "+((r.data&&r.data.error)?r.data.error:String(r.raw||"").slice(0,200)));
+            finishWith(fallbackVisionResult(), true, "HTTP");
           }
         })
-        .catch(function(e){ clearTimeout(capTimer); finishWith(fallbackVisionResult(), true, "NETWORK/ABORT -> "+(e&&e.message?e.message:String(e))); });
+        .catch(function(){ clearTimeout(capTimer); finishWith(fallbackVisionResult(), true, "NETWORK/ABORT"); });
     })();
   }
 
@@ -2364,7 +2376,7 @@
                 "Цена давит в верхнюю границу дневного диапазона."],
         upper: ["Цена работает в верхней части дневного диапазона.",
                 "Основная торговля дня идёт выше середины диапазона.",
-                "Цена держится ближе к верхней границе сессии."],
+                "Цена держится ближе к ве��хней границе сессии."],
         middle: ["Цена в середине дневного диапазона, смещения нет.",
                  "Торговля идёт по центру диапазона — ни одна сторона не забрала территорию.",
                  "Цена держится равноудалённо от границ сессии."],
