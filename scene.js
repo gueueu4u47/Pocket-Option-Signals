@@ -95,7 +95,7 @@
 
   function lang() {
     var l = (document.documentElement.getAttribute("lang") || "ru").slice(0, 2);
-    return LIB[l] ? l : "en";
+    return LIB[l] ? l : "ru";
   }
   function names() { return NAME[lang()] || NAME.en; }
   function ui() { return LIB[lang()].ui; }
@@ -689,14 +689,16 @@
         bubble.innerHTML = esc(line.text).replace(/\n/g, "<br>");
         autoscroll();
         var advanced = false;
-        var advance = function () { if (advanced) return; advanced = true; if (myGen !== S.gen) return resolve(); wait(readMs(line.text)).then(resolve); };
-        var guard = setTimeout(advance, 4000);
+        var gap = 220;
+        var advance = function () { if (advanced) return; advanced = true; if (myGen !== S.gen) return resolve(); wait(gap).then(resolve); };
+        var guard = setTimeout(advance, 12000);
         ap.then(function (uri) {
+          if (myGen !== S.gen) { clearTimeout(guard); return resolve(); }
+          if (uri && playLineAudio(uri, function () { clearTimeout(guard); advance(); })) return;
           clearTimeout(guard);
-          if (myGen !== S.gen) { return resolve(); }
-          if (!(uri && playLineAudio(uri))) speak(line.who, line.text);
-          advance();
-        }).catch(function () { clearTimeout(guard); if (myGen !== S.gen) return resolve(); speak(line.who, line.text); advance(); });
+          speak(line.who, line.text);
+          wait(readMs(line.text)).then(advance);
+        }).catch(function () { clearTimeout(guard); if (myGen !== S.gen) return resolve(); speak(line.who, line.text); wait(readMs(line.text)).then(advance); });
       });
     });
   }
