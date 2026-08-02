@@ -619,6 +619,16 @@ function softCard(res, lang, summary, reasons) {
 }
 
 /* ---------- Fish Audio TTS (https://fish.audio) ---------- */
+function stripForTTS(s) {
+  return String(s == null ? "" : s)
+    .replace(/[\u{1F000}-\u{1FAFF}]/gu, "")
+    .replace(/[\u{2190}-\u{27BF}]/gu, "")
+    .replace(/[\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "")
+    .replace(/[\uFE00-\uFE0F\u200D]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 function fishTTS(text, refId, timeoutMs, who) {
   return new Promise(function (resolve) {
     var https = require("https");
@@ -627,7 +637,8 @@ function fishTTS(text, refId, timeoutMs, who) {
     refId = String(refId || "").replace(/[^A-Za-z0-9_-]/g, "");
     if (!refId) return resolve({ err: "no_fish_ref" });
     var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
-    var speed = (who === "opy") ? 0.94 : 1.08;
+    var speed = (who === "opy") ? 0.9 : 1.14;
+    var volume = (who === "opy") ? 0 : 2;
     var body = JSON.stringify({
       text: String(text || ""),
       reference_id: refId,
@@ -636,7 +647,7 @@ function fishTTS(text, refId, timeoutMs, who) {
       chunk_length: 300,
       normalize: true,
       latency: "balanced",
-      prosody: { speed: speed, volume: 0 }
+      prosody: { speed: speed, volume: volume }
     });
     var done = false, chunks = [], req = null;
     var to = setTimeout(function () { finish({ err: "fish_timeout" }); }, Math.max(3000, timeoutMs || 12000));
@@ -682,7 +693,8 @@ async function synthDialogueAudio(dialogue, apiKey, opts) {
       const it = dialogue[my];
       if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
       const fishRef = (it.who === "opy") ? fOpy : fDop;
-      const clean = it.text.replace(/\s+/g, " ").trim().slice(0, 300);
+      const clean = stripForTTS(it.text).slice(0, 300);
+      if (!clean) continue;
       let left = Math.min(perMs, deadline - Date.now());
       if (left < 1500) { if (diag.errs.length < 4) diag.errs.push("low budget"); return; }
       diag.tried++;
