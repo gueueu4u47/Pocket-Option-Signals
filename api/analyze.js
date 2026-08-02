@@ -603,6 +603,61 @@ function softCard(res, lang, summary, reasons) {
 }
 
 /* ============================================================ */
+/* ---------- Озвучка реплик через ElevenLabs (опционально) ---------- */
+async function elevenTTS(text, voiceId, apiKey, modelId, timeoutMs) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), Math.max(1200, timeoutMs || 8000));
+  try {
+    const resp = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voiceId), {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg"
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: modelId,
+        voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true }
+      }),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) return null;
+    const ab = await resp.arrayBuffer();
+    if (!ab || !ab.byteLength) return null;
+    return "data:audio/mpeg;base64," + Buffer.from(ab).toString("base64");
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+async function synthDialogueAudio(dialogue, apiKey, opts) {
+  if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return;
+  const modelId = opts.modelId, vDop = opts.voiceDop, vOpy = opts.voiceOpy;
+  const perMs = opts.perMs, deadline = opts.deadline, concurrency = 2;
+  let idx = 0;
+  async function worker() {
+    while (idx < dialogue.length) {
+      const my = idx++;
+      if (Date.now() > deadline) return;
+      const it = dialogue[my];
+      if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
+      const voiceId = (it.who === "opy") ? vOpy : vDop;
+      if (!voiceId) continue;
+      const left = Math.min(perMs, deadline - Date.now());
+      if (left < 1500) return;
+      const clean = it.text.replace(/\s+/g, " ").trim().slice(0, 300);
+      const uri = await elevenTTS(clean, voiceId, apiKey, modelId, left);
+      if (uri) it.audio = uri;
+    }
+  }
+  const workers = [];
+  for (let i = 0; i < concurrency; i++) workers.push(worker());
+  await Promise.all(workers);
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Vary", "Origin");
@@ -859,6 +914,21 @@ module.exports = async (req, res) => {
     if (!degraded && bestCut) {
       console.error("ANALYZE_CUT " + diag.join(" | ") + " reasons=" + bestReasons.length + " raw=" + String(rawSeen).slice(0, 600));
     }
+    const elevenKey = process.env.ELEVENLABS_API_KEY;
+    if (!degraded && elevenKey && payload.dialogue.length) {
+      const ttsHardCap = overallDeadline + 9000;
+      const ttsDeadline = Math.min(Date.now() + Number(process.env.ELEVEN_TTS_BUDGET_MS || 14000), ttsHardCap);
+      try {
+        await synthDialogueAudio(payload.dialogue, elevenKey, {
+          modelId: process.env.ELEVEN_MODEL || "eleven_multilingual_v2",
+          voiceDop: process.env.ELEVEN_VOICE_DOP || "TxGEqnHWrfWFTfGW9XjX",
+          voiceOpy: process.env.ELEVEN_VOICE_OPY || "pNInz6obpgDQGcFmaJgB",
+          perMs: Number(process.env.ELEVEN_TTS_PER_MS || 9000),
+          deadline: ttsDeadline
+        });
+      } catch (e) { console.error("TTS error:", (e && e.message) || e); }
+    }
+
     if (!degraded) cacheSet(cacheKey, payload);
     supaLogAnalyze(user.id);
     return res.status(200).json(payload);
