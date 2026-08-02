@@ -1108,7 +1108,7 @@
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Painel do proprietário", ownerSub:"Estatísticas do servidor do Signal Pulse. Acesso verificado pelo Telegram.",
       mUsers:"Usuários", mResults:"Resultados", mEvents:"Eventos", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Hoje", refresh:"Atualizar métricas",
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Aparência", designSub:"O tema e o modo de exibição ficam neste dispositivo.",
-      modeAlways:"Sempre", modeNow:"Agora", modeSchedule:"Agenda", modeLaunch:"Início", modeVision:"Vision", modeQuick:"Quick",
+      modeAlways:"Sempre", modeNow:"Agora", modeSchedule:"Agenda", modeLaunch:"In��cio", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"De (Asia/Oral)", schedTo:"Até (Asia/Oral)", saveDesign:"Salvar aparência", savedDesign:"Salvo",
       greetMorning:"Bom dia", greetDay:"Boa tarde", greetEvening:"Boa noite",
       unitSec:"s", unitMin:"min", unitHour:"h"
@@ -1168,7 +1168,7 @@
       visionModeText:"Жүктелген графикті талдау", quickModeText:"Валюта жұбының қозғалысы мен нарық белсенділігі бойынша сигнал",
       actionVision:"Pulse Vision-ға өту", actionQuick:"Pulse Quick іске қосу", quickPreparing:"Нарықты талдап жатырмыз…",
       qs1:"Таңдалған жұпты оқып жатырмыз", qs2:"Баға қозғалысын қараймыз", qs3:"Жақын деңгейлерді тексереміз", qs4:"Нарық белсенділігін салыстырамыз", qs5:"Сигнал құрып жатырмыз",
-      visionEyebrow:"PULSE VISION", visionTitle:"График талдауы", visionText:"Толық скриншот жүктеңіз — қолданба пропорцияны сақтайды.",
+      visionEyebrow:"PULSE VISION", visionTitle:"Г��афик талдауы", visionText:"Толық скриншот жүктеңіз — қолданба пропорцияны сақтайды.",
       uploadTitle:"Скриншот таңдау", uploadHint:"PNG, JPG немесе WEBP · 8 МБ дейін", analyze:"Графикті талдау",
       stage1:"Суретті дайындап жатырмыз", stage2:"График құрылымын зерттеп жатырмыз", stage3:"Көрінетін деңгейлерді тексереміз", stage4:"Нәтижені құрып жатырмыз",
       confidence:"Сенімділік", asset:"АКТИВ", duration:"ҰЗАҚТЫҒЫ", entry:"КІРУ", outcomeBy:"НӘТИЖЕГЕ ДЕЙІН",
@@ -2110,6 +2110,7 @@
 
   function showVisionResult(data){
     window.__pulseDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : null;
+    window.__pulseDlgSource = (data && data.dlgSource) ? String(data.dlgSource) : null;
     if (data && data.ttsDiag) { try { console.warn("[TTS]", JSON.stringify(data.ttsDiag)); } catch(e){} var __td=data.ttsDiag; if(__td.key===false||__td.fatal||(__td.tried&&!__td.ok)){ var __vr=document.getElementById("visionRisk"); if(__vr){ __vr.textContent="TTS: "+JSON.stringify(__td); __vr.style.display="block"; } } }
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
