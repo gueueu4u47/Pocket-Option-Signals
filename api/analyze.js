@@ -603,59 +603,121 @@ function softCard(res, lang, summary, reasons) {
 }
 
 /* ============================================================ */
-/* ---------- Озвучка реплик через ElevenLabs (опционально) ---------- */
-async function elevenTTS(text, voiceId, apiKey, modelId, timeoutMs) {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), Math.max(1200, timeoutMs || 8000));
-  try {
-    const resp = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voiceId), {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-        "Accept": "audio/mpeg"
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: modelId,
-        voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true }
-      }),
-      signal: ctrl.signal
-    });
-    if (!resp.ok) return null;
-    const ab = await resp.arrayBuffer();
-    if (!ab || !ab.byteLength) return null;
-    return "data:audio/mpeg;base64," + Buffer.from(ab).toString("base64");
-  } catch (e) {
-    return null;
-  } finally {
-    clearTimeout(to);
-  }
+/* ---------- Озвучка реплик через Microsoft Edge TTS (бесплатно, без ключа) ---------- */
+var EDGE_WSS = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+var EDGE_TRUSTED = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+var EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-131.0.2903.99";
+var EDGE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.2903.99";
+
+function edgeSecGec() {
+  var crypto = require("crypto");
+  var WIN_EPOCH = 11644473600n;
+  var ticks = BigInt(Math.floor(Date.now() / 1000)) + WIN_EPOCH;
+  ticks = ticks - (ticks % 300n);
+  ticks = ticks * 10000000n;
+  var str = ticks.toString() + EDGE_TRUSTED;
+  return crypto.createHash("sha256").update(str, "ascii").digest("hex").toUpperCase();
+}
+
+function edgeUuid() {
+  return require("crypto").randomUUID().replace(/-/g, "");
+}
+
+function edgeXmlEscape(v) {
+  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+async function edgeTTS(text, voiceName, timeoutMs, who) {
+  var WS = globalThis.WebSocket;
+  if (typeof WS !== "function") return { err: "no_websocket" };
+  var voice = voiceName || "ru-RU-DmitryNeural";
+  var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
+  var rate = (who === "opy") ? "-6%" : "+12%";
+  var url = EDGE_WSS + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
+  return await new Promise(function (resolve) {
+    var done = false;
+    var chunks = [];
+    var ws = null;
+    var to = setTimeout(function () { finish({ err: "timeout" }); }, Math.max(2500, timeoutMs || 9000));
+    function pack() {
+      if (!chunks.length) return null;
+      return "data:audio/mpeg;base64," + Buffer.concat(chunks).toString("base64");
+    }
+    function finish(result) {
+      if (done) return;
+      done = true;
+      clearTimeout(to);
+      try { if (ws && ws.readyState <= 1) ws.close(); } catch (e) {}
+      resolve(result);
+    }
+    try {
+      ws = new WS(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" } });
+    } catch (e) {
+      try { ws = new WS(url); } catch (e2) { return finish({ err: "ws_ctor:" + ((e2 && e2.message) || "x") }); }
+    }
+    try { ws.binaryType = "arraybuffer"; } catch (e) {}
+    ws.onopen = function () {
+      var cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" +
+        JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
+      var ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'>" +
+        "<voice name='" + voice + "'><prosody pitch='" + pitch + "' rate='" + rate + "' volume='+0%'>" +
+        edgeXmlEscape(text) + "</prosody></voice></speak>";
+      var msg = "X-RequestId:" + edgeUuid() + "\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:" + new Date().toString() + "Z\r\nPath:ssml\r\n\r\n" + ssml;
+      try { ws.send(cfg); ws.send(msg); } catch (e) { finish({ err: "send:" + ((e && e.message) || "x") }); }
+    };
+    ws.onmessage = function (ev) {
+      var data = ev.data;
+      if (typeof data === "string") {
+        if (data.indexOf("Path:turn.end") !== -1) {
+          var u = pack();
+          return finish(u ? { uri: u } : { err: "empty audio" });
+        }
+        return;
+      }
+      try {
+        var b = Buffer.from(data);
+        if (b.length < 2) return;
+        var headerLen = (b[0] << 8) | b[1];
+        var audio = b.subarray(2 + headerLen);
+        if (audio.length) chunks.push(Buffer.from(audio));
+      } catch (e) {}
+    };
+    ws.onerror = function (ev) { finish({ err: "ws_error:" + ((ev && (ev.message || ev.error)) || "conn") }); };
+    ws.onclose = function (ev) {
+      var u = pack();
+      if (u) return finish({ uri: u });
+      finish({ err: "closed:" + ((ev && ev.code) || "?") });
+    };
+  });
 }
 
 async function synthDialogueAudio(dialogue, apiKey, opts) {
-  if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return;
+  const diag = { tried: 0, ok: 0, errs: [] };
+  if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return diag;
   const modelId = opts.modelId, vDop = opts.voiceDop, vOpy = opts.voiceOpy;
   const perMs = opts.perMs, deadline = opts.deadline, concurrency = 2;
   let idx = 0;
   async function worker() {
     while (idx < dialogue.length) {
       const my = idx++;
-      if (Date.now() > deadline) return;
+      if (Date.now() > deadline) { if (diag.errs.length < 3) diag.errs.push("deadline"); return; }
       const it = dialogue[my];
       if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
       const voiceId = (it.who === "opy") ? vOpy : vDop;
-      if (!voiceId) continue;
+      if (!voiceId) { if (diag.errs.length < 3) diag.errs.push("no voiceId:" + it.who); continue; }
       const left = Math.min(perMs, deadline - Date.now());
-      if (left < 1500) return;
+      if (left < 1500) { if (diag.errs.length < 3) diag.errs.push("low budget"); return; }
       const clean = it.text.replace(/\s+/g, " ").trim().slice(0, 300);
-      const uri = await elevenTTS(clean, voiceId, apiKey, modelId, left);
-      if (uri) it.audio = uri;
+      diag.tried++;
+      const r = await edgeTTS(clean, voiceId, left, it.who);
+      if (r && r.uri) { it.audio = r.uri; diag.ok++; }
+      else if (r && r.err && diag.errs.length < 3) diag.errs.push(r.err);
     }
   }
   const workers = [];
   for (let i = 0; i < concurrency; i++) workers.push(worker());
   await Promise.all(workers);
+  return diag;
 }
 
 module.exports = async (req, res) => {
@@ -914,19 +976,19 @@ module.exports = async (req, res) => {
     if (!degraded && bestCut) {
       console.error("ANALYZE_CUT " + diag.join(" | ") + " reasons=" + bestReasons.length + " raw=" + String(rawSeen).slice(0, 600));
     }
-    const elevenKey = process.env.ELEVENLABS_API_KEY;
-    if (!degraded && elevenKey && payload.dialogue.length) {
+    const voiceOff = String(process.env.VOICE_TTS || "").toLowerCase() === "off";
+    if (!degraded && !voiceOff && payload.dialogue.length) {
       const ttsHardCap = overallDeadline + 9000;
-      const ttsDeadline = Math.min(Date.now() + Number(process.env.ELEVEN_TTS_BUDGET_MS || 14000), ttsHardCap);
+      const ttsDeadline = Math.min(Date.now() + Number(process.env.EDGE_TTS_BUDGET_MS || 16000), ttsHardCap);
+      const voiceDop = process.env.EDGE_VOICE_DOP || "ru-RU-DmitryNeural";
+      const voiceOpy = process.env.EDGE_VOICE_OPY || "ru-RU-DmitryNeural";
       try {
-        await synthDialogueAudio(payload.dialogue, elevenKey, {
-          modelId: process.env.ELEVEN_MODEL || "eleven_multilingual_v2",
-          voiceDop: process.env.ELEVEN_VOICE_DOP || "TxGEqnHWrfWFTfGW9XjX",
-          voiceOpy: process.env.ELEVEN_VOICE_OPY || "pNInz6obpgDQGcFmaJgB",
-          perMs: Number(process.env.ELEVEN_TTS_PER_MS || 9000),
-          deadline: ttsDeadline
-        });
-      } catch (e) { console.error("TTS error:", (e && e.message) || e); }
+        const d = await synthDialogueAudio(payload.dialogue, "edge", { modelId: "edge", voiceDop, voiceOpy, perMs: Number(process.env.EDGE_TTS_PER_MS || 9000), deadline: ttsDeadline });
+        payload.ttsDiag = Object.assign({ engine: "edge", voiceDop, voiceOpy }, d);
+      } catch (e) {
+        payload.ttsDiag = { engine: "edge", fatal: (e && e.message) || String(e) };
+      }
+      console.error("TTS_DIAG " + JSON.stringify(payload.ttsDiag));
     }
 
     if (!degraded) cacheSet(cacheKey, payload);
