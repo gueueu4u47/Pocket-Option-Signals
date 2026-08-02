@@ -825,7 +825,7 @@ module.exports = async (req, res) => {
       return softCard(res, lang,
         lang === "ru" ? "Не удалось подтвердить вход через Telegram." : "Telegram sign-in could not be confirmed.",
         lang === "ru"
-          ? ["Открой приложение заново из бота в Telegram.", "Анализ работает только внутри Telegram."]
+          ? ["Открой приложение заново из бота в Telegram.", "А��ализ работает только внутри Telegram."]
           : ["Reopen the app from the bot inside Telegram.", "Analysis works only inside Telegram."]);
     }
     const isOwner = String(user.id) === String(process.env.OWNER_TELEGRAM_ID || "");
@@ -955,7 +955,7 @@ module.exports = async (req, res) => {
     }
 
     if (best && best.direction && bestReasons.length && !(best.dialogue && best.dialogue.length >= 4)) {
-      const ms = budget(13000);
+      const ms = budgetKeep(13000, 9000);
       if (ms >= 5000) {
         const tpl = lang === "ru" ? ENRICH_RU : ENRICH_EN;
         const ep = tpl
@@ -991,7 +991,7 @@ module.exports = async (req, res) => {
 
     if (best && best.direction && sanitizeDialogue(best.dialogue).length < 2) {
       const dms = budget(9000);
-      if (dms >= 4000) {
+      if (dms >= 2500) {
         const dTpl = lang === "ru" ? DLG_RU : DLG_EN;
         const dp = dTpl
           .split("{DIR}").join(normDirection(best.direction))
@@ -1034,6 +1034,7 @@ module.exports = async (req, res) => {
     } else if (payload.dialogue.length) {
       payload.dlgSource = "ai";
     }
+    payload.dlgDiag = (diag.length ? diag.join(" | ") : "ok").slice(0, 180);
 
     if (degraded) {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
