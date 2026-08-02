@@ -183,7 +183,7 @@ function fallbackDialogue(direction, lang) {
       { who: "opy", text: "Не суетись. Ждём, пока движение подтвердится." },
       { who: "dop", text: "Оно уже подтвердилось, глаза разуй! 👆" },
       { who: "opy", text: "Видел тысячу таких. Вход по плану, не на нервах." },
-      { who: "dop", text: "Да ты просто трусишь! Продаём, ну! 🔥" },
+      { who: "dop", text: "Да ты просто тру��ишь! Продаём, ну! 🔥" },
       { who: "opy", text: "Не трушу, а жду. Подтвердится — тогда вход." }
     ];
     return [
@@ -650,7 +650,7 @@ function fishTTS(text, refId, timeoutMs, who) {
     if (!refId) return resolve({ err: "no_fish_ref" });
     var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
     var speed = (who === "opy") ? 0.9 : 1.14;
-    var volume = (who === "opy") ? 0 : 2;
+    var volume = 0;
     var body = JSON.stringify({
       text: String(text || ""),
       reference_id: refId,
