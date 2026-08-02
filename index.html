@@ -1044,7 +1044,7 @@
       stage1:"छवि तैयार कर रहे हैं", stage2:"चार्ट संरचना पढ़ रहे हैं", stage3:"दिखने वाले स्तर जाँच रहे हैं", stage4:"परिणाम बना रहे हैं",
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
-      dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
+      dirUp:"��पर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
       newAnalysis:"नया विश्लेषण", newQuick:"नया Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
@@ -1108,7 +1108,7 @@
       ownerEyebrow:"PULSE CONTROL", ownerTitle:"Painel do proprietário", ownerSub:"Estatísticas do servidor do Signal Pulse. Acesso verificado pelo Telegram.",
       mUsers:"Usuários", mResults:"Resultados", mEvents:"Eventos", mVision:"Pulse Vision", mQuick:"Pulse Quick", mWin:"Win", mLoss:"Loss", mToday:"Hoje", refresh:"Atualizar métricas",
       designEyebrow:"PULSE DESIGN CONTROL", designTitle:"Aparência", designSub:"O tema e o modo de exibição ficam neste dispositivo.",
-      modeAlways:"Sempre", modeNow:"Agora", modeSchedule:"Agenda", modeLaunch:"In��cio", modeVision:"Vision", modeQuick:"Quick",
+      modeAlways:"Sempre", modeNow:"Agora", modeSchedule:"Agenda", modeLaunch:"In����cio", modeVision:"Vision", modeQuick:"Quick",
       schedFrom:"De (Asia/Oral)", schedTo:"Até (Asia/Oral)", saveDesign:"Salvar aparência", savedDesign:"Salvo",
       greetMorning:"Bom dia", greetDay:"Boa tarde", greetEvening:"Boa noite",
       unitSec:"s", unitMin:"min", unitHour:"h"
@@ -1126,7 +1126,7 @@
       actionVision:"الانتقال إلى Pulse Vision", actionQuick:"تشغيل Pulse Quick", quickPreparing:"نحلل السوق…",
       qs1:"نقرأ الزوج المختار", qs2:"نراقب حركة السعر", qs3:"نتحقق من المستويات القريبة", qs4:"نقيس نشاط السوق", qs5:"نُشكّل الإشارة",
       visionEyebrow:"PULSE VISION", visionTitle:"تحليل الرسم البياني", visionText:"حمّل لقطة شاشة كاملة — يحفظ التطبيق الأبعاد.",
-      uploadTitle:"اختيار لقطة الشاشة", uploadHint:"PNG أو JPG أو WEBP · حتى 8 ميغابا��ت", analyze:"تحليل الرسم البياني",
+      uploadTitle:"اختيار لقطة الشاشة", uploadHint:"PNG أو JPG أو WEBP · حتى 8 ميغابا����ت", analyze:"تحليل الرسم البياني",
       stage1:"نجهّز الصورة", stage2:"ندرس بنية الرسم", stage3:"نتحقق من المستويات الظاهرة", stage4:"نُشكّل النتيجة",
       confidence:"الثقة", asset:"الأصل", duration:"المدة", entry:"الدخول", outcomeBy:"حتى النتيجة",
       cdEntry:"الدخول بعد", cdResult:"النتيجة بعد", cdDone:"حان وقت النتيجة",
@@ -2032,7 +2032,7 @@
     var st = $("procSteps");
     if(st){ var sp = st.children; for(var k=0;k<sp.length;k++){ sp[k].classList.toggle("on", k<=i); } }
   }
-  // Последний этап включается, только когда ответ реально пришёл
+  // Последний э��ап включается, только когда ответ реально пришёл
   function procFinalPhase(){
     clearInterval(procTimer);
     setStage(procStages.length-1);
@@ -2158,7 +2158,7 @@
   }
 
   function fallbackVisionResult(){
-    var ru = state.language === "ru";
+    var ru = state.language !== "en";
     return {
       direction: "NO_SIGNAL",
       confidence: ru ? "низкая" : "low",
@@ -2532,7 +2532,7 @@
   }
 
   function quickNoSignal(reasonKey){
-    var ru = state.language === "ru";
+    var ru = state.language !== "en";
     var map = {
       flat: {
         ru: ["Стороны в тупике: ни покупатель, ни продавец не держат инициативу.",
@@ -2590,7 +2590,7 @@
      игровое направление. Оно случайное, поэтому карточка всегда несёт
      видимую подпись об этом — иначе это было бы выдачей монетки за анализ. */
   function quickGameSignal(){
-    var ru = state.language === "ru";
+    var ru = state.language !== "en";
     var up = Math.random() < 0.5;
     return {
       direction: up ? "UP" : "DOWN",
@@ -2606,7 +2606,7 @@
   }
 
   function buildQuickFromQuote(q, prevPrice){
-    var ru = state.language === "ru";
+    var ru = state.language !== "en";
     var close = qNum(q.close != null ? q.close : q.price);
     var open = qNum(q.open), high = qNum(q.high), low = qNum(q.low), prev = qNum(q.previous_close);
     var pct = qNum(q.percent_change);
@@ -2682,7 +2682,7 @@
       : strength === "strong" ? (ru ? "высокая" : "high")
       : strength === "moderate" ? (ru ? "средняя" : "medium")
       : (ru ? "низкая" : "low");
-    // За 3–15 секунд цена проходит слишком мало, чтобы обещать высокую уверенность.
+    // За 3���15 секунд цена проходит слишком мало, чтобы обещать высокую уверенность.
     var durSec = Number(state.duration || 0);
     if(durSec > 0 && durSec <= 15 && strength === "strong") conf = ru ? "средняя" : "medium";
 
@@ -2713,7 +2713,7 @@
   }
 
   function renderQuick(an, tm, label){
-    var ru = state.language === "ru";
+    var ru = state.language !== "en";
     var d = dirInfo(an.direction);
     var live = d.norm === "UP" || d.norm === "DOWN";
 
