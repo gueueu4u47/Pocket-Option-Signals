@@ -552,7 +552,8 @@
       ".ps-verdict{margin-top:16px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.02em;padding:11px 14px;border-radius:14px;animation:psIn .4s ease both;}",
       ".ps-verdict.dop{color:var(--ps-dop);border:1px solid rgba(255,92,114,.4);background:rgba(255,70,92,.1);text-shadow:0 0 10px rgba(255,92,114,.5);}",
       ".ps-verdict.opy{color:var(--ps-opy);border:1px solid rgba(90,166,255,.4);background:rgba(34,44,72,.5);text-shadow:0 0 10px rgba(90,166,255,.45);}",
-      ".ps-voice-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 12px);right:12px;z-index:9999;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.85;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
+      ".ps-voice-btn{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 12px);right:12px;z-index:9999;width:44px;height:44px;border-radius:12px;display:none;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--ps-brd);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);opacity:.85;transition:opacity .15s ease,box-shadow .15s ease,transform .12s ease;}",
+      "body.pulse-scene-on .ps-voice-btn{display:flex;}",
       ".ps-voice-btn:active{transform:scale(.94);}",
       ".ps-voice-btn.on{opacity:1;border-color:rgba(90,166,255,.5);box-shadow:0 0 16px rgba(90,166,255,.4);}",
       "@keyframes psIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}",
@@ -711,6 +712,20 @@
   }
 
   function driver(myGen) {
+    var ai = aiBeat();
+    if (ai && ai.length) {
+      S.inResolve = true;
+      var polls = 0;
+      playBeat(ai, myGen, false).then(function waitResult() {
+        if (myGen !== S.gen) return;
+        if (S.resolving || polls++ > 40) return wait(1200);
+        return wait(400).then(waitResult);
+      }).then(function () {
+        if (myGen !== S.gen) return;
+        reveal();
+      });
+      return;
+    }
     var intro = pickIntro() || [];
     playBeat(intro, myGen, false).then(function loop() {
       if (myGen !== S.gen) return;
