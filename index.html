@@ -2099,7 +2099,7 @@
     $("visionStrategyWrap").style.display = "block";
     var ctl = null; try{ ctl = new AbortController(); }catch(e){}
     var tmr = setTimeout(function(){ if(ctl){ try{ ctl.abort(); }catch(e){} } }, 27000);
-    fetch("/api/analyze-localized",{ method:"POST", headers:{"Content-Type":"application/json"},
+    fetch("/api/analyze",{ method:"POST", headers:{"Content-Type":"application/json"},
       signal: ctl ? ctl.signal : undefined,
       body: JSON.stringify({ initData:initData, mode:"explain", language:state.language,
         direction:data.direction, reasons:data.reasons||[], asset:assetOut||"", timeframe:data.timeframe||"" })
@@ -2219,7 +2219,7 @@
         if(controller){ try{ controller.abort(); }catch(e){} }
         finishWith(fallbackVisionResult(), false, "timeout 50s");
       }, 50000);
-      fetch("/api/analyze-localized",{method:"POST",headers:{"Content-Type":"application/json"},
+      fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ image:state.image, mimeType:"image/jpeg", language:state.language, initData:initData, fast:true }),
         signal: controller?controller.signal:undefined })
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j, raw:tx}; }); })
