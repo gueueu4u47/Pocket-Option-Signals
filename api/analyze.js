@@ -1041,23 +1041,13 @@ module.exports = async (req, res) => {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
     }
 
+    // ГОЛОС ПО ЗАПРОСУ: НЕ синтезируем на сервере — это держало ответ до 20+ сек.
+    // Клиент подтягивает голос каждой реплики на лету через /api/tts (с префетчем),
+    // поэтому диалог стартует сразу после ответа модели.
     const voiceOff = String(process.env.VOICE_TTS || "").toLowerCase() === "off";
-    if (!degraded && !voiceOff && payload.dialogue.length) {
-      const fishKey = process.env.FISH_API_KEY || "";
-      const ttsHardCap = overallDeadline + 11000;
-      const ttsDeadline = Math.min(Date.now() + Number(process.env.TTS_BUDGET_MS || 24000), ttsHardCap);
-      const fishDop = process.env.FISH_VOICE_DOP || "";
-      const fishOpy = process.env.FISH_VOICE_OPY || "";
-      try {
-        const d = await synthDialogueAudio(payload.dialogue, "on", { fishKey, fishDop, fishOpy, perMs: Number(process.env.TTS_PER_MS || 12000), deadline: ttsDeadline });
-        payload.ttsDiag = Object.assign({ engine: "fish", fishKey: fishKey ? "set" : "", fishDop: fishDop ? "set" : "", fishOpy: fishOpy ? "set" : "", dlgSource: payload.dlgSource }, d);
-      } catch (e) {
-        payload.ttsDiag = { engine: "fish", fatal: (e && e.message) || String(e) };
-      }
-      console.error("TTS_DIAG " + JSON.stringify(payload.ttsDiag));
-    }
+    payload.ttsMode = voiceOff ? "off" : "ondemand";
 
-    if (!degraded && payload.dialogue.some((d) => d && d.audio)) cacheSet(cacheKey, payload);
+    if (!degraded && payload.dialogue.length) cacheSet(cacheKey, payload);
     supaLogAnalyze(user.id);
     return res.status(200).json(payload);
   } catch (error) {
