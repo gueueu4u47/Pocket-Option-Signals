@@ -1,170 +1,1071 @@
-const { AsyncLocalStorage } = require("async_hooks");
+const crypto = require("crypto");
 
-const SUPPORTED = {
-  ru: "Russian",
-  en: "English",
-  uz: "Uzbek",
-  hi: "Hindi",
-  pt: "Brazilian Portuguese",
-  ar: "Arabic",
-  kk: "Kazakh"
-};
+/* ============================================================
+   Signal Pulse — /api/analyze
+   ============================================================ */
 
-const store = global.__pulseLanguageStore || (global.__pulseLanguageStore = new AsyncLocalStorage());
+function validateTelegramInitData(initData, botToken) {
+  if (!initData || !botToken) return null;
+  const params = new URLSearchParams(initData);
+  const receivedHash = params.get("hash");
+  if (!receivedHash) return null;
+  params.delete("hash");
+  const dataCheckString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
+  const secretKey = crypto.createHmac("sha256", "WebAppData").update(botToken).digest();
+  const calculatedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+  const receivedBuffer = Buffer.from(receivedHash, "hex");
+  const calculatedBuffer = Buffer.from(calculatedHash, "hex");
+  if (receivedBuffer.length !== calculatedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)) {
+    return null;
+  }
+  const authDate = Number(params.get("auth_date") || 0);
+  const now = Math.floor(Date.now() / 1000);
+  if (!authDate || now - authDate > 86400) return null;
+  try {
+    return JSON.parse(params.get("user") || "{}");
+  } catch {
+    return null;
+  }
+}
 
-if (!global.__pulseNativeFetch) {
-  global.__pulseNativeFetch = global.fetch;
-  global.fetch = async function localizedFetch(input, init) {
-    const ctx = store.getStore();
-    const url = String(input && input.url ? input.url : input || "");
-    if (ctx && init && typeof init.body === "string" &&
-        (/\/chat\/completions(?:\?|$)/.test(url) || /generativelanguage\.googleapis\.com/.test(url))) {
-      try {
-        const body = JSON.parse(init.body);
-        const instruction =
-          "CRITICAL OUTPUT LANGUAGE: Write EVERY human-readable JSON string value in " + ctx.name +
-          ". This includes reasons, confidence, summary, strategy, tips, entryWindow, expiry, state and every dialogue text. " +
-          "Keep JSON keys, direction values BUY/SELL/NO_SIGNAL, and who values dop/opy unchanged. Never use Russian or English unless " +
-          ctx.name + " is that language.";
-        let inserted = false;
-        const content = body && body.messages && body.messages[0] && body.messages[0].content;
-        if (Array.isArray(content)) {
-          for (const part of content) {
-            if (part && part.type === "text") {
-              part.text = instruction + "\n\n" + String(part.text || "");
-              inserted = true;
-              break;
-            }
-          }
-        }
-        const parts = body && body.contents && body.contents[0] && body.contents[0].parts;
-        if (!inserted && Array.isArray(parts)) {
-          for (const part of parts) {
-            if (part && typeof part.text === "string") {
-              part.text = instruction + "\n\n" + part.text;
-              inserted = true;
-              break;
-            }
-          }
-        }
-        if (inserted) init = Object.assign({}, init, { body: JSON.stringify(body) });
-      } catch (_) {}
+const RATE = new Map();
+function rateLimit(key, limit, windowMs) {
+  const now = Date.now();
+  const hits = (RATE.get(key) || []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) {
+    RATE.set(key, hits);
+    return false;
+  }
+  hits.push(now);
+  RATE.set(key, hits);
+  if (RATE.size > 5000) {
+    for (const [k, v] of RATE) {
+      if (!v.length || now - v[v.length - 1] > windowMs) RATE.delete(k);
     }
-    return global.__pulseNativeFetch(input, init);
+  }
+  return true;
+}
+
+const CACHE = new Map();
+const CACHE_TTL = Number(process.env.ANALYZE_CACHE_TTL_MS || 900000);
+function imageKey(base64, lang) {
+  return crypto.createHash("sha1").update(String(lang) + "|" + String(base64)).digest("hex");
+}
+function cacheGet(key) {
+  const hit = CACHE.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.t > CACHE_TTL) { CACHE.delete(key); return null; }
+  return hit.payload;
+}
+function cacheSet(key, payload) {
+  CACHE.set(key, { t: Date.now(), payload });
+  if (CACHE.size > 400) {
+    const now = Date.now();
+    for (const [k, v] of CACHE) { if (now - v.t > CACHE_TTL) CACHE.delete(k); }
+    while (CACHE.size > 400) CACHE.delete(CACHE.keys().next().value);
+  }
+}
+
+const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
+const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+function repairJson(s) {
+  let str = String(s);
+  let inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (esc) { esc = false; continue; }
+    if (c === "\\") { esc = true; continue; }
+    if (c === "\"") inStr = !inStr;
+  }
+  if (inStr) str += "\"";
+  str = str.replace(/:\s*([}\],])/g, ":null$1");
+  str = str.replace(/,\s*([}\]])/g, "$1");
+  str = str.replace(/,\s*$/, "");
+  const oc = (str.match(/{/g) || []).length, cc = (str.match(/}/g) || []).length;
+  const os = (str.match(/\[/g) || []).length, cs = (str.match(/]/g) || []).length;
+  for (let i = 0; i < os - cs; i++) str += "]";
+  for (let i = 0; i < oc - cc; i++) str += "}";
+  return str;
+}
+
+function escapeRawControlChars(s) {
+  let str = String(s);
+  let out = "";
+  let inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (esc) { out += c; esc = false; continue; }
+    if (c === "\\") { out += c; esc = true; continue; }
+    if (c === "\"") { inStr = !inStr; out += c; continue; }
+    if (inStr && c === "\n") { out += "\\n"; continue; }
+    if (inStr && c === "\r") { out += "\\r"; continue; }
+    if (inStr && c === "\t") { out += "\\t"; continue; }
+    out += c;
+  }
+  return out;
+}
+
+function parseJsonLoose(text) {
+  let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+  const first = clean.indexOf("{");
+  const last = clean.lastIndexOf("}");
+  if (first > -1 && last > -1 && last > first) clean = clean.slice(first, last + 1);
+  else if (first > -1) clean = clean.slice(first);
+  try { return JSON.parse(clean); }
+  catch (e) {
+    try { return JSON.parse(escapeRawControlChars(clean)); }
+    catch (e1) {
+      try { return JSON.parse(repairJson(escapeRawControlChars(clean))); }
+      catch (e2) { return null; }
+    }
+  }
+}
+
+function looksTechnical(s) {
+  const t = String(s || "");
+  if (/^[\s{\[]/.test(t)) return true;
+  if (/"\s*:\s*"/.test(t)) return true;
+  if (/\b(direction|confidence|entryWindow|expiry|timeframe|summary|strategy|reasons|tips|asset|dialogue)\b\s*"?\s*:/i.test(t)) return true;
+  if (/(BUY|SELL|NO_SIGNAL)\s*"/.test(t)) return true;
+  return false;
+}
+
+function cleanList(v, max) {
+  const arr = Array.isArray(v) ? v : (v ? [v] : []);
+  const out = [];
+  arr.forEach((x) => {
+    const s = String(x == null ? "" : x).replace(/^[\s\-*•\d.)]+/, "").replace(/["\\]+$/, "").trim();
+    if (s && s.length > 3 && !looksTechnical(s) && out.indexOf(s) === -1) out.push(s);
+  });
+  return out.slice(0, max || 4);
+}
+
+function sanitizeDialogue(v) {
+  const arr = Array.isArray(v) ? v : [];
+  const out = [];
+  for (let i = 0; i < arr.length && out.length < 6; i++) {
+    const it = arr[i];
+    if (!it || typeof it !== "object") continue;
+    const w = String(it.who || "").toLowerCase().trim();
+    let who = "";
+    if (["dop", "dopamine", "дофамин"].indexOf(w) > -1) who = "dop";
+    else if (["opy", "experience", "опыт"].indexOf(w) > -1) who = "opy";
+    if (!who) continue;
+    let text = String(it.text == null ? "" : it.text).replace(/["\\]+$/, "").trim();
+    if (!text || text.length < 2 || looksTechnical(text)) continue;
+    if (text.length > 120) text = text.slice(0, 117) + "\u2026";
+    out.push({ who, text });
+  }
+  return out;
+}
+
+function fallbackDialogue(direction, lang) {
+  var ru = lang !== "en";
+  var dir = String(direction || "").toUpperCase();
+  var _pk = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+  var _bd = function (s) { var n = 4 + Math.floor(Math.random() * 3); var w = ["dop", "opy", "dop", "opy", "dop", "opy"], o = []; for (var i = 0; i < n; i++) o.push({ who: w[i], text: _pk(s[i]) }); return o; };
+  var _P = {
+    ru: {
+      BUY: [
+        ["\u0413\u043b\u044f\u0434\u0438, \u043f\u0440\u0451\u0442 \u0432\u0432\u0435\u0440\u0445! \u0417\u0430\u0445\u043e\u0434\u0438\u043c \u0441\u0435\u0439\u0447\u0430\u0441, \u0447\u0435\u043c\u043f\u0438\u043e\u043d! \ud83d\ude80", "\u0420\u0430\u043a\u0435\u0442\u0430 \u043f\u043e\u0448\u043b\u0430! \u041d\u0443 \u0447\u0435\u0433\u043e \u043c\u044b \u0441\u0442\u043e\u0438\u043c?! \ud83d\ude80", "\u0417\u0435\u043b\u0451\u043d\u0430\u044f \u0441\u0432\u0435\u0447\u0430 \u0437\u043e\u0432\u0451\u0442! \u0416\u043c\u0451\u043c \u0432\u0432\u0435\u0440\u0445, \u0436\u0438\u0432\u043e! \ud83e\udd11", "\u0421\u043c\u043e\u0442\u0440\u0438 \u043a\u0430\u043a \u043b\u0435\u0442\u0438\u0442! \u0417\u0430\u043f\u0440\u044b\u0433\u0438\u0432\u0430\u0435\u043c \u0432 \u043f\u043e\u0435\u0437\u0434! \ud83d\ude0e"],
+        ["\u0422\u0438\u0445\u043e, \u043e\u0431\u0435\u0437\u044c\u044f\u043d\u0430. \u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435, \u043f\u043e\u0442\u043e\u043c \u043a\u043d\u043e\u043f\u043a\u0430.", "\u041d\u0435 \u0447\u0430\u0441\u0442\u0438. \u0414\u043e\u0436\u0434\u0451\u043c\u0441\u044f, \u043f\u043e\u043a\u0430 \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435 \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u0442\u0441\u044f.", "\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u043e. \u041e\u0434\u0438\u043d \u0438\u043c\u043f\u0443\u043b\u044c\u0441 \u2014 \u0435\u0449\u0451 \u043d\u0435 \u0441\u0438\u0433\u043d\u0430\u043b.", "\u0421\u044f\u0434\u044c. \u0420\u044b\u043d\u043e\u043a \u043d\u0430\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442 \u0437\u0430 \u0441\u043f\u0435\u0448\u043a\u0443."],
+        ["\u0414\u0430 \u0447\u0435\u0433\u043e \u0436\u0434\u0430\u0442\u044c?! \u0423\u0435\u0434\u0435\u0442 \u0436\u0435 \u0431\u0435\u0437 \u043d\u0430\u0441! \ud83d\ude24", "\u041e\u043d\u043e \u0443\u043b\u0435\u0442\u0438\u0442, \u0441\u043b\u044b\u0448\u0438\u0448\u044c \u043c\u0435\u043d\u044f?! \ud83d\ude24", "\u041a\u0430\u0436\u0434\u0430\u044f \u0441\u0435\u043a\u0443\u043d\u0434\u0430 \u2014 \u0443\u043f\u0443\u0449\u0435\u043d\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u0442! \ud83d\udd25", "\u0412\u0441\u0435 \u0443\u0436\u0435 \u0432 \u043f\u043b\u044e\u0441\u0435, \u0430 \u043c\u044b \u0442\u0443\u043f\u0438\u043c! \ud83e\udd11"],
+        ["\u0423\u0435\u0434\u0435\u0442 \u043e\u0434\u0438\u043d \u2014 \u0431\u0443\u0434\u0435\u0442 \u0434\u0440\u0443\u0433\u043e\u0439. \u041f\u043e \u043f\u043b\u0430\u043d\u0443. \u0412\u0441\u0435\u0433\u0434\u0430.", "\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u0441\u0434\u0435\u043b\u043a\u0443 \u0434\u0435\u0448\u0435\u0432\u043b\u0435, \u0447\u0435\u043c \u0441\u043b\u0438\u0442\u044c \u0434\u0435\u043f\u043e\u0437\u0438\u0442.", "\u0420\u044b\u043d\u043e\u043a \u043d\u0435 \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0439. \u0422\u0435\u0440\u043f\u0435\u043d\u0438\u0435 \u0432\u0430\u0436\u043d\u0435\u0435 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u0438.", "\u0412\u0445\u043e\u0434 \u043f\u043e \u043f\u0440\u0430\u0432\u0438\u043b\u0430\u043c, \u0430 \u043d\u0435 \u043f\u043e \u0437\u0443\u0434\u0443 \u0432 \u0440\u0443\u043a\u0430\u0445."],
+        ["\u0410\u0439, \u043d\u0443 \u0442\u044b \u0438 \u0437\u0430\u043d\u0443\u0434\u0430! \u0412\u0441\u0435 \u0434\u0430\u0432\u043d\u043e \u0432 \u043f\u043b\u044e\u0441\u0435! \ud83e\udd11", "\u0421 \u0442\u043e\u0431\u043e\u0439 \u044f \u043f\u043e\u0441\u0435\u0434\u0435\u044e \u0440\u0430\u043d\u044c\u0448\u0435 \u0432\u0440\u0435\u043c\u0435\u043d\u0438! \ud83d\ude24", "\u0421\u043a\u0443\u0447\u043d\u044b\u0439 \u0442\u044b\u2026 \u043b\u0430\u0434\u043d\u043e, \u0436\u0434\u0443. \u041d\u043e \u043d\u0435\u0434\u043e\u043b\u0433\u043e! \ud83d\ude0e", "\u041e\u043f\u044f\u0442\u044c \u0442\u0432\u043e\u0438 \u043f\u0440\u0430\u0432\u0438\u043b\u0430! \u041d\u0443 \u043e\u043a, \u043e\u043a\u2026 \ud83d\ude44"],
+        ["\u0412 \u043f\u043b\u044e\u0441\u0435 \u2014 \u0434\u043e \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u0441\u043b\u0438\u0432\u0430. \u0414\u0438\u0441\u0446\u0438\u043f\u043b\u0438\u043d\u0430 \u0440\u0435\u0448\u0430\u0435\u0442.", "\u0414\u043e\u0436\u0438\u0432\u0451\u0442 \u0442\u0432\u043e\u0439 \u0441\u0447\u0451\u0442 \u0434\u043e \u0441\u0442\u0430\u0440\u043e\u0441\u0442\u0438 \u2014 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0441\u043a\u0430\u0436\u0435\u0448\u044c.", "\u0421\u043a\u0443\u043a\u0430 \u0434\u0435\u0448\u0435\u0432\u043b\u0435 \u0443\u0431\u044b\u0442\u043a\u0430. \u041a\u0430\u0436\u0434\u044b\u0439 \u0440\u0430\u0437.", "\u0412 \u0438\u0433\u0440\u0435 \u0434\u0435\u0440\u0436\u0430\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430, \u0430 \u043d\u0435 \u044d\u043c\u043e\u0446\u0438\u0438."]
+      ],
+      SELL: [
+        ["\u0412\u043d\u0438\u0437 \u043b\u0435\u0442\u0438\u0442! \u041f\u0440\u043e\u0434\u0430\u0451\u043c, \u0431\u044b\u0441\u0442\u0440\u0435\u0435, \u0443\u043f\u0443\u0441\u0442\u0438\u043c! \ud83d\udd25", "\u0412\u0430\u043b\u0438\u0442\u0441\u044f! \u0428\u043e\u0440\u0442, \u043d\u0443 \u0434\u0430\u0432\u0430\u0439 \u0436\u0435! \ud83d\udd25", "\u041a\u0440\u0430\u0441\u043d\u0430\u044f \u0441\u0432\u0435\u0447\u0430 \u0436\u0440\u0451\u0442 \u0432\u0441\u0451! \u041f\u0440\u043e\u0434\u0430\u0451\u043c! \ud83d\ude24", "\u041f\u0430\u0434\u0430\u0435\u0442 \u043a\u0430\u043a \u043a\u0430\u043c\u0435\u043d\u044c! \u0417\u0430\u0445\u043e\u0434\u0438\u043c \u0432\u043d\u0438\u0437! \ud83d\ude80"],
+        ["\u041d\u0435 \u0441\u0443\u0435\u0442\u0438\u0441\u044c. \u0416\u0434\u0451\u043c, \u043f\u043e\u043a\u0430 \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0441\u044f.", "\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u043e. \u041f\u0430\u0434\u0435\u043d\u0438\u0435 \u0431\u044b\u0432\u0430\u0435\u0442 \u043b\u043e\u0432\u0443\u0448\u043a\u043e\u0439.", "\u0422\u043e\u0440\u043c\u043e\u0437\u0438. \u041e\u0434\u0438\u043d \u0442\u0438\u043a \u0432\u043d\u0438\u0437 \u2014 \u043d\u0435 \u0442\u0440\u0435\u043d\u0434.", "\u0421\u044f\u0434\u044c. \u041f\u0440\u043e\u0432\u0435\u0440\u0438\u043c, \u0447\u0442\u043e \u044d\u0442\u043e \u043d\u0435 \u043e\u0442\u0441\u043a\u043e\u043a."],
+        ["\u041e\u043d\u043e \u0443\u0436\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043b\u043e\u0441\u044c, \u0433\u043b\u0430\u0437\u0430 \u0440\u0430\u0437\u0443\u0439! \ud83d\udc46", "\u0414\u0430 \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u043c\u043e\u0436\u043d\u043e \u0436\u0434\u0430\u0442\u044c?! \u0423\u0445\u043e\u0434\u0438\u0442! \ud83d\ude24", "\u041f\u043e\u043a\u0430 \u0442\u044b \u0434\u0443\u043c\u0430\u0435\u0448\u044c, \u043c\u044b \u0442\u0435\u0440\u044f\u0435\u043c \u0434\u0435\u043d\u044c\u0433\u0438! \ud83d\udd25", "\u0412\u0441\u0435 \u0448\u043e\u0440\u0442\u044f\u0442, \u0430 \u043c\u044b \u0441\u043c\u043e\u0442\u0440\u0438\u043c! \ud83e\udd11"],
+        ["\u0412\u0438\u0434\u0435\u043b \u0442\u044b\u0441\u044f\u0447\u0443 \u0442\u0430\u043a\u0438\u0445. \u0412\u0445\u043e\u0434 \u043f\u043e \u043f\u043b\u0430\u043d\u0443, \u043d\u0435 \u043d\u0430 \u043d\u0435\u0440\u0432\u0430\u0445.", "\u041f\u043e\u0441\u043f\u0435\u0448\u043d\u044b\u0439 \u0448\u043e\u0440\u0442 \u2014 \u0431\u044b\u0441\u0442\u0440\u044b\u0439 \u043c\u0438\u043d\u0443\u0441. \u0416\u0434\u0451\u043c.", "\u0420\u0430\u0437\u0432\u043e\u0440\u043e\u0442 \u0434\u043e\u0440\u043e\u0436\u0435 \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043d\u043e\u0439 \u0441\u0432\u0435\u0447\u0438. \u0422\u0435\u0440\u043f\u0438.", "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0443\u0440\u043e\u0432\u0435\u043d\u044c, \u043f\u043e\u0442\u043e\u043c \u043a\u043d\u043e\u043f\u043a\u0430. \u041d\u0435 \u043d\u0430\u043e\u0431\u043e\u0440\u043e\u0442."],
+        ["\u0414\u0430 \u0442\u044b \u043f\u0440\u043e\u0441\u0442\u043e \u0442\u0440\u0443\u0441\u0438\u0448\u044c! \u041f\u0440\u043e\u0434\u0430\u0451\u043c, \u043d\u0443! \ud83d\udd25", "\u041f\u043e\u043a\u0430 \u0442\u044b \u043e\u0441\u0442\u043e\u0440\u043e\u0436\u043d\u0438\u0447\u0430\u0435\u0448\u044c, \u043f\u043e\u0435\u0437\u0434 \u0443\u0448\u0451\u043b! \ud83d\ude24", "\u0412\u0435\u0447\u043d\u043e \u0442\u0432\u043e\u0451 \u00ab\u043f\u043e\u0434\u043e\u0436\u0434\u0451\u043c\u00bb! \u0421\u043a\u0443\u0447\u043d\u043e! \ud83d\ude0e", "\u041b\u0430\u0434\u043d\u043e, \u043b\u0430\u0434\u043d\u043e, \u0436\u0434\u0443 \u0442\u0432\u043e\u0451 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435\u2026 \ud83d\ude44"],
+        ["\u041d\u0435 \u0442\u0440\u0443\u0448\u0443, \u0430 \u0436\u0434\u0443. \u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0441\u044f \u2014 \u0442\u043e\u0433\u0434\u0430 \u0432\u0445\u043e\u0434.", "\u041e\u0441\u0442\u043e\u0440\u043e\u0436\u043d\u043e\u0441\u0442\u044c \u2014 \u044d\u0442\u043e \u043d\u0435 \u0441\u0442\u0440\u0430\u0445, \u0430 \u0440\u0430\u0441\u0447\u0451\u0442.", "\u0423\u0448\u0451\u043b \u043f\u043e\u0435\u0437\u0434 \u2014 \u043f\u0440\u0438\u0434\u0451\u0442 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439. \u041f\u043e \u043f\u043b\u0430\u043d\u0443.", "\u0422\u0435\u0440\u043f\u0435\u043d\u0438\u0435 \u0434\u0435\u0448\u0435\u0432\u043b\u0435, \u0447\u0435\u043c \u043b\u043e\u0432\u0438\u0442\u044c \u043d\u043e\u0436."]
+      ],
+      NONE: [
+        ["\u041d\u0443 \u0445\u043e\u0442\u044c \u0447\u0442\u043e-\u043d\u0438\u0431\u0443\u0434\u044c \u043d\u0430\u0436\u043c\u0451\u043c, \u0430? \u0421\u043a\u0443\u0447\u043d\u043e \u0436\u0435! \ud83d\ude0e", "\u0414\u0430\u0432\u0430\u0439 \u0441\u0434\u0435\u043b\u043a\u0443, \u0440\u0443\u043a\u0438 \u0447\u0435\u0448\u0443\u0442\u0441\u044f! \ud83d\ude24", "\u0427\u0435\u0433\u043e \u0441\u0438\u0434\u0438\u043c? \u0425\u043e\u0442\u044c \u043c\u043e\u043d\u0435\u0442\u043a\u0443 \u043a\u0438\u043d\u0435\u043c! \ud83e\udd11", "\u041d\u0443 \u043e\u0434\u0438\u043d \u0432\u0445\u043e\u0434\u0438\u043a, \u0434\u043b\u044f \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d\u0438\u044f! \ud83d\ude0e"],
+        ["\u041d\u0435\u0442 \u0441\u0438\u0433\u043d\u0430\u043b\u0430 \u2014 \u0437\u043d\u0430\u0447\u0438\u0442 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u043d\u0430\u0448 \u0432\u0445\u043e\u0434 \u043f\u043e\u0434\u043e\u0436\u0434\u0430\u0442\u044c.", "\u041f\u0443\u0441\u0442\u043e \u043d\u0430 \u0433\u0440\u0430\u0444\u0438\u043a\u0435. \u041b\u0443\u0447\u0448\u0430\u044f \u0441\u0434\u0435\u043b\u043a\u0430 \u2014 \u0435\u0451 \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0438\u0435.", "\u0420\u044b\u043d\u043e\u043a \u043c\u043e\u043b\u0447\u0438\u0442. \u0418 \u043c\u044b \u043f\u043e\u043c\u043e\u043b\u0447\u0438\u043c.", "\u041d\u0435\u0442 \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u044b \u2014 \u043d\u0435\u0442 \u043a\u043d\u043e\u043f\u043a\u0438."],
+        ["\u0420\u0443\u043a\u0438 \u0447\u0435\u0448\u0443\u0442\u0441\u044f, \u0447\u0435\u043c\u043f\u0438\u043e\u043d! \ud83d\ude24", "\u0414\u0430 \u043a\u0430\u043a \u043c\u043e\u0436\u043d\u043e \u043f\u0440\u043e\u0441\u0442\u043e \u0441\u0438\u0434\u0435\u0442\u044c?! \ud83d\udd25", "\u0421\u043a\u0443\u043a\u0430 \u0443\u0431\u0438\u0432\u0430\u0435\u0442 \u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u0441\u043b\u0438\u0432\u0430! \ud83d\ude24", "\u041e\u0434\u0438\u043d \u043a\u043b\u0438\u043a, \u043d\u0443 \u0447\u0442\u043e \u0442\u0435\u0431\u0435 \u0441\u0442\u043e\u0438\u0442?! \ud83e\udd11"],
+        ["\u0421\u043a\u0443\u043a\u0430 \u0434\u0435\u0448\u0435\u0432\u043b\u0435 \u0441\u043b\u0438\u0442\u043e\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430. \u041f\u0440\u043e\u043f\u0443\u0441\u043a\u0430\u0435\u043c.", "\u0421\u0438\u0434\u0435\u0442\u044c \u043d\u0430 \u0440\u0443\u043a\u0430\u0445 \u2014 \u0442\u043e\u0436\u0435 \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f.", "\u041f\u0443\u0441\u0442\u043e\u0439 \u0432\u0445\u043e\u0434 \u2014 \u043c\u0438\u043d\u0443\u0441 \u043d\u0430 \u0440\u043e\u0432\u043d\u043e\u043c \u043c\u0435\u0441\u0442\u0435.", "\u041d\u0435\u0442 \u0441\u0435\u0442\u0430\u043f\u0430 \u2014 \u043d\u0435\u0442 \u0441\u0434\u0435\u043b\u043a\u0438. \u0422\u043e\u0447\u043a\u0430."],
+        ["\u041e\u0434\u0438\u043d \u043a\u043b\u0438\u043a, \u0432\u0441\u0435\u0433\u043e \u043e\u0434\u0438\u043d! \u041d\u0443 \u0447\u0442\u043e \u0442\u0435\u0431\u0435 \u0441\u0442\u043e\u0438\u0442? \ud83d\ude24", "\u0422\u044b \u043c\u0435\u043d\u044f \u0432 \u043c\u043e\u0433\u0438\u043b\u0443 \u0432\u0433\u043e\u043d\u0438\u0448\u044c \u0441\u0432\u043e\u0438\u043c \u00ab\u0436\u0434\u0451\u043c\u00bb! \ud83d\ude0e", "\u041b\u0430\u0434\u043d\u043e, \u0437\u0430\u043d\u0443\u0434\u0430, \u0441\u0438\u0434\u0438\u043c\u2026 \u043f\u043e\u043a\u0430 \ud83d\ude44", "\u0421\u043a\u0443\u043a\u043e\u0442\u0438\u0449\u0430 \u0441 \u0442\u043e\u0431\u043e\u0439, \u043d\u043e \u043e\u043a! \ud83d\ude24"],
+        ["\u041e\u0434\u0438\u043d \u043a\u043b\u0438\u043a \u043d\u0430 \u043f\u0443\u0441\u0442\u043e\u043c \u043c\u0435\u0441\u0442\u0435 \u2014 \u043c\u0438\u043d\u0443\u0441 \u043d\u0430 \u0440\u043e\u0432\u043d\u043e\u043c \u043c\u0435\u0441\u0442\u0435.", "\u0422\u0435\u0440\u043f\u0435\u043d\u0438\u0435 \u0441\u0435\u0439\u0447\u0430\u0441 \u2014 \u0434\u0435\u043f\u043e\u0437\u0438\u0442 \u0437\u0430\u0432\u0442\u0440\u0430.", "\u041b\u0443\u0447\u0448\u0435\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u2014 \u0431\u0435\u0437\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435.", "\u0421\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u044b\u0435 \u0434\u0435\u043d\u044c\u0433\u0438 \u2014 \u0442\u043e\u0436\u0435 \u0437\u0430\u0440\u0430\u0431\u043e\u0442\u043e\u043a."]
+      ]
+    },
+    en: {
+      BUY: [
+        ["Look, it's flying up! Let's get in now, champ! \ud83d\ude80", "Rocket's off! Why are we waiting?! \ud83d\ude80"],
+        ["Easy, monkey. Confirmation first, then the button.", "Slow down. One impulse isn't a signal."],
+        ["Why wait?! It'll leave without us! \ud83d\ude24", "Everyone's up and we're stalling! \ud83e\udd11"],
+        ["One leaves, another comes. By the plan. Always.", "Missing a trade is cheaper than a blown account."],
+        ["Ugh, such a bore! Everyone's up already! \ud83e\udd11", "You'll turn me grey with your rules! \ud83d\ude24"],
+        ["Up until the first dump. Discipline wins.", "Rules keep us in the game, not emotions."]
+      ],
+      SELL: [
+        ["It's dropping! Sell, sell, faster! \ud83d\udd25", "It's crashing! Short it, come on! \ud83d\udd25"],
+        ["Don't rush. We wait for the move to confirm.", "Easy. A drop can be a trap."],
+        ["It already confirmed, open your eyes! \ud83d\udc46", "While you think, we lose money! \ud83d\udd25"],
+        ["Seen a thousand of these. By the plan, not nerves.", "A rushed short is a fast loss. We wait."],
+        ["You're just scared! Sell already! \ud83d\udd25", "Your endless 'let's wait'! So boring! \ud83d\ude0e"],
+        ["Not scared, alive. We wait for the signal, then enter.", "Caution isn't fear, it's math."]
+      ],
+      NONE: [
+        ["Come on, let's press something! So boring! \ud83d\ude0e", "Give me a trade, my hands are itching! \ud83d\ude24"],
+        ["No signal means today our entry is to wait.", "Chart's empty. Best trade is no trade."],
+        ["My hands are itching, champ! \ud83d\ude24", "How can you just sit still?! \ud83d\udd25"],
+        ["Boredom is cheaper than a blown account. We skip.", "Sitting on your hands is a strategy too."],
+        ["One click, just one! What's it gonna cost you? \ud83d\ude24", "You'll bury me with your 'let's wait'! \ud83d\ude0e"],
+        ["One click on nothing is a loss out of nothing.", "Patience now, deposit tomorrow."]
+      ]
+    }
   };
+  var _lg = ru ? _P.ru : _P.en;
+  return _bd(_lg[dir] || _lg.NONE);
+  if (ru) {
+    if (dir === "BUY") return [
+      { who: "dop", text: "Гляди, прёт вверх! Заходим сейчас, чемпион! 🚀" },
+      { who: "opy", text: "Тихо, обезьяна. Сначала подтверждение, потом кнопка." },
+      { who: "dop", text: "Да чего ждать?! Уедет же без нас! 😤" },
+      { who: "opy", text: "Уедет один — будет другой. По плану. Всегда." },
+      { who: "dop", text: "Ай, ну ты и зануда! Все давно в плюсе! 🤑" },
+      { who: "opy", text: "В плюсе — до первого слива. Дисциплина решает." }
+    ];
+    if (dir === "SELL") return [
+      { who: "dop", text: "Вниз летит! Продаём, быстрее, упустим! 🔥" },
+      { who: "opy", text: "Не суетись. Ждём, пока движение подтвердится." },
+      { who: "dop", text: "Оно уже подтвердилось, глаза разуй! 👆" },
+      { who: "opy", text: "Видел тысячу таких. Вход по плану, не на нервах." },
+      { who: "dop", text: "Да ты просто тру��ишь! Продаём, ну! 🔥" },
+      { who: "opy", text: "Не трушу, а жду. Подтвердится — тогда вход." }
+    ];
+    return [
+      { who: "dop", text: "Ну ��оть что-нибудь нажмём, а? Скучно же! 😎" },
+      { who: "opy", text: "Нет сигнала — значит наш вход сегодня подождать." },
+      { who: "dop", text: "Руки чешутся, чемпион! 😤" },
+      { who: "opy", text: "Скука дешевле слитого депозита. Пропускаем." },
+      { who: "dop", text: "Один клик, всего один! Ну чего тебе стоит? 😤" },
+      { who: "opy", text: "Один клик на пустом месте — минус на ровном месте." }
+    ];
+  }
+  if (dir === "BUY") return [
+    { who: "dop", text: "Look, it's flying up! Let's get in now, champ! 🚀" },
+    { who: "opy", text: "Easy, monkey. Confirmation first, then the button." },
+    { who: "dop", text: "Why wait?! It'll leave without us! 😤" },
+    { who: "opy", text: "One leaves, another comes. By the plan. Always." },
+    { who: "dop", text: "Ugh, such a bore! Everyone's up already! 🤑" },
+    { who: "opy", text: "Up until the first dump. Discipline wins." }
+  ];
+  if (dir === "SELL") return [
+    { who: "dop", text: "It's dropping! Sell, sell, faster! 🔥" },
+    { who: "opy", text: "Don't rush. We wait for the move to confirm." },
+    { who: "dop", text: "It already confirmed, open your eyes! 👆" },
+    { who: "opy", text: "Seen a thousand of these. By the plan, not nerves." },
+    { who: "dop", text: "You're just scared! Sell already! 🔥" },
+    { who: "opy", text: "Not scared, alive. We wait for the signal, then enter." }
+  ];
+  return [
+    { who: "dop", text: "Come on, let's press something! So boring! 😎" },
+    { who: "opy", text: "No signal means today our entry is to wait." },
+    { who: "dop", text: "My hands are itching, champ! 😤" },
+    { who: "opy", text: "Boredom is cheaper than a blown account. We skip." },
+    { who: "dop", text: "One click, just one! What's it gonna cost you? 😤" },
+    { who: "opy", text: "One click on nothing is a loss out of nothing." }
+  ];
 }
 
-const WORDS = {
-  uz: { low:"past", medium:"o‘rta", high:"yuqori", unknown:"Aniqlanmadi" },
-  hi: { low:"कम", medium:"मध्यम", high:"उच्च", unknown:"पहचाना नहीं गया" },
-  pt: { low:"baixa", medium:"média", high:"alta", unknown:"Não reconhecido" },
-  ar: { low:"منخفضة", medium:"متوسطة", high:"عالية", unknown:"غير معروف" },
-  kk: { low:"төмен", medium:"орташа", high:"жоғары", unknown:"Танылмады" }
-};
-
-const NO_DATA = {
-  uz: ["Yuklangan rasmda grafik tuzilishini aniqlab bo‘lmadi.","Tasdiqlangan yo‘nalish yo‘q — bu skrinshot bo‘yicha kirish oqlanmaydi.","Kattaroq skrinshot oling: shamlar, vaqt shkalasi va narx darajalari to‘liq ko‘rinsin."],
-  hi: ["अपलोड की गई छवि में चार्ट की संरचना पढ़ी नहीं जा सकी।","दिशा की पुष्टि नहीं हुई — इस स्क्रीनशॉट पर एंट्री उचित नहीं है।","बड़ा स्क्रीनशॉट लें: कैंडल, समय अक्ष और कीमत के स्तर पूरे दिखें।"],
-  pt: ["Não foi possível identificar a estrutura do gráfico na imagem enviada.","Não há direção confirmada — entrar com base nesta captura não é justificável.","Envie uma captura maior, mostrando velas, eixo do tempo e níveis de preço por completo."],
-  ar: ["تعذر قراءة بنية الرسم البياني في الصورة المرفوعة.","لا يوجد اتجاه مؤكد — لا يُنصح بالدخول اعتمادًا على هذه اللقطة.","التقط صورة أكبر تُظهر الشموع ومحور الوقت ومستويات السعر بالكامل."],
-  kk: ["Жүктелген суреттен график құрылымын оқу мүмкін болмады.","Бағыт расталмады — бұл скриншот бойынша кіру негізсіз.","Үлкенірек скриншот жасаңыз: шамдар, уақыт шкаласы және баға деңгейлері толық көрінсін."]
-};
-
-const FALLBACK = {
-  uz: {
-    BUY:["Yuqoriga ketyapti! Hozir kiramiz! 🚀","Shoshma. Avval tasdiq, keyin tugma.","Kutguncha ketib qoladi-ku! 😤","Bitta imkon ketadi, boshqasi keladi. Reja bo‘yicha."],
-    SELL:["Pastga qulayapti! Sotamiz! 🔥","Shoshma. Har pasayish signal emas.","Ko‘rib turibsan-ku, ketdi! 😤","Tasdiq bo‘lmasa, bu tuzoq bo‘lishi mumkin."],
-    NONE:["Hech bo‘lmasa biror narsa bosamizmi? 😎","Signal yo‘q bo‘lsa, bitim ham yo‘q.","Qo‘llarim qichishyapti! 😤","Zerikish yo‘qotishdan arzonroq."]
-  },
-  hi: {
-    BUY:["ऊपर भाग रहा है! अभी एंट्री! 🚀","शांत। पहले पुष्टि, फिर बटन।","इंतज़ार में निकल जाएगा! 😤","एक मौका गया तो दूसरा आएगा। योजना से चलो।"],
-    SELL:["नीचे गिर रहा है! बेचो! 🔥","जल्दी मत करो। हर गिरावट संकेत नहीं होती।","साफ़ दिख रहा है, जा रहा है! 😤","पुष्टि के बिना यह जाल हो सकता है।"],
-    NONE:["कुछ तो दबाएँ? बहुत बोरिंग है! 😎","संकेत नहीं तो ट्रेड नहीं।","हाथ खुजला रहे हैं! 😤","बोरियत, नुकसान से सस्ती है।"]
-  },
-  pt: {
-    BUY:["Tá voando pra cima! Entra agora! 🚀","Calma. Confirma primeiro, botão depois.","Vai embora sem a gente! 😤","Uma oportunidade passa, outra aparece. Segue o plano."],
-    SELL:["Tá despencando! Vende logo! 🔥","Sem pressa. Nem toda queda é sinal.","Olha isso, já confirmou! 😤","Sem confirmação, pode ser armadilha."],
-    NONE:["Vamos apertar alguma coisa? Que tédio! 😎","Sem sinal, sem operação.","Minha mão tá coçando! 😤","Tédio custa menos que prejuízo." ]
-  },
-  ar: {
-    BUY:["يصعد بسرعة! ندخل الآن! 🚀","اهدأ. التأكيد أولًا، ثم الزر.","سيهرب من دوننا! 😤","تذهب فرصة وتأتي أخرى. التزم بالخطة."],
-    SELL:["ينهار للأسفل! بِع الآن! 🔥","لا تتعجل. ليس كل هبوط إشارة.","واضح أنه هابط! 😤","من دون تأكيد قد يكون فخًا."],
-    NONE:["ألا نضغط أي شيء؟ ممل! 😎","لا إشارة، لا صفقة.","يدي تريد الضغط! 😤","الملل أرخص من الخسارة."]
-  },
-  kk: {
-    BUY:["Жоғары ұшып барады! Қазір кіреміз! 🚀","Асықпа. Алдымен растау, содан кейін батырма.","Бізсіз кетіп қалады! 😤","Бір мүмкіндік кетсе, екіншісі келеді. Жоспармен."],
-    SELL:["Төмен құлап барады! Сатамыз! 🔥","Асықпа. Әр құлдырау сигнал емес.","Көрініп тұр ғой, кетіп барады! 😤","Растаусыз бұл тұзақ болуы мүмкін."],
-    NONE:["Бірдеңе басайықшы? Іш пысты! 😎","Сигнал жоқ болса, мәміле де жоқ.","Қолым қышып тұр! 😤","Іш пысу шығыннан арзан."]
-  }
-};
-
-const GENERIC_ERROR = {
-  uz:"So‘rovni bajarib bo‘lmadi. Biroz kutib, qayta urinib ko‘ring.",
-  hi:"अनुरोध पूरा नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।",
-  pt:"Não foi possível concluir a solicitação. Aguarde um pouco e tente novamente.",
-  ar:"تعذر إكمال الطلب. انتظر قليلًا ثم حاول مرة أخرى.",
-  kk:"Сұрауды орындау мүмкін болмады. Біраз күтіп, қайталап көріңіз."
-};
-
-function cleanBrokenText(value) {
-  if (typeof value === "string") return value
-    .replace(new RegExp("А\\uFFFDализ", "g"),"Анализ")
-    .replace(new RegExp("загрузилс\\uFFFD", "g"),"загрузился")
-    .replace(new RegExp("Н\\uFFFD сегодня", "g"),"На сегодня")
-    .replace(new RegExp("тру\\uFFFDишь", "g"),"трусишь")
-    .replace(new RegExp("\\uFFFDоть", "g"),"хоть");
-  if (Array.isArray(value)) return value.map(cleanBrokenText);
-  if (value && typeof value === "object") {
-    for (const key of Object.keys(value)) value[key] = cleanBrokenText(value[key]);
-  }
-  return value;
+function sanitizeState(v) {
+  if (!v || typeof v !== "object") return null;
+  const s = (x) => {
+    let t = String(x == null ? "" : x).replace(/["\\]+$/, "").trim();
+    if (!t || looksTechnical(t)) return "";
+    if (t.length > 48) t = t.slice(0, 47) + "…";
+    return t;
+  };
+  const impulse = s(v.impulse);
+  const emotion = s(v.emotion || v.emotionRisk);
+  const verdict = s(v.verdict || v.experience);
+  if (!impulse && !emotion && !verdict) return null;
+  return { impulse, emotion, verdict };
 }
 
-function localizePayload(payload, lang) {
-  payload = cleanBrokenText(payload);
-  if (!WORDS[lang] || !payload || typeof payload !== "object") return payload;
-  const w = WORDS[lang];
-  const c = String(payload.confidence || "").toLowerCase();
-  if (c === "low" || c === "низкая") payload.confidence = w.low;
-  else if (c === "medium" || c === "средняя") payload.confidence = w.medium;
-  else if (c === "high" || c === "высокая") payload.confidence = w.high;
-  if (!payload.asset || /^(Not recognized|Не распознан)$/i.test(payload.asset)) payload.asset = w.unknown;
-  if (!payload.timeframe || /^(Not recognized|Не распознан)$/i.test(payload.timeframe)) payload.timeframe = w.unknown;
-  if (payload.degraded) {
-    payload.reasons = NO_DATA[lang];
-    if (!payload.summary || /temporarily unavailable|did not respond|временно недоступен|не ответил/i.test(payload.summary)) {
-      payload.summary = GENERIC_ERROR[lang];
+function looksTruncated(rawText) {
+  const t = String(rawText || "").replace(/```[a-z]*/gi, "").trim();
+  if (!t) return true;
+  return !/}\s*$/.test(t);
+}
+
+function dropPartialTail(reasons, rawText) {
+  const arr = Array.isArray(reasons) ? reasons.slice() : [];
+  if (!arr.length || !looksTruncated(rawText)) return arr;
+  const last = String(arr[arr.length - 1] || "").trim();
+  if (/[.!?\u2026\u00bb)]$/.test(last)) return arr;
+  const words = last.split(/\s+/);
+  if (words.length > 2) words.pop();
+  const fixed = words.join(" ").replace(/[\s,;:\-\u2014]+$/, "");
+  if (fixed.length >= 20 && fixed.split(/\s+/).length >= 3) {
+    arr[arr.length - 1] = fixed + "\u2026";
+  } else if (arr.length > 1) {
+    arr.pop();
+  }
+  return arr;
+}
+
+function trimPartialText(s, cut) {
+  const t = String(s == null ? "" : s).trim();
+  if (!t || !cut) return t;
+  if (/[.!?\u2026\u00bb)]$/.test(t)) return t;
+  const w = t.split(/\s+/);
+  if (w.length > 3) w.pop();
+  const fixed = w.join(" ").replace(/[\s,;:\-\u2014]+$/, "");
+  if (fixed.length >= 25 && fixed.split(/\s+/).length >= 4) return fixed + "\u2026";
+  return "";
+}
+
+function extractDialogueRaw(rawText) {
+  const raw = String(rawText || "");
+  const m = raw.match(/"dialogue"\s*:\s*\[([\s\S]*?)(\]|$)/i);
+  if (!m || !m[1]) return [];
+  const out = [];
+  const re = /\{[^{}]*?"who"\s*:\s*"([^"]+)"[^{}]*?"text"\s*:\s*"([\s\S]*?)"[^{}]*?\}/g;
+  let mm;
+  while ((mm = re.exec(m[1])) && out.length < 6) {
+    out.push({ who: mm[1], text: mm[2].replace(/\\n/g, " ").replace(/\\"/g, '"').trim() });
+  }
+  return out;
+}
+
+function extractFields(rawText) {
+  const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
+  const out = {};
+  const str = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)"', "i"));
+    return m && m[1] ? m[1].trim() : "";
+  };
+  const list = (key) => {
+    const m = raw.match(new RegExp('"' + key + '"\\s*:\\s*\\[([\\s\\S]*?)(\\]|$)', "i"));
+    if (!m || !m[1]) return [];
+    return m[1]
+      .split(/"\s*,\s*"/)
+      .map((s) => s.replace(/^[\s"]+|[\s",]+$/g, "").trim())
+      .filter(Boolean);
+  };
+  ["direction", "confidence", "entryWindow", "expiry", "asset", "timeframe", "summary", "strategy"].forEach((k) => {
+    const v = str(k);
+    if (v) out[k] = v;
+  });
+  const reasons = list("reasons");
+  if (reasons.length) out.reasons = reasons;
+  const tips = list("tips");
+  if (tips.length) out.tips = tips;
+  const dlgRaw = extractDialogueRaw(raw);
+  if (dlgRaw.length) out.dialogue = dlgRaw;
+  return out;
+}
+
+function salvageReasons(parsed, rawText, lang) {
+  let reasons = cleanList(parsed && parsed.reasons, 4);
+  if (reasons.length) return reasons;
+  const textBlocks = [parsed && parsed.summary, parsed && parsed.strategy, parsed && parsed.note]
+    .filter(Boolean)
+    .join(" ");
+  if (textBlocks) {
+    reasons = cleanList(String(textBlocks).split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 12), 3);
+    if (reasons.length) return reasons;
+  }
+  let raw = String(rawText || "").replace(/```[a-z]*/gi, "");
+  const rm = raw.match(/"reasons"\s*:\s*\[([\s\S]*?)(\]|$)/i);
+  if (rm && rm[1]) {
+    const items = rm[1].split(/"\s*,\s*"/).map((s) => s.replace(/^[\s"]+|[\s",]+$/g, ""));
+    reasons = cleanList(items, 3);
+    if (reasons.length) return reasons;
+  }
+  const lines = raw
+    .split(/\n|(?<=[.!?])\s+/)
+    .map((l) =>
+      l
+        .replace(/^[\s\-*•\d.)"]+/, "")
+        .replace(/^"?[a-z_A-Z]+"?\s*:\s*"?/, "")
+        .replace(/["{}\[\],]+$/, "")
+        .trim()
+    )
+    .filter((l) => l.length > 14 && /[а-яёa-z]{4}/i.test(l));
+  reasons = cleanList(lines, 3);
+  if (reasons.length) return reasons;
+  return [];
+}
+
+function noDataReasons(lang) {
+  return lang === "ru"
+    ? [
+        "На загруженном изображении не удалось разобрать структуру графика.",
+        "Нет подтверждённого направления — вход по этому скриншоту не оправдан.",
+        "Сделай скриншот крупнее: свечи, шкала времени и уровни цены целиком."
+      ]
+    : [
+        "The chart structure could not be read from the uploaded image.",
+        "No confirmed direction — entering on this screenshot is not justified.",
+        "Take a larger screenshot: candles, time axis and price levels in full."
+      ];
+}
+
+function directionFromText(rawText) {
+  const s = String(rawText || "");
+  const m = s.match(/"direction"\s*:\s*"?(BUY|SELL|NO_SIGNAL|UP|DOWN|CALL|PUT)"?/i);
+  if (m) return m[1].toUpperCase();
+  if (/\b(BUY|CALL|LONG|ВВЕРХ|вверх|рост|быч)/.test(s) && !/\b(SELL|PUT|SHORT|ВНИЗ|вниз)/.test(s)) return "BUY";
+  if (/\b(SELL|PUT|SHORT|ВНИЗ|вниз|падени|медвеж)/.test(s) && !/\b(BUY|CALL|LONG|ВВЕРХ|вверх)/.test(s)) return "SELL";
+  return "";
+}
+
+function normDirection(d) {
+  const s = String(d || "").toUpperCase().trim();
+  if (["BUY", "UP", "CALL", "ВВЕРХ", "LONG"].indexOf(s) > -1) return "BUY";
+  if (["SELL", "DOWN", "PUT", "ВНИЗ", "SHORT"].indexOf(s) > -1) return "SELL";
+  return "NO_SIGNAL";
+}
+
+function extractText(data) {
+  const ch = data && data.choices && data.choices[0];
+  if (!ch) return "";
+  const msg = ch.message || {};
+  let out = "";
+  if (typeof msg.content === "string") out = msg.content;
+  else if (Array.isArray(msg.content)) {
+    out = msg.content
+      .map((p) => (typeof p === "string" ? p : (p && (p.text || (p.parts && p.parts.text))) || ""))
+      .join("\n");
+  }
+  if (!out.trim() && Array.isArray(msg.parts)) {
+    out = msg.parts.map((p) => (p && p.text) || "").join("\n");
+  }
+  if (!out.trim() && typeof msg.reasoning_content === "string") out = msg.reasoning_content;
+  if (!out.trim() && typeof msg.reasoning === "string") out = msg.reasoning;
+  if (!out.trim() && typeof ch.text === "string") out = ch.text;
+  if (!out.trim() && typeof data.output_text === "string") out = data.output_text;
+  if (!out.trim() && data && Array.isArray(data.candidates)) {
+    out = data.candidates
+      .map((c) => (c && c.content && Array.isArray(c.content.parts) ? c.content.parts.map((p) => (p && p.text) || "").join("\n") : ""))
+      .join("\n");
+  }
+  return String(out || "").trim();
+}
+
+async function postAI(apiKey, payload, timeoutMs) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
+  try {
+    const resp = await fetch(AI_BASE + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal
+    });
+    const data = await resp.json().catch(() => null);
+    return { httpOk: resp.ok, status: resp.status, data };
+  } catch (e) {
+    return { httpOk: false, status: 0, data: null, netError: (e && e.message) || String(e) };
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+const GOOGLE_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+function isGoogleKey(key) {
+  if (process.env.AI_BASE_URL) return false;
+  const k = String(key || "").trim();
+  return /^AIza[0-9A-Za-z_\-]{20,}$/.test(k) || /^AQ\.[0-9A-Za-z._\-]{20,}$/.test(k);
+}
+
+function googleModel(model) {
+  const m = String(model || "").trim();
+  if (!m || /^gemini-3/.test(m)) return "gemini-2.5-flash";
+  return m;
+}
+
+function googleText(data) {
+  const cand = (data && Array.isArray(data.candidates) && data.candidates[0]) || null;
+  if (!cand || !cand.content || !Array.isArray(cand.content.parts)) return "";
+  return cand.content.parts.map((p) => (p && p.text) || "").join("").trim();
+}
+
+async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens) {
+  const mdl = googleModel(model);
+  const cap = Number(maxTokens || process.env.AI_MAX_TOKENS || 6000);
+  const gParts = parts.map((p) => {
+    if (p && p.inline_data) {
+      return { inline_data: { mime_type: p.inline_data.mime_type, data: p.inline_data.data } };
+    }
+    return { text: (p && p.text) || "" };
+  });
+  const cfg = { temperature: temperature, maxOutputTokens: cap };
+  if (forceJson) cfg.responseMimeType = "application/json";
+  const bodies = [
+    { contents: [{ role: "user", parts: gParts }], generationConfig: Object.assign({ thinkingConfig: { thinkingBudget: 0 } }, cfg) },
+    { contents: [{ role: "user", parts: gParts }], generationConfig: cfg }
+  ];
+  const deadline = Date.now() + (timeoutMs || 24000);
+  let lastErr = "no answer";
+  for (let i = 0; i < bodies.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), remaining);
+    try {
+      const url = GOOGLE_BASE + "/models/" + encodeURIComponent(mdl) + ":generateContent";
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": String(apiKey).trim() },
+        body: JSON.stringify(bodies[i]),
+        signal: ctrl.signal
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        const msg = String((data && data.error && (data.error.message || data.error)) || ("HTTP " + resp.status));
+        lastErr = msg;
+        if (/thinking|responseMimeType|unknown|invalid argument|not supported/i.test(msg)) continue;
+        return { ok: false, error: msg };
+      }
+      const text = googleText(data);
+      const cand = (data && Array.isArray(data.candidates) && data.candidates[0]) || {};
+      const fin = String(cand.finishReason || "");
+      if (text) {
+        return {
+          ok: true,
+          text,
+          parsed: parseJsonLoose(text),
+          finish: fin.toLowerCase(),
+          variant: i,
+          truncated: fin === "MAX_TOKENS" || looksTruncated(text)
+        };
+      }
+      lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
+    } catch (e) {
+      lastErr = (e && e.name === "AbortError") ? "This operation was aborted" : String((e && e.message) || e);
+    } finally {
+      clearTimeout(to);
     }
   }
-  if (payload.notice) {
-    payload.summary = GENERIC_ERROR[lang];
-    payload.reasons = NO_DATA[lang].slice(1);
-  }
-  if (!payload.degraded && (payload.dlgSource === "fallback" || !Array.isArray(payload.dialogue) || !payload.dialogue.length)) {
-    const dir = payload.direction === "BUY" || payload.direction === "SELL" ? payload.direction : "NONE";
-    const lines = FALLBACK[lang][dir];
-    payload.dialogue = lines.map((text, i) => ({ who: i % 2 ? "opy" : "dop", text }));
-    payload.dlgSource = "localized-fallback";
-  }
-  return payload;
+  return { ok: false, error: lastErr };
 }
 
-module.exports = async function localizedAnalyze(req, res) {
-  const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-  const lang = SUPPORTED[body.language] ? body.language : "en";
-  const innerBody = Object.assign({}, body, { language: lang === "ru" ? "ru" : "en" });
-  const innerReq = Object.assign({}, req, { body: innerBody });
-  const innerRes = Object.create(res);
-  innerRes.status = function status(code) { res.status(code); return innerRes; };
-  innerRes.setHeader = function setHeader(k, v) { res.setHeader(k, v); };
-  innerRes.end = function end() { return res.end(); };
-  innerRes.json = function json(payload) { return res.json(localizePayload(payload, lang)); };
+async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens) {
+  if (isGoogleKey(apiKey)) return callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens);
+  const content = parts.map((p) => {
+    if (p && p.text) return { type: "text", text: p.text };
+    if (p && p.inline_data) {
+      return { type: "image_url", image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } };
+    }
+    return { type: "text", text: "" };
+  });
+  const cap = Number(maxTokens || process.env.AI_MAX_TOKENS || 6000);
+  const base = {
+    model,
+    messages: [{ role: "user", content }],
+    temperature,
+    max_tokens: cap
+  };
+  const attempts = [];
+  attempts.push(Object.assign({}, base, {
+    reasoning_effort: "none",
+    thinking: { type: "disabled" },
+    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
+  }, forceJson ? { response_format: { type: "json_object" } } : {}));
+  attempts.push(Object.assign({}, base, {
+    reasoning_effort: "none",
+    extra_body: { google: { thinking_config: { thinking_budget: 0 } } }
+  }, forceJson ? { response_format: { type: "json_object" } } : {}));
+  attempts.push(Object.assign({}, base));
+  const deadline = Date.now() + (timeoutMs || 24000);
+  let lastErr = "no answer";
+  for (let i = 0; i < attempts.length; i++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 5000) { lastErr = lastErr + " / time budget"; break; }
+    const attemptMs = i === 0 ? Math.min(remaining, 18000) : remaining;
+    const r = await postAI(apiKey, attempts[i], attemptMs);
+    if (r.netError) { lastErr = r.netError; continue; }
+    if (!r.httpOk) {
+      const msg = String((r.data && r.data.error && (r.data.error.message || r.data.error)) || ("HTTP " + r.status));
+      lastErr = msg;
+      if (/unknown|unsupported|invalid|not support|response_format|reasoning|thinking|extra_body/i.test(msg)) continue;
+      return { ok: false, error: msg };
+    }
+    const finish = String((r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "");
+    const text = extractText(r.data);
+    if (text) {
+      return {
+        ok: true,
+        text,
+        parsed: parseJsonLoose(text),
+        finish,
+        truncated: finish === "length" || looksTruncated(text)
+      };
+    }
+    const fin = (r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].finish_reason) || "";
+    lastErr = "empty response" + (fin ? " (" + fin + ")" : "");
+  }
+  return { ok: false, error: lastErr };
+}
 
-  // Fresh module instance prevents the original RU/EN cache from mixing different languages.
-  const path = require.resolve("./analyze-core");
-  delete require.cache[path];
-  const analyze = require("./analyze-core");
-  return store.run({ code: lang, name: SUPPORTED[lang] }, () => analyze(innerReq, innerRes));
+async function supaGet(path) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
+  if (!base || !key) return null;
+  const r = await fetch(`${base}/rest/v1${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` }
+  });
+  if (!r.ok) throw new Error("supabase " + r.status);
+  return r.json();
+}
+async function supaLogAnalyze(userId) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
+  if (!base || !key) return;
+  await fetch(`${base}/rest/v1/pulse_events`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ telegram_id: userId, event_type: "vision_analyze", details: {} })
+  }).catch(() => {});
+}
+async function globalAnalyzeCount() {
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const rows = await supaGet(
+    `/pulse_events?select=id&event_type=eq.vision_analyze&created_at=gte.${start.toISOString()}`
+  );
+  return Array.isArray(rows) ? rows.length : 0;
+}
+async function dailyAnalyzeCount(userId) {
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const rows = await supaGet(
+    `/pulse_events?select=id&telegram_id=eq.${encodeURIComponent(userId)}&event_type=eq.vision_analyze&created_at=gte.${start.toISOString()}`
+  );
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
+const PROMPT_RU = "Ты опытный трейдер-аналитик. Анализируй строго то, что видно на скриншоте. Верни ТОЛЬКО JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"причина\",\"причина\"],\"confidence\":\"низкая|средняя|высокая\",\"summary\":\"1-2 предложения\",\"strategy\":\"2-3 предложения\",\"entryWindow\":\"условие входа\",\"expiry\":\"интервал\",\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"tips\":[\"совет\"]}";
+
+const PROMPT_EN = "You are an experienced trading analyst. Analyze strictly what is visible on the screenshot. Return JSON only: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"reason\",\"reason\"],\"confidence\":\"low|medium|high\",\"summary\":\"1-2 sentences\",\"strategy\":\"2-3 sentences\",\"entryWindow\":\"entry condition\",\"expiry\":\"holding interval\",\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"tips\":[\"tip\"]}";
+
+const RETRY_RU = "Посмотри на скриншот и ответь ОДНИМ JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"причина\",\"причина\"],\"summary\":\"одно предложение\"} reasons обязателен.";
+
+const RETRY_EN = "Look at the chart screenshot and reply with ONE JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"reason\",\"reason\"],\"summary\":\"one sentence\"} reasons is required.";
+
+const FAST_RU = "Ты опытный трейдер-аналитик. По скриншоту графика дай короткий разбор. Отвечай ТОЛЬКО одним JSON-объектом, direction первым. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"факт\",\"факт\",\"факт\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"summary\":\"1-2 предложения\",\"entryWindow\":\"когда входить\",\"expiry\":\"сколько держать\"} Если график нечитаемый - NO_SIGNAL. reasons обязателен, 3 пункта. dialogue — живая сценка спора про ЭТОТ сигнал: dop (Дофамин, обезьяна в очках, импульсивный, FOMO, громко, с эмодзи) против opy (Опыт, седой ветеран, сухо, иронично, тормозит). 6 коротких реплик, чередуй dop/opy, начни с dop, каждая до 90 символов в одну строку без переносов.";
+
+const FAST_EN = "You are an experienced trading analyst. Give a short read of this chart screenshot. Answer with ONE JSON object only, direction first. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"fact\",\"fact\",\"fact\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"summary\":\"1-2 sentences\",\"entryWindow\":\"when to enter\",\"expiry\":\"how long to hold\"} If unreadable - NO_SIGNAL. reasons required, 3 items. dialogue — a lively argument about THIS signal: dop (Dopamine, monkey in shades, impulsive, FOMO, loud, emoji) vs opy (Experience, grey-haired veteran, dry, ironic, holds back). 6 short lines, alternate dop/opy, start with dop, each up to 90 chars on one line, no line breaks.";
+
+const ENRICH_RU = "Ты режиссёр короткой КОМИКС-СЦЕНЫ. Покажи внутренний конфликт трейдера как сценку двух персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты: {REASONS}. Персонажи: \"dop\" (Дофамин) — обезьяна в очках, импульсивный, FOMO, громко, эмодзи; \"opy\" (Опыт) — седой ветеран, сухо, иронично, тормозит. Ответь ОДНИМ JSON без markdown: {\"reasons\":[\"фраза\",\"фраза\",\"фраза\"],\"summary\":\"2-3 предложения\",\"strategy\":\"3 предложения\",\"tips\":[\"совет\",\"совет\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"низкий|средний|высокий\",\"emotion\":\"низкий|умеренный|повышенный|высокий\",\"verdict\":\"вердикт 2-5 слов\"}}. dialogue — 6 коротких реплик, чередуй dop/opy, начни с dop, каждая до 90 символов В ОДНУ строку без переносов. Не выдумывай цифр.";
+
+const ENRICH_EN = "You direct a short COMIC SCENE. Show the trader inner conflict as two characters with OPPOSITE personalities. Signal: direction {DIR}, asset {ASSET}, timeframe {TF}. Facts: {REASONS}. Characters: \"dop\" (Dopamine) — a monkey in shades, impulsive, FOMO, loud, emoji; \"opy\" (Experience) — grey-haired veteran, dry, ironic, holds back. Answer with ONE JSON, no markdown: {\"reasons\":[\"phrase\",\"phrase\",\"phrase\"],\"summary\":\"2-3 sentences\",\"strategy\":\"3 sentences\",\"tips\":[\"tip\",\"tip\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"low|medium|high\",\"emotion\":\"low|moderate|elevated|high\",\"verdict\":\"verdict 2-5 words\"}}. dialogue — 6 short lines, alternate dop/opy, start with dop, each up to 90 chars on ONE line with no line breaks. Do not invent numbers.";
+
+const DLG_RU = "\u0422\u044b \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u0441\u0442 \u0436\u0438\u0432\u043e\u0433\u043e \u044e\u043c\u043e\u0440\u0430. \u0421\u0434\u0435\u043b\u0430\u0439 \u043a\u043e\u0440\u043e\u0442\u043a\u0443\u044e \u043f\u0435\u0440\u0435\u043f\u0430\u043b\u043a\u0443 \u0434\u0432\u0443\u0445 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436\u0435\u0439 \u043f\u0440\u043e \u0441\u0438\u0433\u043d\u0430\u043b {DIR} \u043f\u043e \u0430\u043a\u0442\u0438\u0432\u0443 {ASSET}. \u0424\u0430\u043a\u0442\u044b: {REASONS}. dop (\u0414\u043e\u0444\u0430\u043c\u0438\u043d) \u2014 \u0438\u043c\u043f\u0443\u043b\u044c\u0441\u0438\u0432\u043d\u0430\u044f \u043e\u0431\u0435\u0437\u044c\u044f\u043d\u0430 \u0432 \u043e\u0447\u043a\u0430\u0445, FOMO, \u0433\u0440\u043e\u043c\u043a\u043e, \u0441 \u044d\u043c\u043e\u0434\u0437\u0438. opy (\u041e\u043f\u044b\u0442) \u2014 \u0441\u0435\u0434\u043e\u0439 \u0432\u0435\u0442\u0435\u0440\u0430\u043d, \u0441\u0443\u0445\u043e, \u0438\u0440\u043e\u043d\u0438\u0447\u043d\u043e, \u0442\u043e\u0440\u043c\u043e\u0437\u0438\u0442. \u041e\u0442\u0432\u0435\u0442\u044c \u0422\u041e\u041b\u042c\u041a\u041e JSON: {\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}]} \u0420\u043e\u0432\u043d\u043e 6 \u0440\u0435\u043f\u043b\u0438\u043a, \u0447\u0435\u0440\u0435\u0434\u0443\u0439 dop \u0438 opy, \u043d\u0430\u0447\u043d\u0438 \u0441 dop, \u043a\u0430\u0436\u0434\u0430\u044f \u0434\u043e 90 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432, \u0432 \u043e\u0434\u043d\u0443 \u0441\u0442\u0440\u043e\u043a\u0443. \u0416\u0438\u0432\u043e, \u043f\u043e-\u0440\u0430\u0437\u043d\u043e\u043c\u0443, \u0431\u0435\u0437 \u043f\u043e\u0432\u0442\u043e\u0440\u043e\u0432, \u0431\u0435\u0437 \u0432\u044b\u0434\u0443\u043c\u0430\u043d\u043d\u044b\u0445 \u0446\u0438\u0444\u0440.";
+const DLG_EN = "You write lively humor. Make a short banter between two characters about a {DIR} signal on {ASSET}. Facts: {REASONS}. dop (Dopamine) is an impulsive monkey in sunglasses, FOMO, loud, with emojis. opy (Experience) is a grey veteran, dry, ironic, holds back. Reply ONLY JSON: {\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}]} Exactly 6 lines, alternate dop and opy, start with dop, each under 90 chars, one line. Lively, varied, no repeats, no made-up numbers.";
+const MICRO_RU = "Скриншот графика. Ответь ОДНИМ JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"до 50 символов\",\"до 50 символов\"],\"confidence\":\"низкая|средняя|высокая\"} Никакого текста вне JSON.";
+
+const MICRO_EN = "Chart screenshot. Answer with ONE JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"under 50 chars\",\"under 50 chars\"],\"confidence\":\"low|medium|high\"} No text outside JSON.";
+
+function softCard(res, lang, summary, reasons) {
+  const ru = lang !== "en";
+  return res.status(200).json({
+    direction: "NO_SIGNAL",
+    confidence: ru ? "низкая" : "low",
+    asset: ru ? "Не распознан" : "Not recognized",
+    timeframe: "",
+    entryWindow: "",
+    expiry: "",
+    summary: summary,
+    reasons: (reasons && reasons.length) ? reasons : noDataReasons(ru ? "ru" : "en"),
+    strategy: "",
+    tips: [],
+    dialogue: [],
+    state: null,
+    degraded: false,
+    notice: true
+  });
+}
+
+/* ---------- Fish Audio TTS (https://fish.audio) ---------- */
+function stripForTTS(s) {
+  return String(s == null ? "" : s)
+    .replace(/[\u{1F000}-\u{1FAFF}]/gu, "")
+    .replace(/[\u{2190}-\u{27BF}]/gu, "")
+    .replace(/[\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "")
+    .replace(/[\uFE00-\uFE0F\u200D]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function fishTTS(text, refId, timeoutMs, who) {
+  return new Promise(function (resolve) {
+    var https = require("https");
+    var key = process.env.FISH_API_KEY || "";
+    if (!key) return resolve({ err: "no_fish_key" });
+    refId = String(refId || "").replace(/[^A-Za-z0-9_-]/g, "");
+    if (!refId) return resolve({ err: "no_fish_ref" });
+    var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
+    var speed = (who === "opy") ? 0.9 : 1.14;
+    var volume = 0.8;
+    var body = JSON.stringify({
+      text: String(text || ""),
+      reference_id: refId,
+      format: "mp3",
+      mp3_bitrate: 128,
+      chunk_length: 300,
+      normalize: true,
+      latency: "balanced",
+      prosody: { speed: speed, volume: volume }
+    });
+    var done = false, chunks = [], req = null;
+    var to = setTimeout(function () { finish({ err: "fish_timeout" }); }, Math.max(3000, timeoutMs || 12000));
+    function finish(r) { if (done) return; done = true; clearTimeout(to); try { if (req) req.destroy(); } catch (e) {} resolve(r); }
+    try {
+      req = https.request({
+        method: "POST",
+        hostname: "api.fish.audio",
+        path: "/v1/tts",
+        headers: {
+          "Authorization": "Bearer " + key,
+          "Content-Type": "application/json",
+          "model": model,
+          "Content-Length": Buffer.byteLength(body)
+        }
+      }, function (res) {
+        var status = res.statusCode || 0;
+        res.on("data", function (d) { chunks.push(d); });
+        res.on("end", function () {
+          var buf = Buffer.concat(chunks);
+          if (status === 200 && buf.length) return finish({ uri: "data:audio/mpeg;base64," + buf.toString("base64") });
+          var msg = ""; try { msg = buf.toString("utf8").slice(0, 160); } catch (e) {}
+          finish({ err: "http " + status + (msg ? (":" + msg) : "") });
+        });
+      });
+      req.on("error", function (e) { finish({ err: "fish_err:" + ((e && e.message) || "x") }); });
+      req.write(body);
+      req.end();
+    } catch (e) { finish({ err: "fish_ctor:" + ((e && e.message) || "x") }); }
+  });
+}
+
+async function synthDialogueAudio(dialogue, apiKey, opts) {
+  const diag = { tried: 0, ok: 0, fish: 0, errs: [] };
+  if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return diag;
+  const fishKey = opts.fishKey || "", fDop = opts.fishDop || "", fOpy = opts.fishOpy || "";
+  const perMs = opts.perMs, deadline = opts.deadline, concurrency = Math.max(3, Math.min(6, dialogue.length));
+  let idx = 0;
+  async function worker() {
+    while (idx < dialogue.length) {
+      const my = idx++;
+      if (Date.now() > deadline) { if (diag.errs.length < 4) diag.errs.push("deadline"); return; }
+      const it = dialogue[my];
+      if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
+      const fishRef = (it.who === "opy") ? fOpy : fDop;
+      const clean = stripForTTS(it.text).slice(0, 300);
+      if (!clean) continue;
+      let left = Math.min(perMs, deadline - Date.now());
+      if (left < 1500) { if (diag.errs.length < 4) diag.errs.push("low budget"); return; }
+      diag.tried++;
+      if (fishKey && fishRef) {
+        const rf = await fishTTS(clean, fishRef, left, it.who);
+        if (rf && rf.uri) { it.audio = rf.uri; diag.ok++; diag.fish++; continue; }
+        if (rf && rf.err && diag.errs.length < 4) diag.errs.push("fish:" + rf.err);
+      } else if (diag.errs.length < 4) {
+        diag.errs.push("no_ref:" + it.who);
+      }
+    }
+  }
+  const workers = [];
+  for (let i = 0; i < concurrency; i++) workers.push(worker());
+  await Promise.all(workers);
+  return diag;
+}
+
+module.exports = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(200).end();
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  const body0 = typeof req.body === "string" ? (JSON.parse(req.body || "{}") || {}) : (req.body || {});
+  const lang0 = body0.language === "en" ? "en" : "ru";
+
+  if (!apiKey) {
+    return res.status(200).json({
+      direction: "NO_SIGNAL",
+      confidence: lang0 === "ru" ? "низкая" : "low",
+      asset: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      timeframe: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      summary: lang0 === "ru" ? "Анализ временно недоступен." : "Analysis is temporarily unavailable.",
+      reasons: noDataReasons(lang0),
+      strategy: "",
+      tips: [],
+      dialogue: [],
+      state: null,
+      degraded: true,
+      diag: "missing api key"
+    });
+  }
+
+  try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const { image, mimeType = "image/jpeg", language = "ru", initData } = body0;
+    const lang = language === "en" ? "en" : "ru";
+
+    const user = validateTelegramInitData(initData, botToken);
+    if (!user || !user.id) {
+      return softCard(res, lang,
+        lang === "ru" ? "Не удалось подтвердить вход через Telegram." : "Telegram sign-in could not be confirmed.",
+        lang === "ru"
+          ? ["Открой приложение заново из бота в Telegram.", "А��ализ работает только внутри Telegram."]
+          : ["Reopen the app from the bot inside Telegram.", "Analysis works only inside Telegram."]);
+    }
+    const isOwner = String(user.id) === String(process.env.OWNER_TELEGRAM_ID || "");
+
+    if (!isOwner && !rateLimit("analyze:" + user.id, 5, 60000)) {
+      return softCard(res, lang,
+        lang === "ru" ? "Слишком много анализов подряд." : "Too many analyses in a row.",
+        lang === "ru"
+          ? ["Подожди минуту и попробуй снова.", "Пауза помогает не торопиться со входами."]
+          : ["Wait a minute and try again.", "A pause helps you avoid rushed entries."]);
+    }
+
+    if (["image/png", "image/jpeg", "image/webp"].indexOf(String(mimeType)) === -1) {
+      return softCard(res, lang,
+        lang === "ru" ? "Этот формат изображения не поддерживается." : "This image format is not supported.",
+        lang === "ru"
+          ? ["Подходят скриншоты PNG, JPG и WEBP.", "Сделай обычный скриншот экрана и загрузи его."]
+          : ["PNG, JPG and WEBP screenshots work.", "Take a regular screen capture and upload it."]);
+    }
+    if (!image || typeof image !== "string") {
+      return softCard(res, lang,
+        lang === "ru" ? "Скриншот не загрузилс��." : "The screenshot was not uploaded.",
+        lang === "ru"
+          ? ["Выбери изображение графика и повтори анализ.", "Без графика разбор сделать невозможно."]
+          : ["Pick a chart image and run the analysis again.", "Without a chart there is nothing to read."]);
+    }
+    if (image.length > 12000000) {
+      return softCard(res, lang,
+        lang === "ru" ? "Изображение слишком большое." : "The image is too large.",
+        lang === "ru"
+          ? ["Загрузи файл поменьше, до 8 МБ.", "Обычного скриншота с телефона достаточно."]
+          : ["Upload a smaller file, up to 8 MB.", "A normal phone screenshot is enough."]);
+    }
+
+    const DAILY_LIMIT = Number(process.env.DAILY_ANALYZE_LIMIT || 5);
+    try {
+      const used = await dailyAnalyzeCount(user.id);
+      if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
+        return softCard(res, lang,
+          lang === "ru"
+            ? `Н�� сегодня анализы закончились (${DAILY_LIMIT} в день).`
+            : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
+          lang === "ru"
+            ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
+            : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
+      }
+    } catch (e) {}
+
+    const base64Image = image.indexOf(",") > -1 ? image.split(",").pop() : image;
+
+    const COOLDOWN_SEC = Number(process.env.ANALYZE_COOLDOWN_SEC || 25);
+    if (!isOwner && COOLDOWN_SEC > 0 && !rateLimit("cooldown:" + user.id, 1, COOLDOWN_SEC * 1000)) {
+      return softCard(res, lang,
+        lang === "ru"
+          ? `Нужна небольшая пауза — около ${COOLDOWN_SEC} секунд.`
+          : `A short pause is needed — about ${COOLDOWN_SEC} seconds.`,
+        lang === "ru"
+          ? ["Анализы идут слишком часто.", "Подожди немного и загрузи скриншот заново."]
+          : ["Analyses are coming in too fast.", "Wait a moment and upload the screenshot again."]);
+    }
+
+    const cacheKey = imageKey(base64Image, lang);
+    const cached = cacheGet(cacheKey);
+    if (cached && cached.dialogue && cached.dialogue.length) {
+      supaLogAnalyze(user.id);
+      return res.status(200).json(Object.assign({}, cached, { cached: true }));
+    }
+
+    const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
+    const mainPrompt = lang === "ru" ? FAST_RU : FAST_EN;
+    const retryPrompt = lang === "ru" ? MICRO_RU : MICRO_EN;
+
+    let best = null;
+    let bestReasons = [];
+    let bestCut = false;
+    let rawSeen = "";
+    const diag = [];
+
+    const overallDeadline = Date.now() + 46000;
+    const budget = (want) => Math.max(0, Math.min(want, overallDeadline - Date.now()));
+    const budgetKeep = (want, reserve) => Math.max(0, Math.min(want, overallDeadline - (reserve || 0) - Date.now()));
+
+    for (const model of MODELS) {
+      const ms = budgetKeep(22000, 13000);
+      if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
+      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true, 1500);
+      if (!r.ok) { diag.push(model + ": " + r.error); continue; }
+      rawSeen = r.text;
+      const parsed = Object.assign(extractFields(r.text), r.parsed || {});
+      const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
+      const dir = parsed.direction || directionFromText(r.text);
+      const cut = !!r.truncated;
+      const hasDlg = sanitizeDialogue(parsed.dialogue).length >= 4;
+      if (dir && reasons.length && (!cut || hasDlg)) {
+        best = Object.assign({}, parsed, { direction: dir });
+        bestReasons = reasons;
+        bestCut = false;
+        break;
+      }
+      if ((dir || reasons.length) && (!best || bestCut)) {
+        best = Object.assign({}, parsed, dir ? { direction: dir } : {});
+        bestReasons = reasons;
+        bestCut = cut;
+      }
+      diag.push(model + (cut ? ": truncated" : ": weak answer"));
+    }
+
+    if (!best || !bestReasons.length || !best.direction || bestCut) {
+      for (const model of MODELS) {
+        const ms = budgetKeep(10000, 13000);
+        if (ms < 7000) { diag.push("retry skipped (time)"); break; }
+        const r = await callModel(apiKey, model, [{ text: retryPrompt }, imagePart], 0.2, ms, false);
+        if (!r.ok) { diag.push("retry " + model + ": " + r.error); continue; }
+        rawSeen = rawSeen || r.text;
+        const parsed = Object.assign(extractFields(r.text), r.parsed || {});
+        const reasons = dropPartialTail(salvageReasons(parsed, r.text, lang), r.text);
+        const dir = parsed.direction || directionFromText(r.text);
+        if (reasons.length || dir) {
+          const keep = bestReasons.slice();
+          const keepDir = (best && best.direction) || "";
+          best = Object.assign({}, best || {}, parsed, dir ? { direction: dir } : (keepDir ? { direction: keepDir } : {}));
+          bestReasons = reasons.length >= keep.length ? reasons : keep;
+          bestCut = reasons.length ? !!r.truncated : bestCut;
+          if (bestReasons.length) break;
+        }
+        diag.push("retry " + model + ": no reasons");
+      }
+    }
+
+    if (best && best.direction && bestReasons.length && !(best.dialogue && best.dialogue.length >= 4)) {
+      const ms = budgetKeep(13000, 9000);
+      if (ms >= 5000) {
+        const tpl = lang === "ru" ? ENRICH_RU : ENRICH_EN;
+        const ep = tpl
+          .split("{DIR}").join(normDirection(best.direction))
+          .split("{REASONS}").join(bestReasons.join("; "))
+          .split("{ASSET}").join(String(best.asset || "-"))
+          .split("{TF}").join(String(best.timeframe || "-"));
+        const r = await callModel(apiKey, MODELS[0], [{ text: ep }], 0.85, ms, true);
+        if (r.ok) {
+          const ex = Object.assign(extractFields(r.text), r.parsed || {});
+          const cut2 = !!r.truncated;
+          const sum2 = trimPartialText(String(ex.summary || ""), cut2);
+          const st2 = trimPartialText(String(ex.strategy || ""), cut2);
+          const tp2 = cleanList(ex.tips, 3);
+          const dlg = sanitizeDialogue(ex.dialogue);
+          if (dlg.length) best.dialogue = dlg;
+          const stt = sanitizeState(ex.state);
+          if (stt) best.state = stt;
+          if (sum2 && sum2.length > String((best && best.summary) || "").length) best.summary = sum2;
+          if (st2) best.strategy = st2;
+          if (tp2.length) best.tips = tp2;
+          const rs2 = dropPartialTail(cleanList(ex.reasons, 3), r.text);
+          if (rs2.length >= bestReasons.length && rs2.join(" ").length > bestReasons.join(" ").length) {
+            bestReasons = rs2;
+          }
+        } else {
+          diag.push("enrich: " + r.error);
+        }
+      } else {
+        diag.push("enrich skipped (time)");
+      }
+    }
+
+    if (best && best.direction && sanitizeDialogue(best.dialogue).length < 2) {
+      const dms = budget(9000);
+      if (dms >= 2500) {
+        const dTpl = lang === "ru" ? DLG_RU : DLG_EN;
+        const dp = dTpl
+          .split("{DIR}").join(normDirection(best.direction))
+          .split("{ASSET}").join(String(best.asset || "-"))
+          .split("{REASONS}").join(bestReasons.join("; "));
+        const dr = await callModel(apiKey, MODELS[0], [{ text: dp }], 0.9, dms, true, 1000);
+        if (dr.ok) {
+          const dex = Object.assign(extractFields(dr.text), dr.parsed || {});
+          const dlg2 = sanitizeDialogue(dex.dialogue);
+          if (dlg2.length >= 2) best.dialogue = dlg2;
+        } else { diag.push("dlg2: " + dr.error); }
+      } else { diag.push("dlg2 skipped (time)"); }
+    }
+    const degraded = !best || !bestReasons.length;
+    const direction = normDirection(best && best.direction);
+    const finalDirection = degraded ? "NO_SIGNAL" : direction;
+    const reasonsOut = bestReasons.length ? bestReasons : noDataReasons(lang);
+
+    const payload = {
+      direction: finalDirection,
+      confidence: (best && best.confidence) || (finalDirection === "NO_SIGNAL" ? (lang === "ru" ? "низкая" : "low") : (lang === "ru" ? "средняя" : "medium")),
+      entryWindow: (best && best.entryWindow) || "",
+      expiry: (best && best.expiry) || "",
+      asset: (best && best.asset) || (lang === "ru" ? "Не распознан" : "Not recognized"),
+      timeframe: (best && best.timeframe) || (lang === "ru" ? "Не распознан" : "Not recognized"),
+      summary: trimPartialText((best && best.summary) || "", bestCut),
+      reasons: reasonsOut,
+      strategy: trimPartialText((best && best.strategy) || "", bestCut),
+      tips: cleanList(best && best.tips, 3),
+      dialogue: sanitizeDialogue(best && best.dialogue),
+      state: (best && best.state) || null,
+      agents: [],
+      degraded: degraded
+    };
+
+    /* ГАРАНТИЯ ГОЛОСА: если модель не вернула диалог — ставим запасной, чтобы TTS всегда срабатывал */
+    if (!degraded && !payload.dialogue.length) {
+      payload.dialogue = fallbackDialogue(finalDirection, lang);
+      payload.dlgSource = "fallback";
+    } else if (payload.dialogue.length) {
+      payload.dlgSource = "ai";
+    }
+    payload.dlgDiag = (diag.length ? diag.join(" | ") : "ok").slice(0, 180);
+
+    if (degraded) {
+      console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
+    }
+
+    // ГОЛОС ПО ЗАПРОСУ: НЕ синтезируем на сервере — это держало ответ до 20+ сек.
+    // Клиент подтягивает голос каждой реплики на лету через /api/tts (с префетчем),
+    // поэтому диалог стартует сразу после ответа модели.
+    const voiceOff = String(process.env.VOICE_TTS || "").toLowerCase() === "off";
+    payload.ttsMode = voiceOff ? "off" : "ondemand";
+
+    if (!degraded && payload.dialogue.length) cacheSet(cacheKey, payload);
+    supaLogAnalyze(user.id);
+    return res.status(200).json(payload);
+  } catch (error) {
+    console.error("Analyze error:", error);
+    return res.status(200).json({
+      direction: "NO_SIGNAL",
+      confidence: lang0 === "ru" ? "низкая" : "low",
+      asset: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      timeframe: lang0 === "ru" ? "Не распознан" : "Not recognized",
+      summary: lang0 === "ru" ? "Сервис анализа не ответил." : "The analysis service did not respond.",
+      reasons: noDataReasons(lang0),
+      strategy: "",
+      tips: [],
+      dialogue: [],
+      state: null,
+      degraded: true
+    });
+  }
 };
 
 module.exports.config = { maxDuration: 60 };
