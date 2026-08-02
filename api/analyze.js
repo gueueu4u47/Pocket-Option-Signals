@@ -610,6 +610,7 @@ var EDGE_TRUSTED = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 var EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-140.0.3485.14";
 var EDGE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.3485.14";
 var EDGE_SKEW = 0;
+var EDGE_LAST_OK = EDGE_WSS_LEGACY;
 
 function edgeSecGec() {
   var crypto = require("crypto");
@@ -658,41 +659,104 @@ async function edgeTTS(text, voiceName, timeoutMs, who) {
   var voice = voiceName || "ru-RU-DmitryNeural";
   var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
   var rate = (who === "opy") ? "-6%" : "+12%";
-  var endpoints = [EDGE_WSS, EDGE_WSS_LEGACY];
+  var all = [EDGE_WSS, EDGE_WSS_LEGACY];
+  var endpoints = [];
+  if (EDGE_LAST_OK && all.indexOf(EDGE_LAST_OK) !== -1) endpoints.push(EDGE_LAST_OK);
+  for (var k = 0; k < all.length; k++) { if (endpoints.indexOf(all[k]) === -1) endpoints.push(all[k]); }
   var last = { err: "fail" };
   for (var i = 0; i < endpoints.length; i++) {
     var r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs);
-    if (r && r.uri) return { uri: r.uri };
+    if (r && r.uri) { EDGE_LAST_OK = endpoints[i]; return { uri: r.uri }; }
     if (r && r.status === 403 && r.serverDate) {
       var srv = Math.floor(new Date(r.serverDate).getTime() / 1000);
-      if (srv) { EDGE_SKEW = srv - Math.floor(Date.now() / 1000); r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs); if (r && r.uri) return { uri: r.uri }; }
+      if (srv) { EDGE_SKEW = srv - Math.floor(Date.now() / 1000); r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs); if (r && r.uri) { EDGE_LAST_OK = endpoints[i]; return { uri: r.uri }; } }
     }
     last = r || last;
   }
   return { err: (last && last.err) || "fail" };
 }
 
+/* ---------- Fish Audio TTS (https://fish.audio) ---------- */
+function fishTTS(text, refId, timeoutMs, who) {
+  return new Promise(function (resolve) {
+    var https = require("https");
+    var key = process.env.FISH_API_KEY || "";
+    if (!key) return resolve({ err: "no_fish_key" });
+    if (!refId) return resolve({ err: "no_fish_ref" });
+    var model = process.env.FISH_MODEL || "s2.1-pro-free";
+    var speed = (who === "opy") ? 0.94 : 1.08;
+    var body = JSON.stringify({
+      text: String(text || ""),
+      reference_id: refId,
+      format: "mp3",
+      mp3_bitrate: 128,
+      chunk_length: 300,
+      normalize: true,
+      latency: "balanced",
+      prosody: { speed: speed, volume: 0 }
+    });
+    var done = false, chunks = [], req = null;
+    var to = setTimeout(function () { finish({ err: "fish_timeout" }); }, Math.max(3000, timeoutMs || 12000));
+    function finish(r) { if (done) return; done = true; clearTimeout(to); try { if (req) req.destroy(); } catch (e) {} resolve(r); }
+    try {
+      req = https.request({
+        method: "POST",
+        hostname: "api.fish.audio",
+        path: "/v1/tts",
+        headers: {
+          "Authorization": "Bearer " + key,
+          "Content-Type": "application/json",
+          "model": model,
+          "Content-Length": Buffer.byteLength(body)
+        }
+      }, function (res) {
+        var status = res.statusCode || 0;
+        res.on("data", function (d) { chunks.push(d); });
+        res.on("end", function () {
+          var buf = Buffer.concat(chunks);
+          if (status === 200 && buf.length) return finish({ uri: "data:audio/mpeg;base64," + buf.toString("base64") });
+          var msg = ""; try { msg = buf.toString("utf8").slice(0, 160); } catch (e) {}
+          finish({ err: "http " + status + (msg ? (":" + msg) : "") });
+        });
+      });
+      req.on("error", function (e) { finish({ err: "fish_err:" + ((e && e.message) || "x") }); });
+      req.write(body);
+      req.end();
+    } catch (e) { finish({ err: "fish_ctor:" + ((e && e.message) || "x") }); }
+  });
+}
+
 async function synthDialogueAudio(dialogue, apiKey, opts) {
-  const diag = { tried: 0, ok: 0, errs: [] };
+  const diag = { tried: 0, ok: 0, fish: 0, edge: 0, errs: [] };
   if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return diag;
-  const modelId = opts.modelId, vDop = opts.voiceDop, vOpy = opts.voiceOpy;
+  const vDop = opts.voiceDop, vOpy = opts.voiceOpy;
+  const fishKey = opts.fishKey || "", fDop = opts.fishDop || "", fOpy = opts.fishOpy || "";
   const perMs = opts.perMs, deadline = opts.deadline, concurrency = 2;
   let idx = 0;
   async function worker() {
     while (idx < dialogue.length) {
       const my = idx++;
-      if (Date.now() > deadline) { if (diag.errs.length < 3) diag.errs.push("deadline"); return; }
+      if (Date.now() > deadline) { if (diag.errs.length < 4) diag.errs.push("deadline"); return; }
       const it = dialogue[my];
       if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
-      const voiceId = (it.who === "opy") ? vOpy : vDop;
-      if (!voiceId) { if (diag.errs.length < 3) diag.errs.push("no voiceId:" + it.who); continue; }
-      const left = Math.min(perMs, deadline - Date.now());
-      if (left < 1500) { if (diag.errs.length < 3) diag.errs.push("low budget"); return; }
+      const edgeVoice = (it.who === "opy") ? vOpy : vDop;
+      const fishRef = (it.who === "opy") ? fOpy : fDop;
       const clean = it.text.replace(/\s+/g, " ").trim().slice(0, 300);
+      let left = Math.min(perMs, deadline - Date.now());
+      if (left < 1500) { if (diag.errs.length < 4) diag.errs.push("low budget"); return; }
       diag.tried++;
-      const r = await edgeTTS(clean, voiceId, left, it.who);
-      if (r && r.uri) { it.audio = r.uri; diag.ok++; }
-      else if (r && r.err && diag.errs.length < 3) diag.errs.push(r.err);
+      if (fishKey && fishRef) {
+        const rf = await fishTTS(clean, fishRef, left, it.who);
+        if (rf && rf.uri) { it.audio = rf.uri; diag.ok++; diag.fish++; continue; }
+        if (rf && rf.err && diag.errs.length < 4) diag.errs.push("fish:" + rf.err);
+      }
+      left = Math.min(perMs, deadline - Date.now());
+      if (left < 1500) { if (diag.errs.length < 4) diag.errs.push("low budget2"); return; }
+      if (edgeVoice) {
+        const re = await edgeTTS(clean, edgeVoice, left, it.who);
+        if (re && re.uri) { it.audio = re.uri; diag.ok++; diag.edge++; }
+        else if (re && re.err && diag.errs.length < 4) diag.errs.push("edge:" + re.err);
+      }
     }
   }
   const workers = [];
@@ -959,15 +1023,18 @@ module.exports = async (req, res) => {
     }
     const voiceOff = String(process.env.VOICE_TTS || "").toLowerCase() === "off";
     if (!degraded && !voiceOff && payload.dialogue.length) {
-      const ttsHardCap = overallDeadline + 9000;
-      const ttsDeadline = Math.min(Date.now() + Number(process.env.EDGE_TTS_BUDGET_MS || 16000), ttsHardCap);
+      const fishKey = process.env.FISH_API_KEY || "";
+      const ttsHardCap = overallDeadline + (fishKey ? 11000 : 9000);
+      const ttsDeadline = Math.min(Date.now() + Number(process.env.TTS_BUDGET_MS || (fishKey ? 24000 : 16000)), ttsHardCap);
       const voiceDop = process.env.EDGE_VOICE_DOP || "ru-RU-DmitryNeural";
       const voiceOpy = process.env.EDGE_VOICE_OPY || "ru-RU-DmitryNeural";
+      const fishDop = process.env.FISH_VOICE_DOP || "";
+      const fishOpy = process.env.FISH_VOICE_OPY || "";
       try {
-        const d = await synthDialogueAudio(payload.dialogue, "edge", { modelId: "edge", voiceDop, voiceOpy, perMs: Number(process.env.EDGE_TTS_PER_MS || 9000), deadline: ttsDeadline });
-        payload.ttsDiag = Object.assign({ engine: "edge", voiceDop, voiceOpy }, d);
+        const d = await synthDialogueAudio(payload.dialogue, "on", { voiceDop, voiceOpy, fishKey, fishDop, fishOpy, perMs: Number(process.env.TTS_PER_MS || (fishKey ? 12000 : 9000)), deadline: ttsDeadline });
+        payload.ttsDiag = Object.assign({ engine: fishKey ? "fish+edge" : "edge", voiceDop, voiceOpy, fishDop: fishDop ? "set" : "", fishOpy: fishOpy ? "set" : "" }, d);
       } catch (e) {
-        payload.ttsDiag = { engine: "edge", fatal: (e && e.message) || String(e) };
+        payload.ttsDiag = { engine: "tts", fatal: (e && e.message) || String(e) };
       }
       console.error("TTS_DIAG " + JSON.stringify(payload.ttsDiag));
     }
