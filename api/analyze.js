@@ -150,7 +150,7 @@ function cleanList(v, max) {
 function sanitizeDialogue(v) {
   const arr = Array.isArray(v) ? v : [];
   const out = [];
-  for (let i = 0; i < arr.length && out.length < 5; i++) {
+  for (let i = 0; i < arr.length && out.length < 6; i++) {
     const it = arr[i];
     if (!it || typeof it !== "object") continue;
     const w = String(it.who || "").toLowerCase().trim();
@@ -174,38 +174,50 @@ function fallbackDialogue(direction, lang) {
       { who: "dop", text: "Гляди, прёт вверх! Заходим сейчас, чемпион! 🚀" },
       { who: "opy", text: "Тихо, обезьяна. Сначала подтверждение, потом кнопка." },
       { who: "dop", text: "Да чего ждать?! Уедет же без нас! 😤" },
-      { who: "opy", text: "Уедет один — будет другой. По плану. Всегда." }
+      { who: "opy", text: "Уедет один — будет другой. По плану. Всегда." },
+      { who: "dop", text: "Ай, ну ты и зануда! Все давно в плюсе! 🤑" },
+      { who: "opy", text: "В плюсе — до первого слива. Дисциплина решает." }
     ];
     if (dir === "SELL") return [
       { who: "dop", text: "Вниз летит! Продаём, быстрее, упустим! 🔥" },
       { who: "opy", text: "Не суетись. Ждём, пока движение подтвердится." },
       { who: "dop", text: "Оно уже подтвердилось, глаза разуй! 👆" },
-      { who: "opy", text: "Видел тысячу таких. Вход по плану, не на нервах." }
+      { who: "opy", text: "Видел тысячу таких. Вход по плану, не на нервах." },
+      { who: "dop", text: "Да ты просто трусишь! Продаём, ну! 🔥" },
+      { who: "opy", text: "Не трушу, а жду. Подтвердится — тогда вход." }
     ];
     return [
       { who: "dop", text: "Ну хоть что-нибудь нажмём, а? Скучно же! 😎" },
       { who: "opy", text: "Нет сигнала — значит наш вход сегодня подождать." },
       { who: "dop", text: "Руки чешутся, чемпион! 😤" },
-      { who: "opy", text: "Скука дешевле слитого депозита. Пропускаем." }
+      { who: "opy", text: "Скука дешевле слитого депозита. Пропускаем." },
+      { who: "dop", text: "Один клик, всего один! Ну чего тебе стоит? 😤" },
+      { who: "opy", text: "Один клик на пустом месте — минус на ровном месте." }
     ];
   }
   if (dir === "BUY") return [
     { who: "dop", text: "Look, it's flying up! Let's get in now, champ! 🚀" },
     { who: "opy", text: "Easy, monkey. Confirmation first, then the button." },
     { who: "dop", text: "Why wait?! It'll leave without us! 😤" },
-    { who: "opy", text: "One leaves, another comes. By the plan. Always." }
+    { who: "opy", text: "One leaves, another comes. By the plan. Always." },
+    { who: "dop", text: "Ugh, such a bore! Everyone's up already! 🤑" },
+    { who: "opy", text: "Up until the first dump. Discipline wins." }
   ];
   if (dir === "SELL") return [
     { who: "dop", text: "It's dropping! Sell, sell, faster! 🔥" },
     { who: "opy", text: "Don't rush. We wait for the move to confirm." },
     { who: "dop", text: "It already confirmed, open your eyes! 👆" },
-    { who: "opy", text: "Seen a thousand of these. By the plan, not nerves." }
+    { who: "opy", text: "Seen a thousand of these. By the plan, not nerves." },
+    { who: "dop", text: "You're just scared! Sell already! 🔥" },
+    { who: "opy", text: "Not scared, alive. We wait for the signal, then enter." }
   ];
   return [
     { who: "dop", text: "Come on, let's press something! So boring! 😎" },
     { who: "opy", text: "No signal means today our entry is to wait." },
     { who: "dop", text: "My hands are itching, champ! 😤" },
-    { who: "opy", text: "Boredom is cheaper than a blown account. We skip." }
+    { who: "opy", text: "Boredom is cheaper than a blown account. We skip." },
+    { who: "dop", text: "One click, just one! What's it gonna cost you? 😤" },
+    { who: "opy", text: "One click on nothing is a loss out of nothing." }
   ];
 }
 
@@ -586,13 +598,13 @@ const RETRY_RU = "Посмотри на скриншот и ответь ОДН�
 
 const RETRY_EN = "Look at the chart screenshot and reply with ONE JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"reason\",\"reason\"],\"summary\":\"one sentence\"} reasons is required.";
 
-const FAST_RU = "Ты опытный трейдер-аналитик. По скриншоту графика дай короткий разбор. Отвечай ТОЛЬКО одним JSON-объектом, direction первым. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"факт\",\"факт\",\"факт\"],\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"summary\":\"1-2 предложения\",\"entryWindow\":\"когда входить\",\"expiry\":\"сколько держать\"} Если график нечитаемый - NO_SIGNAL. reasons обязателен, 3 пункта.";
+const FAST_RU = "Ты опытный трейдер-аналитик. По скриншоту графика дай короткий разбор. Отвечай ТОЛЬКО одним JSON-объектом, direction первым. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"факт\",\"факт\",\"факт\"],\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"summary\":\"1-2 предложения\",\"entryWindow\":\"когда входить\",\"expiry\":\"сколько держать\",\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}]} Если график нечитаемый - NO_SIGNAL. reasons обязателен, 3 пункта. dialogue — живая сценка спора про ЭТОТ сигнал: dop (Дофамин, обезьяна в очках, импульсивный, FOMO, громко, с эмодзи) против opy (Опыт, седой ветеран, сухо, иронично, тормозит). 6 коротких реплик, чередуй dop/opy, начни с dop, каждая до 90 символов в одну строку без переносов.";
 
-const FAST_EN = "You are an experienced trading analyst. Give a short read of this chart screenshot. Answer with ONE JSON object only, direction first. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"fact\",\"fact\",\"fact\"],\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"summary\":\"1-2 sentences\",\"entryWindow\":\"when to enter\",\"expiry\":\"how long to hold\"} If unreadable - NO_SIGNAL. reasons required, 3 items.";
+const FAST_EN = "You are an experienced trading analyst. Give a short read of this chart screenshot. Answer with ONE JSON object only, direction first. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"fact\",\"fact\",\"fact\"],\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"summary\":\"1-2 sentences\",\"entryWindow\":\"when to enter\",\"expiry\":\"how long to hold\",\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}]} If unreadable - NO_SIGNAL. reasons required, 3 items. dialogue — a lively argument about THIS signal: dop (Dopamine, monkey in shades, impulsive, FOMO, loud, emoji) vs opy (Experience, grey-haired veteran, dry, ironic, holds back). 6 short lines, alternate dop/opy, start with dop, each up to 90 chars on one line, no line breaks.";
 
-const ENRICH_RU = "Ты режиссёр короткой КОМИКС-СЦЕНЫ. Покажи внутренний конфликт трейдера как сценку двух персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты: {REASONS}. Персонажи: \"dop\" (Дофамин) — обезьяна в очках, импульсивный, FOMO, громко, эмодзи; \"opy\" (Опыт) — седой ветеран, сухо, иронично, тормозит. Ответь ОДНИМ JSON без markdown: {\"reasons\":[\"фраза\",\"фраза\",\"фраза\"],\"summary\":\"2-3 предложения\",\"strategy\":\"3 предложения\",\"tips\":[\"совет\",\"совет\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"низкий|средний|высокий\",\"emotion\":\"низкий|умеренный|повышенный|высокий\",\"verdict\":\"вердикт 2-5 слов\"}}. dialogue — 4 короткие реплики, чередуй dop/opy, начни с dop, каждая до 90 символов В ОДНУ строку без переносов. Не выдумывай цифр.";
+const ENRICH_RU = "Ты режиссёр короткой КОМИКС-СЦЕНЫ. Покажи внутренний конфликт трейдера как сценку двух персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты: {REASONS}. Персонажи: \"dop\" (Дофамин) — обезьяна в очках, импульсивный, FOMO, громко, эмодзи; \"opy\" (Опыт) — седой ветеран, сухо, иронично, тормозит. Ответь ОДНИМ JSON без markdown: {\"reasons\":[\"фраза\",\"фраза\",\"фраза\"],\"summary\":\"2-3 предложения\",\"strategy\":\"3 предложения\",\"tips\":[\"совет\",\"совет\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"низкий|средний|высокий\",\"emotion\":\"низкий|умеренный|повышенный|высокий\",\"verdict\":\"вердикт 2-5 слов\"}}. dialogue — 6 коротких реплик, чередуй dop/opy, начни с dop, каждая до 90 символов В ОДНУ строку без переносов. Не выдумывай цифр.";
 
-const ENRICH_EN = "You direct a short COMIC SCENE. Show the trader inner conflict as two characters with OPPOSITE personalities. Signal: direction {DIR}, asset {ASSET}, timeframe {TF}. Facts: {REASONS}. Characters: \"dop\" (Dopamine) — a monkey in shades, impulsive, FOMO, loud, emoji; \"opy\" (Experience) — grey-haired veteran, dry, ironic, holds back. Answer with ONE JSON, no markdown: {\"reasons\":[\"phrase\",\"phrase\",\"phrase\"],\"summary\":\"2-3 sentences\",\"strategy\":\"3 sentences\",\"tips\":[\"tip\",\"tip\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"low|medium|high\",\"emotion\":\"low|moderate|elevated|high\",\"verdict\":\"verdict 2-5 words\"}}. dialogue — 4 short lines, alternate dop/opy, start with dop, each up to 90 chars on ONE line with no line breaks. Do not invent numbers.";
+const ENRICH_EN = "You direct a short COMIC SCENE. Show the trader inner conflict as two characters with OPPOSITE personalities. Signal: direction {DIR}, asset {ASSET}, timeframe {TF}. Facts: {REASONS}. Characters: \"dop\" (Dopamine) — a monkey in shades, impulsive, FOMO, loud, emoji; \"opy\" (Experience) — grey-haired veteran, dry, ironic, holds back. Answer with ONE JSON, no markdown: {\"reasons\":[\"phrase\",\"phrase\",\"phrase\"],\"summary\":\"2-3 sentences\",\"strategy\":\"3 sentences\",\"tips\":[\"tip\",\"tip\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"low|medium|high\",\"emotion\":\"low|moderate|elevated|high\",\"verdict\":\"verdict 2-5 words\"}}. dialogue — 6 short lines, alternate dop/opy, start with dop, each up to 90 chars on ONE line with no line breaks. Do not invent numbers.";
 
 const MICRO_RU = "Скриншот графика. Ответь ОДНИМ JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"до 50 символов\",\"до 50 символов\"],\"confidence\":\"низкая|средняя|высокая\"} Никакого текста вне JSON.";
 
@@ -684,7 +696,7 @@ async function synthDialogueAudio(dialogue, apiKey, opts) {
   const diag = { tried: 0, ok: 0, fish: 0, errs: [] };
   if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return diag;
   const fishKey = opts.fishKey || "", fDop = opts.fishDop || "", fOpy = opts.fishOpy || "";
-  const perMs = opts.perMs, deadline = opts.deadline, concurrency = 2;
+  const perMs = opts.perMs, deadline = opts.deadline, concurrency = 3;
   let idx = 0;
   async function worker() {
     while (idx < dialogue.length) {
@@ -775,7 +787,7 @@ module.exports = async (req, res) => {
     }
     if (!image || typeof image !== "string") {
       return softCard(res, lang,
-        lang === "ru" ? "Скриншот не загрузился." : "The screenshot was not uploaded.",
+        lang === "ru" ? "Скриншот не загрузилс��." : "The screenshot was not uploaded.",
         lang === "ru"
           ? ["Выбери изображение графика и повтори анализ.", "Без графика разбор сделать невозможно."]
           : ["Pick a chart image and run the analysis again.", "Without a chart there is nothing to read."]);
@@ -882,7 +894,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    if (best && best.direction && bestReasons.length) {
+    if (best && best.direction && bestReasons.length && !(best.dialogue && best.dialogue.length >= 4)) {
       const ms = budget(13000);
       if (ms >= 5000) {
         const tpl = lang === "ru" ? ENRICH_RU : ENRICH_EN;
@@ -933,7 +945,7 @@ module.exports = async (req, res) => {
       reasons: reasonsOut,
       strategy: trimPartialText((best && best.strategy) || "", bestCut),
       tips: cleanList(best && best.tips, 3),
-      dialogue: (best && Array.isArray(best.dialogue)) ? best.dialogue : [],
+      dialogue: sanitizeDialogue(best && best.dialogue),
       state: (best && best.state) || null,
       agents: [],
       degraded: degraded
