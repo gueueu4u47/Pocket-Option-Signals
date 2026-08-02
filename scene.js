@@ -14,7 +14,6 @@
     en: { dop: "DOPAMINE", opy: "EXPERIENCE" }
   };
 
-  /* Финальный спор + итог */
   var SPAR = {
     ru: {
       q: "Ну что, сигнал зашёл?",
@@ -30,7 +29,6 @@
     }
   };
 
-  /* ---------- Библиотека реплик ---------- */
   var LIB = {
     ru: {
       ui: {
@@ -95,7 +93,6 @@
     }
   };
 
-  /* ---------- Утилиты ---------- */
   function lang() {
     var l = (document.documentElement.getAttribute("lang") || "ru").slice(0, 2);
     return LIB[l] ? l : "en";
@@ -138,10 +135,8 @@
 
   var box, thread;
 
-  /* ---------- Озвучка (голос-пассажир: обрывается на каждой новой реплике, не диктует тайминг) ---------- */
-  var VOICE = { on: false, talkGen: 0, supported: (typeof window !== "undefined" && "speechSynthesis" in window), voices: [], vDop: null, vOpy: null, actx: null, master: null, bg: null, bgGain: null };
+  var VOICE = { on: false, talkGen: 0, supported: (typeof window !== "undefined" && "speechSynthesis" in window), voices: [], vDop: null, vOpy: null, actx: null, master: null, bg: null, bgGain: null, curSrc: null };
 
-  /* ---------- Звук через <audio> (WAV data-URI): работает там, где WebAudio/TTS заблокированы ---------- */
   var AUDIO = { pool: [], idx: 0, cache: {}, unlocked: false };
 
   function toneWav(freq, ms, vol) {
@@ -285,8 +280,20 @@
     playTone(base, ms, 0.55);
   }
 
-  function playLineAudio(uri) {
-    if (!VOICE.on || !uri) return false;
+  function dataUriToBuf(uri) {
+    var i = uri.indexOf(",");
+    if (i < 0) return null;
+    var b64 = uri.slice(i + 1);
+    try {
+      var bin = atob(b64);
+      var n = bin.length;
+      var bytes = new Uint8Array(n);
+      for (var j = 0; j < n; j++) bytes[j] = bin.charCodeAt(j);
+      return bytes.buffer;
+    } catch (e) { return null; }
+  }
+
+  function playViaAudioEl(uri) {
     try {
       if (!VOICE.voiceEl) VOICE.voiceEl = new Audio();
       var el = VOICE.voiceEl;
@@ -298,6 +305,46 @@
       if (pr && pr.catch) pr.catch(function () {});
       return true;
     } catch (e) { return false; }
+  }
+
+  // Голоса идут через WebAudio — тот же канал, что и фон (который на телефоне
+  // работает). Там, где HTML5 <audio> с data-URI блокируется (Telegram/iOS),
+  // это единственный надёжный путь.
+  function playLineAudio(uri) {
+    if (!VOICE.on || !uri) return false;
+    ensureAudio();
+    var canWebAudio = VOICE.actx && typeof VOICE.actx.decodeAudioData === "function" && /^data:audio\/(mpeg|mp3|mp4|aac|ogg|wav)/i.test(uri);
+    if (canWebAudio) {
+      var abuf = dataUriToBuf(uri);
+      if (abuf) {
+        VOICE.talkGen++;
+        var myGen = VOICE.talkGen;
+        if (VOICE.curSrc) { try { VOICE.curSrc.stop(); } catch (e) {} VOICE.curSrc = null; }
+        if (VOICE.actx.state === "suspended") { try { VOICE.actx.resume(); } catch (e) {} }
+        duck(true);
+        var onOk = function (audioBuf) {
+          if (!VOICE.on || myGen !== VOICE.talkGen) { duck(false); return; }
+          try {
+            var src = VOICE.actx.createBufferSource();
+            src.buffer = audioBuf;
+            var g = VOICE.actx.createGain();
+            g.gain.value = 1;
+            src.connect(g);
+            g.connect(VOICE.master || VOICE.actx.destination);
+            src.onended = function () { if (myGen === VOICE.talkGen) duck(false); };
+            VOICE.curSrc = src;
+            src.start(0);
+          } catch (e) { duck(false); playViaAudioEl(uri); }
+        };
+        var onErr = function () { duck(false); playViaAudioEl(uri); };
+        try {
+          var ret = VOICE.actx.decodeAudioData(abuf, onOk, onErr);
+          if (ret && ret.then) ret.then(onOk, onErr);
+        } catch (e) { onErr(); }
+        return true;
+      }
+    }
+    return playViaAudioEl(uri);
   }
 
   function speak(who, text, kind) {
@@ -322,7 +369,6 @@
     }
   }
 
-  /* Ретро-озвучка: очередь коротких тонов на реплику = иллюзия речи (когда нет системных голосов) */
   function talkBlips(who, kind, clean, gen) {
     var letters = clean.replace(/[^A-Za-z\u0400-\u04FF0-9]/g, "");
     var count = Math.max(2, Math.min(22, Math.round(letters.length / 2)));
@@ -346,6 +392,7 @@
     VOICE.talkGen++;
     if (VOICE.supported) { try { window.speechSynthesis.cancel(); } catch (e) {} }
     if (VOICE.voiceEl) { try { VOICE.voiceEl.pause(); } catch (e) {} }
+    if (VOICE.curSrc) { try { VOICE.curSrc.stop(); } catch (e) {} VOICE.curSrc = null; }
     duck(false);
   }
 
@@ -408,7 +455,6 @@
     window.speechSynthesis.onvoiceschanged = pickVoices;
   }
 
-  /* ---------- Стили ---------- */
   function injectStyle() {
     if (document.getElementById("pulseSceneCss")) return;
     var css = document.createElement("style");
@@ -486,7 +532,6 @@
     document.head.appendChild(css);
   }
 
-  /* ---------- Построение ---------- */
   function build() {
     if (box) return true;
     var proc = document.getElementById("processing");
@@ -575,7 +620,6 @@
     }, 170);
   }
 
-  /* ---------- Реплики ---------- */
   function rowEl(who) {
     var nm = names();
     var row = document.createElement("div");
@@ -684,7 +728,6 @@
     });
   }
 
-  /* ---------- Управление ---------- */
   function start() {
     if (S.running) return;
     injectStyle();
@@ -711,7 +754,6 @@
     S.resolving = true;
   }
 
-  /* Спор: диалог остаётся, добавляем вопрос + кнопки */
   function pushBubble(who, text) {
     if (!thread) return;
     var row = rowEl(who);
