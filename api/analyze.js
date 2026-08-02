@@ -170,7 +170,7 @@ function fallbackDialogue(direction, lang) {
   var ru = lang !== "en";
   var dir = String(direction || "").toUpperCase();
   var _pk = function (a) { return a[Math.floor(Math.random() * a.length)]; };
-  var _bd = function (s) { var w = ["dop", "opy", "dop", "opy", "dop", "opy"], o = []; for (var i = 0; i < 6; i++) o.push({ who: w[i], text: _pk(s[i]) }); return o; };
+  var _bd = function (s) { var n = 4 + Math.floor(Math.random() * 3); var w = ["dop", "opy", "dop", "opy", "dop", "opy"], o = []; for (var i = 0; i < n; i++) o.push({ who: w[i], text: _pk(s[i]) }); return o; };
   var _P = {
     ru: {
       BUY: [
@@ -245,7 +245,7 @@ function fallbackDialogue(direction, lang) {
       { who: "opy", text: "Не трушу, а жду. Подтвердится — тогда вход." }
     ];
     return [
-      { who: "dop", text: "Ну хоть что-нибудь нажмём, а? Скучно же! 😎" },
+      { who: "dop", text: "Ну ��оть что-нибудь нажмём, а? Скучно же! 😎" },
       { who: "opy", text: "Нет сигнала — значит наш вход сегодня подождать." },
       { who: "dop", text: "Руки чешутся, чемпион! 😤" },
       { who: "opy", text: "Скука дешевле слитого депозита. Пропускаем." },
@@ -710,7 +710,7 @@ function fishTTS(text, refId, timeoutMs, who) {
     if (!refId) return resolve({ err: "no_fish_ref" });
     var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
     var speed = (who === "opy") ? 0.9 : 1.14;
-    var volume = (who === "opy") ? 0 : 0.15;
+    var volume = (who === "opy") ? 0 : 0.8;
     var body = JSON.stringify({
       text: String(text || ""),
       reference_id: refId,
