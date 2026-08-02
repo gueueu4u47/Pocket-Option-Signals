@@ -682,8 +682,9 @@ function fishTTS(text, refId, timeoutMs, who) {
     var https = require("https");
     var key = process.env.FISH_API_KEY || "";
     if (!key) return resolve({ err: "no_fish_key" });
+    refId = String(refId || "").replace(/[^A-Za-z0-9_-]/g, "");
     if (!refId) return resolve({ err: "no_fish_ref" });
-    var model = process.env.FISH_MODEL || "s2.1-pro-free";
+    var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
     var speed = (who === "opy") ? 0.94 : 1.08;
     var body = JSON.stringify({
       text: String(text || ""),
