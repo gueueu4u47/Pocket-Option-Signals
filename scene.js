@@ -667,7 +667,7 @@
   function typingMs(t) { return Math.min(1200, 340 + String(t).length * 20); }
   function readMs(t) { return Math.min(2200, 700 + String(t).length * 30); }
 
-  function showLine(line, myGen) {
+  function showLine(line, myGen, audioP) {
     return new Promise(function (resolve) {
       if (myGen !== S.gen) return resolve();
       if (line.pause) {
@@ -682,25 +682,58 @@
       thread.appendChild(row);
       autoscroll();
       var bubble = row.querySelector(".ps-bubble");
+      var ap = audioP || (line.audio ? Promise.resolve(line.audio) : Promise.resolve(null));
       wait(typingMs(line.text)).then(function () {
         if (myGen !== S.gen) return resolve();
         bubble.classList.remove("typing");
         bubble.innerHTML = esc(line.text).replace(/\n/g, "<br>");
-        if (!(line.audio && playLineAudio(line.audio))) speak(line.who, line.text);
         autoscroll();
-        return wait(readMs(line.text)).then(resolve);
+        var advanced = false;
+        var advance = function () { if (advanced) return; advanced = true; if (myGen !== S.gen) return resolve(); wait(readMs(line.text)).then(resolve); };
+        var guard = setTimeout(advance, 4000);
+        ap.then(function (uri) {
+          clearTimeout(guard);
+          if (myGen !== S.gen) { return resolve(); }
+          if (!(uri && playLineAudio(uri))) speak(line.who, line.text);
+          advance();
+        }).catch(function () { clearTimeout(guard); if (myGen !== S.gen) return resolve(); speak(line.who, line.text); advance(); });
       });
     });
   }
 
+  function fetchLineAudio(who, text) {
+    if (!VOICE.on) return Promise.resolve(null);
+    var w = (who === OPY) ? "opy" : "dop";
+    var initData = "";
+    try { initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ""; } catch (e) {}
+    try {
+      return fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, who: w, initData: initData }) })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { return (d && d.uri) ? d.uri : null; })
+        .catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+
   function playBeat(beat, myGen, bailOnResolve) {
     var i = 0;
+    var pf = [];
+    function prefetch(n) {
+      if (n < 0 || n >= beat.length || pf[n] !== undefined) return;
+      var ln = beat[n];
+      if (!ln || ln.pause) { pf[n] = null; return; }
+      if (ln.audio) { pf[n] = Promise.resolve(ln.audio); return; }
+      pf[n] = fetchLineAudio(ln.who, ln.text);
+    }
+    prefetch(0); prefetch(1);
     function step() {
       if (myGen !== S.gen) return Promise.resolve();
       if (bailOnResolve && S.resolving) return Promise.resolve();
       if (i >= beat.length) return Promise.resolve();
-      var line = beat[i++];
-      return showLine(line, myGen).then(step);
+      var idx = i++;
+      prefetch(idx + 1);
+      var line = beat[idx];
+      return showLine(line, myGen, pf[idx]).then(step);
     }
     return step();
   }
