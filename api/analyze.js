@@ -2,7 +2,6 @@ const crypto = require("crypto");
 
 /* ============================================================
    Signal Pulse — /api/analyze
-   Анализ ОДНОГО загруженного скриншота графика.
    ============================================================ */
 
 function validateTelegramInitData(initData, botToken) {
@@ -50,9 +49,8 @@ function rateLimit(key, limit, windowMs) {
   return true;
 }
 
-/* ---------- Экономия: кэш одинаковых скриншотов ---------- */
 const CACHE = new Map();
-const CACHE_TTL = Number(process.env.ANALYZE_CACHE_TTL_MS || 900000); // 15 мин
+const CACHE_TTL = Number(process.env.ANALYZE_CACHE_TTL_MS || 900000);
 function imageKey(base64, lang) {
   return crypto.createHash("sha1").update(String(lang) + "|" + String(base64)).digest("hex");
 }
@@ -71,7 +69,6 @@ function cacheSet(key, payload) {
   }
 }
 
-/* ---------- AI helpers ---------- */
 const AI_BASE = process.env.AI_BASE_URL || "https://api.unity2.ai/v1";
 const MODELS = String(process.env.AI_MODELS || "gemini-3-flash-preview")
   .split(",")
@@ -98,6 +95,23 @@ function repairJson(s) {
   return str;
 }
 
+function escapeRawControlChars(s) {
+  let str = String(s);
+  let out = "";
+  let inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (esc) { out += c; esc = false; continue; }
+    if (c === "\\") { out += c; esc = true; continue; }
+    if (c === "\"") { inStr = !inStr; out += c; continue; }
+    if (inStr && c === "\n") { out += "\\n"; continue; }
+    if (inStr && c === "\r") { out += "\\r"; continue; }
+    if (inStr && c === "\t") { out += "\\t"; continue; }
+    out += c;
+  }
+  return out;
+}
+
 function parseJsonLoose(text) {
   let clean = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
   const first = clean.indexOf("{");
@@ -105,7 +119,13 @@ function parseJsonLoose(text) {
   if (first > -1 && last > -1 && last > first) clean = clean.slice(first, last + 1);
   else if (first > -1) clean = clean.slice(first);
   try { return JSON.parse(clean); }
-  catch (e) { try { return JSON.parse(repairJson(clean)); } catch (e2) { return null; } }
+  catch (e) {
+    try { return JSON.parse(escapeRawControlChars(clean)); }
+    catch (e1) {
+      try { return JSON.parse(repairJson(escapeRawControlChars(clean))); }
+      catch (e2) { return null; }
+    }
+  }
 }
 
 function looksTechnical(s) {
@@ -127,7 +147,6 @@ function cleanList(v, max) {
   return out.slice(0, max || 4);
 }
 
-/* Живой диалог Дофамин/Опыт: жёсткая валидация, мусор на экран не пускаем */
 function sanitizeDialogue(v) {
   const arr = Array.isArray(v) ? v : [];
   const out = [];
@@ -145,6 +164,49 @@ function sanitizeDialogue(v) {
     out.push({ who, text });
   }
   return out;
+}
+
+function fallbackDialogue(direction, lang) {
+  var ru = lang !== "en";
+  var dir = String(direction || "").toUpperCase();
+  if (ru) {
+    if (dir === "BUY") return [
+      { who: "dop", text: "Гляди, прёт вверх! Заходим сейчас, чемпион! 🚀" },
+      { who: "opy", text: "Тихо, обезьяна. Сначала подтверждение, потом кнопка." },
+      { who: "dop", text: "Да чего ждать?! Уедет же без нас! 😤" },
+      { who: "opy", text: "Уедет один — будет другой. По плану. Всегда." }
+    ];
+    if (dir === "SELL") return [
+      { who: "dop", text: "Вниз летит! Продаём, быстрее, упустим! 🔥" },
+      { who: "opy", text: "Не суетись. Ждём, пока движение подтвердится." },
+      { who: "dop", text: "Оно уже подтвердилось, глаза разуй! 👆" },
+      { who: "opy", text: "Видел тысячу таких. Вход по плану, не на нервах." }
+    ];
+    return [
+      { who: "dop", text: "Ну хоть что-нибудь нажмём, а? Скучно же! 😎" },
+      { who: "opy", text: "Нет сигнала — значит наш вход сегодня подождать." },
+      { who: "dop", text: "Руки чешутся, чемпион! 😤" },
+      { who: "opy", text: "Скука дешевле слитого депозита. Пропускаем." }
+    ];
+  }
+  if (dir === "BUY") return [
+    { who: "dop", text: "Look, it's flying up! Let's get in now, champ! 🚀" },
+    { who: "opy", text: "Easy, monkey. Confirmation first, then the button." },
+    { who: "dop", text: "Why wait?! It'll leave without us! 😤" },
+    { who: "opy", text: "One leaves, another comes. By the plan. Always." }
+  ];
+  if (dir === "SELL") return [
+    { who: "dop", text: "It's dropping! Sell, sell, faster! 🔥" },
+    { who: "opy", text: "Don't rush. We wait for the move to confirm." },
+    { who: "dop", text: "It already confirmed, open your eyes! 👆" },
+    { who: "opy", text: "Seen a thousand of these. By the plan, not nerves." }
+  ];
+  return [
+    { who: "dop", text: "Come on, let's press something! So boring! 😎" },
+    { who: "opy", text: "No signal means today our entry is to wait." },
+    { who: "dop", text: "My hands are itching, champ! 😤" },
+    { who: "opy", text: "Boredom is cheaper than a blown account. We skip." }
+  ];
 }
 
 function sanitizeState(v) {
@@ -195,6 +257,19 @@ function trimPartialText(s, cut) {
   return "";
 }
 
+function extractDialogueRaw(rawText) {
+  const raw = String(rawText || "");
+  const m = raw.match(/"dialogue"\s*:\s*\[([\s\S]*?)(\]|$)/i);
+  if (!m || !m[1]) return [];
+  const out = [];
+  const re = /\{[^{}]*?"who"\s*:\s*"([^"]+)"[^{}]*?"text"\s*:\s*"([\s\S]*?)"[^{}]*?\}/g;
+  let mm;
+  while ((mm = re.exec(m[1])) && out.length < 6) {
+    out.push({ who: mm[1], text: mm[2].replace(/\\n/g, " ").replace(/\\"/g, '"').trim() });
+  }
+  return out;
+}
+
 function extractFields(rawText) {
   const raw = String(rawText || "").replace(/```[a-z]*/gi, "");
   const out = {};
@@ -218,6 +293,8 @@ function extractFields(rawText) {
   if (reasons.length) out.reasons = reasons;
   const tips = list("tips");
   if (tips.length) out.tips = tips;
+  const dlgRaw = extractDialogueRaw(raw);
+  if (dlgRaw.length) out.dialogue = dlgRaw;
   return out;
 }
 
@@ -466,7 +543,6 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
   return { ok: false, error: lastErr };
 }
 
-/* ---------- Supabase ---------- */
 async function supaGet(path) {
   const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
   if (!base || !key) return null;
@@ -502,85 +578,25 @@ async function dailyAnalyzeCount(userId) {
   return Array.isArray(rows) ? rows.length : 0;
 }
 
-/* ---------- Промпты ---------- */
-const PROMPT_RU = `Ты — опытный трейдер-аналитик. Тебе дан ТОЛЬКО загруженный скриншот графика. Анализируй строго то, что реально видно: тренд, свечи и прайс-экшн, ключевые уровни.
-Правила:
-- Не гарантируй результат и не обещай прибыль.
-- Не выдумывай цену, индикаторы, актив или таймфрейм, если их не видно.
-- Если данных мало — direction "NO_SIGNAL", и в reasons объясни, чего именно не хватает.
-- reasons ОБЯЗАТЕЛЬНО непустой: 2-3 коротких конкретных факта по этому графику, простым языком, без нумерации и без слова "голосование". Именно reasons отвечает на вопрос "почему вверх, вниз или пропустить".
-- tips — максимум 2.
-Верни ТОЛЬКО JSON без markdown:
-{"direction":"BUY|SELL|NO_SIGNAL","reasons":["причина","причина"],"confidence":"низкая|средняя|высокая","summary":"1-2 живых предложения","strategy":"2-3 предложения: вход, подтверждение, отмена идеи","entryWindow":"условие или время входа","expiry":"интервал удержания","asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","tips":["совет","совет"]}
-Важно: соблюдай именно этот порядок ключей и пиши коротко.`;
+const PROMPT_RU = "Ты опытный трейдер-аналитик. Анализируй строго то, что видно на скриншоте. Верни ТОЛЬКО JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"причина\",\"причина\"],\"confidence\":\"низкая|средняя|высокая\",\"summary\":\"1-2 предложения\",\"strategy\":\"2-3 предложения\",\"entryWindow\":\"условие входа\",\"expiry\":\"интервал\",\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"tips\":[\"совет\"]}";
 
-const PROMPT_EN = `You are an experienced trading analyst. You are given ONLY the uploaded chart screenshot. Analyze strictly what is visible: trend, candles and price action, key levels.
-Rules:
-- Never guarantee a result or promise profit.
-- Do not invent price, indicators, asset or timeframe if not visible.
-- If data is insufficient, direction "NO_SIGNAL", and in reasons explain exactly what is missing.
-- reasons MUST be non-empty: 2-3 short concrete facts about this chart, plain language, no numbering. reasons is what answers "why up, down or skip".
-- tips — max 2.
-Return JSON only, no markdown:
-{"direction":"BUY|SELL|NO_SIGNAL","reasons":["reason","reason"],"confidence":"low|medium|high","summary":"1-2 lively sentences","strategy":"2-3 sentences: entry, confirmation, invalidation","entryWindow":"entry condition or timing","expiry":"holding interval","asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","tips":["tip","tip"]}
-Important: keep exactly this key order and be concise.`;
+const PROMPT_EN = "You are an experienced trading analyst. Analyze strictly what is visible on the screenshot. Return JSON only: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"reason\",\"reason\"],\"confidence\":\"low|medium|high\",\"summary\":\"1-2 sentences\",\"strategy\":\"2-3 sentences\",\"entryWindow\":\"entry condition\",\"expiry\":\"holding interval\",\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"tips\":[\"tip\"]}";
 
-const RETRY_RU = `Посмотри на скриншот графика и ответь ОДНИМ JSON-объектом без markdown и без пояснений вокруг:
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["короткая причина по графику","короткая причина по графику"],"summary":"одно предложение"}
-reasons обязателен и не может быть пустым.`;
+const RETRY_RU = "Посмотри на скриншот и ответь ОДНИМ JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"причина\",\"причина\"],\"summary\":\"одно предложение\"} reasons обязателен.";
 
-const RETRY_EN = `Look at the chart screenshot and reply with ONE JSON object, no markdown, no text around it:
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["short chart-based reason","short chart-based reason"],"summary":"one sentence"}
-reasons is required and cannot be empty.`;
+const RETRY_EN = "Look at the chart screenshot and reply with ONE JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"reason\",\"reason\"],\"summary\":\"one sentence\"} reasons is required.";
 
-const FAST_RU = `Ты опытный трейдер-аналитик. По скриншоту графика бинарных опционов дай короткий разбор.
-Отвечай ТОЛЬКО одним JSON-объектом, без markdown и без пояснений вокруг.
-Пиши живо и по делу: каждая причина - законченная фраза на 60-110 символов.
-Порядок ключей соблюдай строго, direction ставь первым.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"низкая|средняя|высокая","reasons":["факт по графику","факт по графику","факт по графику"],"asset":"актив или Не распознан","timeframe":"таймфрейм или Не распознан","summary":"1-2 предложения общей картины","entryWindow":"когда входить","expiry":"сколько держать"}
-Если график нечитаемый или картина смешанная - direction "NO_SIGNAL", и в reasons объясни, чего не хватает.
-reasons обязателен, 3 пункта.`;
+const FAST_RU = "Ты опытный трейдер-аналитик. По скриншоту графика дай короткий разбор. Отвечай ТОЛЬКО одним JSON-объектом, direction первым. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"низкая|средняя|высокая\",\"reasons\":[\"факт\",\"факт\",\"факт\"],\"asset\":\"актив или Не распознан\",\"timeframe\":\"таймфрейм или Не распознан\",\"summary\":\"1-2 предложения\",\"entryWindow\":\"когда входить\",\"expiry\":\"сколько держать\"} Если график нечитаемый - NO_SIGNAL. reasons обязателен, 3 пункта.";
 
-const FAST_EN = `You are an experienced trading analyst. Give a short read of this binary options chart screenshot.
-Answer with ONE JSON object only, no markdown, no text around it.
-Write vividly and to the point: each reason is a complete phrase of 60-110 characters.
-Keep the key order exactly, direction first.
-{"direction":"BUY|SELL|NO_SIGNAL","confidence":"low|medium|high","reasons":["chart fact","chart fact","chart fact"],"asset":"asset or Not recognized","timeframe":"timeframe or Not recognized","summary":"1-2 sentences on the overall picture","entryWindow":"when to enter","expiry":"how long to hold"}
-If the chart is unreadable or mixed - direction "NO_SIGNAL", and in reasons explain what is missing.
-reasons is required, 3 items.`;
+const FAST_EN = "You are an experienced trading analyst. Give a short read of this chart screenshot. Answer with ONE JSON object only, direction first. {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"confidence\":\"low|medium|high\",\"reasons\":[\"fact\",\"fact\",\"fact\"],\"asset\":\"asset or Not recognized\",\"timeframe\":\"timeframe or Not recognized\",\"summary\":\"1-2 sentences\",\"entryWindow\":\"when to enter\",\"expiry\":\"how long to hold\"} If unreadable - NO_SIGNAL. reasons required, 3 items.";
 
-/* Развёрнутый текст + живой диалог запрашиваем вторым шагом, уже без скриншота */
-const ENRICH_RU = `Ты режиссёр короткой КОМИКС-СЦЕНЫ, а не аналитик. Не делай «AI-анализ графика» и не делай «диалог помощника». Покажи внутренний конфликт трейдера как сценку двух живых персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Юмор рождается из контраста: один рвётся нажать кнопку СЕЙЧАС, второй его холодно осаживает.
-По графику уже получен сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты по графику: {REASONS}
-Персонажи:
-- "dop" (Дофамин): обезьяна в очках, импульсивный азарт, FOMO, «бери сейчас!». Говорит громко, эмоционально, с восклицаниями и мемными словечками, иногда эмодзи (🚀🔥😎😤👆). Забавный, но живой.
-- "opy" (Опыт): седой ветеран в тёмных очках, видел 1000 таких ошибок. Говорит сухо, коротко, с иронией, может назвать Дофамин «обезьяна» или «чемпион». Не запрещает — осаживает: «сначала подтверждение», «по плану. всегда».
-Ответь ОДНИМ JSON без markdown:
-{"reasons":["развёрнутая фраза по факту","развёрнутая фраза по факту","развёрнутая фраза по факту"],"summary":"2-3 предложения простым языком","strategy":"3 предложения: вход, подтверждение, отмена идеи","tips":["практический совет","практический совет"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"низкий|средний|высокий","emotion":"низкий|умеренный|повышенный|высокий","verdict":"вердикт Опыта, 2-5 слов"}}
-dialogue — 4 короткие живые реплики, как в комиксе. Чередуй dop/opy, начни с dop. Дофамин — громко и азартно тянет войти; Опыт — сухо и иронично тормозит. Каждая реплика до 90 символов, можно в 2-3 короткие строки через 
-. Мемы и эмодзи разрешены, но без обучения и без воды. Реагируй на {DIR}: BUY — импульс есть, входим по плану, а не на эмоциях; SELL — рынок вниз, ждём подтверждение; NO_SIGNAL — сегодня наш вход подождать.
-state — оцени состояние: impulse (сила желания войти), emotion (риск действия на эмоциях), verdict (что советует Опыт).
-Не выдумывай цифр, которых нет в фактах. В reasons бери только переданные факты.`;
+const ENRICH_RU = "Ты режиссёр короткой КОМИКС-СЦЕНЫ. Покажи внутренний конфликт трейдера как сценку двух персонажей с ПРОТИВОПОЛОЖНЫМИ характерами. Сигнал: направление {DIR}, актив {ASSET}, таймфрейм {TF}. Факты: {REASONS}. Персонажи: \"dop\" (Дофамин) — обезьяна в очках, импульсивный, FOMO, громко, эмодзи; \"opy\" (Опыт) — седой ветеран, сухо, иронично, тормозит. Ответь ОДНИМ JSON без markdown: {\"reasons\":[\"фраза\",\"фраза\",\"фраза\"],\"summary\":\"2-3 предложения\",\"strategy\":\"3 предложения\",\"tips\":[\"совет\",\"совет\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"низкий|средний|высокий\",\"emotion\":\"низкий|умеренный|повышенный|высокий\",\"verdict\":\"вердикт 2-5 слов\"}}. dialogue — 4 короткие реплики, чередуй dop/opy, начни с dop, каждая до 90 символов В ОДНУ строку без переносов. Не выдумывай цифр.";
 
-const ENRICH_EN = `You direct a short COMIC SCENE, not an analysis. Do not make an "AI chart analysis" or an "assistant dialogue". Show the trader's inner conflict as a scene of two living characters with OPPOSITE personalities. The humor comes from contrast: one wants to hit the button NOW, the other coldly holds him back.
-A signal is already produced: direction {DIR}, asset {ASSET}, timeframe {TF}. Chart facts: {REASONS}
-Characters:
-- "dop" (Dopamine): a monkey in shades, impulsive thrill, FOMO, "buy now!". Loud, emotional, exclamations and memey words, sometimes emoji (🚀🔥😎😤👆). Funny but alive.
-- "opy" (Experience): a grey-haired veteran in dark glasses who has seen 1000 such mistakes. Dry, short, ironic, may call Dopamine "monkey" or "champ". Does not forbid — he holds back: "confirmation first", "by the plan. always".
-Answer with ONE JSON, no markdown:
-{"reasons":["fuller phrase per fact","fuller phrase per fact","fuller phrase per fact"],"summary":"2-3 plain sentences","strategy":"3 sentences: entry, confirmation, invalidation","tips":["practical tip","practical tip"],"dialogue":[{"who":"dop","text":"..."},{"who":"opy","text":"..."},{"who":"dop","text":"..."},{"who":"opy","text":"..."}],"state":{"impulse":"low|medium|high","emotion":"low|moderate|elevated|high","verdict":"Experience verdict, 2-5 words"}}
-dialogue — 4 short living lines like a comic. Alternate dop/opy, start with dop. Dopamine loudly wants in; Experience dryly and ironically holds back. Each line up to 90 chars, may be 2-3 short lines via 
-. Memes and emoji allowed, but no teaching and no filler. React to {DIR}: BUY — momentum is there, we enter by the plan not on emotion; SELL — market leans down, wait for confirmation; NO_SIGNAL — today our entry is to wait.
-state — assess: impulse (urge to enter), emotion (risk of acting on emotion), verdict (what Experience advises).
-Do not invent numbers not in the facts. In reasons use only the given facts.`;
+const ENRICH_EN = "You direct a short COMIC SCENE. Show the trader inner conflict as two characters with OPPOSITE personalities. Signal: direction {DIR}, asset {ASSET}, timeframe {TF}. Facts: {REASONS}. Characters: \"dop\" (Dopamine) — a monkey in shades, impulsive, FOMO, loud, emoji; \"opy\" (Experience) — grey-haired veteran, dry, ironic, holds back. Answer with ONE JSON, no markdown: {\"reasons\":[\"phrase\",\"phrase\",\"phrase\"],\"summary\":\"2-3 sentences\",\"strategy\":\"3 sentences\",\"tips\":[\"tip\",\"tip\"],\"dialogue\":[{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"},{\"who\":\"dop\",\"text\":\"...\"},{\"who\":\"opy\",\"text\":\"...\"}],\"state\":{\"impulse\":\"low|medium|high\",\"emotion\":\"low|moderate|elevated|high\",\"verdict\":\"verdict 2-5 words\"}}. dialogue — 4 short lines, alternate dop/opy, start with dop, each up to 90 chars on ONE line with no line breaks. Do not invent numbers.";
 
-const MICRO_RU = `Скриншот графика бинарных опционов. Ответь ОДНИМ JSON и ничего больше:
-{"direction":"BUY|SELL|NO_SIGNAL","reasons":["до 50 символов","до 50 символов"],"confidence":"низкая|средняя|высокая"}
-Причины - очень короткие законченные фразы по графику. Никакого текста вне JSON.`;
+const MICRO_RU = "Скриншот графика. Ответь ОДНИМ JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"до 50 символов\",\"до 50 символов\"],\"confidence\":\"низкая|средняя|высокая\"} Никакого текста вне JSON.";
 
-const MICRO_EN = `Binary options chart screenshot. Answer with ONE JSON and nothing else:
-{"direction":"BUY|SELL|NO_SIGNAL","reasons":["under 50 chars","under 50 chars"],"confidence":"low|medium|high"}
-Reasons are very short complete phrases about the chart. No text outside JSON.`;
+const MICRO_EN = "Chart screenshot. Answer with ONE JSON: {\"direction\":\"BUY|SELL|NO_SIGNAL\",\"reasons\":[\"under 50 chars\",\"under 50 chars\"],\"confidence\":\"low|medium|high\"} No text outside JSON.";
 
 function softCard(res, lang, summary, reasons) {
   const ru = lang !== "en";
@@ -600,80 +616,6 @@ function softCard(res, lang, summary, reasons) {
     degraded: false,
     notice: true
   });
-}
-
-/* ============================================================ */
-/* ---------- Озвучка реплик через Microsoft Edge TTS (бесплатно, без ключа) ---------- */
-var EDGE_WSS = process.env.EDGE_WSS || "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-var EDGE_WSS_LEGACY = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-var EDGE_TRUSTED = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-var EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-140.0.3485.14";
-var EDGE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.3485.14";
-var EDGE_SKEW = 0;
-var EDGE_LAST_OK = EDGE_WSS_LEGACY;
-
-function edgeSecGec() {
-  var crypto = require("crypto");
-  var WIN_EPOCH = 11644473600n;
-  var ticks = BigInt(Math.floor(Date.now() / 1000) + EDGE_SKEW) + WIN_EPOCH;
-  ticks = ticks - (ticks % 300n);
-  ticks = ticks * 10000000n;
-  return crypto.createHash("sha256").update(ticks.toString() + EDGE_TRUSTED, "ascii").digest("hex").toUpperCase();
-}
-
-function edgeUuid() { return require("crypto").randomUUID().replace(/-/g, ""); }
-
-function edgeXmlEscape(v) {
-  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-}
-
-function edgeConnectOnce(endpoint, text, voice, pitch, rate, timeoutMs) {
-  return new Promise(function (resolve) {
-    var WebSocket = require("ws");
-    var done = false, chunks = [], status = 0, serverDate = "", ws = null;
-    var to = setTimeout(function () { finish({ err: "timeout" }); }, Math.max(2500, timeoutMs || 9000));
-    function pack() { return chunks.length ? ("data:audio/mpeg;base64," + Buffer.concat(chunks).toString("base64")) : null; }
-    function finish(result) { if (done) return; done = true; clearTimeout(to); try { if (ws) ws.terminate(); } catch (e) {} resolve(result); }
-    var url = endpoint + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
-    try {
-      ws = new WebSocket(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" }, perMessageDeflate: false, handshakeTimeout: Math.max(2500, timeoutMs || 9000) });
-    } catch (e) { return finish({ err: "ws_ctor:" + ((e && e.message) || "x") }); }
-    ws.on("unexpected-response", function (req, res) { status = res && res.statusCode; serverDate = (res && res.headers && res.headers.date) || ""; });
-    ws.on("open", function () {
-      var cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" + JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
-      var ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'><voice name='" + voice + "'><prosody pitch='" + pitch + "' rate='" + rate + "' volume='+0%'>" + edgeXmlEscape(text) + "</prosody></voice></speak>";
-      var msg = "X-RequestId:" + edgeUuid() + "\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:" + new Date().toString() + "Z\r\nPath:ssml\r\n\r\n" + ssml;
-      try { ws.send(cfg); ws.send(msg); } catch (e) { finish({ err: "send:" + ((e && e.message) || "x") }); }
-    });
-    ws.on("message", function (data, isBinary) {
-      if (!isBinary) { var s = data.toString(); if (s.indexOf("Path:turn.end") !== -1) { var u = pack(); finish(u ? { uri: u } : { err: "empty audio" }); } return; }
-      try { var b = Buffer.isBuffer(data) ? data : Buffer.from(data); var hl = (b[0] << 8) | b[1]; var audio = b.subarray(2 + hl); if (audio.length) chunks.push(Buffer.from(audio)); } catch (e) {}
-    });
-    ws.on("error", function (err) { finish({ err: status ? ("http " + status) : ("ws_error:" + ((err && err.message) || "conn")), status: status, serverDate: serverDate }); });
-    ws.on("close", function (code) { var u = pack(); if (u) finish({ uri: u }); else finish({ err: "closed:" + code + (status ? ("/" + status) : ""), status: status, serverDate: serverDate }); });
-  });
-}
-
-async function edgeTTS(text, voiceName, timeoutMs, who) {
-  try { require("ws"); } catch (e) { return { err: "no_ws_module" }; }
-  var voice = voiceName || "ru-RU-DmitryNeural";
-  var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
-  var rate = (who === "opy") ? "-6%" : "+12%";
-  var all = [EDGE_WSS, EDGE_WSS_LEGACY];
-  var endpoints = [];
-  if (EDGE_LAST_OK && all.indexOf(EDGE_LAST_OK) !== -1) endpoints.push(EDGE_LAST_OK);
-  for (var k = 0; k < all.length; k++) { if (endpoints.indexOf(all[k]) === -1) endpoints.push(all[k]); }
-  var last = { err: "fail" };
-  for (var i = 0; i < endpoints.length; i++) {
-    var r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs);
-    if (r && r.uri) { EDGE_LAST_OK = endpoints[i]; return { uri: r.uri }; }
-    if (r && r.status === 403 && r.serverDate) {
-      var srv = Math.floor(new Date(r.serverDate).getTime() / 1000);
-      if (srv) { EDGE_SKEW = srv - Math.floor(Date.now() / 1000); r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs); if (r && r.uri) { EDGE_LAST_OK = endpoints[i]; return { uri: r.uri }; } }
-    }
-    last = r || last;
-  }
-  return { err: (last && last.err) || "fail" };
 }
 
 /* ---------- Fish Audio TTS (https://fish.audio) ---------- */
@@ -728,9 +670,8 @@ function fishTTS(text, refId, timeoutMs, who) {
 }
 
 async function synthDialogueAudio(dialogue, apiKey, opts) {
-  const diag = { tried: 0, ok: 0, fish: 0, edge: 0, errs: [] };
+  const diag = { tried: 0, ok: 0, fish: 0, errs: [] };
   if (!apiKey || !Array.isArray(dialogue) || !dialogue.length) return diag;
-  const vDop = opts.voiceDop, vOpy = opts.voiceOpy;
   const fishKey = opts.fishKey || "", fDop = opts.fishDop || "", fOpy = opts.fishOpy || "";
   const perMs = opts.perMs, deadline = opts.deadline, concurrency = 2;
   let idx = 0;
@@ -740,7 +681,6 @@ async function synthDialogueAudio(dialogue, apiKey, opts) {
       if (Date.now() > deadline) { if (diag.errs.length < 4) diag.errs.push("deadline"); return; }
       const it = dialogue[my];
       if (!it || typeof it.text !== "string" || !it.text.trim()) continue;
-      const edgeVoice = (it.who === "opy") ? vOpy : vDop;
       const fishRef = (it.who === "opy") ? fOpy : fDop;
       const clean = it.text.replace(/\s+/g, " ").trim().slice(0, 300);
       let left = Math.min(perMs, deadline - Date.now());
@@ -750,13 +690,8 @@ async function synthDialogueAudio(dialogue, apiKey, opts) {
         const rf = await fishTTS(clean, fishRef, left, it.who);
         if (rf && rf.uri) { it.audio = rf.uri; diag.ok++; diag.fish++; continue; }
         if (rf && rf.err && diag.errs.length < 4) diag.errs.push("fish:" + rf.err);
-      }
-      left = Math.min(perMs, deadline - Date.now());
-      if (left < 1500) { if (diag.errs.length < 4) diag.errs.push("low budget2"); return; }
-      if (edgeVoice) {
-        const re = await edgeTTS(clean, edgeVoice, left, it.who);
-        if (re && re.uri) { it.audio = re.uri; diag.ok++; diag.edge++; }
-        else if (re && re.err && diag.errs.length < 4) diag.errs.push("edge:" + re.err);
+      } else if (diag.errs.length < 4) {
+        diag.errs.push("no_ref:" + it.who);
       }
     }
   }
@@ -853,7 +788,7 @@ module.exports = async (req, res) => {
             ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
             : ["The limit resets tomorrow morning.", "Meanwhile you can review your past signals in history."]);
       }
-    } catch (e) { /* fail-open */ }
+    } catch (e) {}
 
     const base64Image = image.indexOf(",") > -1 ? image.split(",").pop() : image;
 
@@ -870,38 +805,14 @@ module.exports = async (req, res) => {
 
     const cacheKey = imageKey(base64Image, lang);
     const cached = cacheGet(cacheKey);
-    if (cached) {
+    if (cached && cached.dialogue && cached.dialogue.length) {
       supaLogAnalyze(user.id);
       return res.status(200).json(Object.assign({}, cached, { cached: true }));
     }
 
-    const GLOBAL_LIMIT = Number(process.env.DAILY_GLOBAL_ANALYZE_LIMIT || 0);
-    if (!isOwner && GLOBAL_LIMIT > 0) {
-      try {
-        const usedAll = await globalAnalyzeCount();
-        if (usedAll >= GLOBAL_LIMIT) {
-          return res.status(200).json({
-            direction: "NO_SIGNAL",
-            confidence: lang === "ru" ? "низкая" : "low",
-            asset: lang === "ru" ? "Не распознан" : "Not recognized",
-            timeframe: "",
-            summary: lang === "ru"
-              ? "На сегодня достигнут общий лимит анализов."
-              : "The overall daily analysis limit has been reached.",
-            reasons: lang === "ru"
-              ? ["Сегодняшний объём анализов исчерпан.", "Возвращайся завтра — лимит обновится."]
-              : ["Today's analysis volume is used up.", "Come back tomorrow when the limit resets."],
-            strategy: "", tips: [], dialogue: [], state: null, degraded: false, notice: true, limited: true
-          });
-        }
-      } catch (e) { /* fail-open */ }
-    }
-
     const imagePart = { inline_data: { mime_type: mimeType, data: base64Image } };
     const mainPrompt = lang === "ru" ? FAST_RU : FAST_EN;
-    const richPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;
     const retryPrompt = lang === "ru" ? MICRO_RU : MICRO_EN;
-    const legacyRetry = lang === "ru" ? RETRY_RU : RETRY_EN;
 
     let best = null;
     let bestReasons = [];
@@ -934,7 +845,7 @@ module.exports = async (req, res) => {
         bestReasons = reasons;
         bestCut = cut;
       }
-      diag.push(model + (cut ? ": truncated (" + (r.finish || "cut") + ")" : ": weak answer"));
+      diag.push(model + (cut ? ": truncated" : ": weak answer"));
     }
 
     if (!best || !bestReasons.length || !best.direction || bestCut) {
@@ -1016,31 +927,35 @@ module.exports = async (req, res) => {
       degraded: degraded
     };
 
+    /* ГАРАНТИЯ ГОЛОСА: если модель не вернула диалог — ставим запасной, чтобы TTS всегда срабатывал */
+    if (!degraded && !payload.dialogue.length) {
+      payload.dialogue = fallbackDialogue(finalDirection, lang);
+      payload.dlgSource = "fallback";
+    } else if (payload.dialogue.length) {
+      payload.dlgSource = "ai";
+    }
+
     if (degraded) {
       console.error("ANALYZE_DEGRADED " + diag.join(" | ") + " raw=" + String(rawSeen).slice(0, 1200));
     }
-    if (!degraded && bestCut) {
-      console.error("ANALYZE_CUT " + diag.join(" | ") + " reasons=" + bestReasons.length + " raw=" + String(rawSeen).slice(0, 600));
-    }
+
     const voiceOff = String(process.env.VOICE_TTS || "").toLowerCase() === "off";
     if (!degraded && !voiceOff && payload.dialogue.length) {
       const fishKey = process.env.FISH_API_KEY || "";
-      const ttsHardCap = overallDeadline + (fishKey ? 11000 : 9000);
-      const ttsDeadline = Math.min(Date.now() + Number(process.env.TTS_BUDGET_MS || (fishKey ? 24000 : 16000)), ttsHardCap);
-      const voiceDop = process.env.EDGE_VOICE_DOP || "ru-RU-DmitryNeural";
-      const voiceOpy = process.env.EDGE_VOICE_OPY || "ru-RU-DmitryNeural";
+      const ttsHardCap = overallDeadline + 11000;
+      const ttsDeadline = Math.min(Date.now() + Number(process.env.TTS_BUDGET_MS || 24000), ttsHardCap);
       const fishDop = process.env.FISH_VOICE_DOP || "";
       const fishOpy = process.env.FISH_VOICE_OPY || "";
       try {
-        const d = await synthDialogueAudio(payload.dialogue, "on", { voiceDop, voiceOpy, fishKey, fishDop, fishOpy, perMs: Number(process.env.TTS_PER_MS || (fishKey ? 12000 : 9000)), deadline: ttsDeadline });
-        payload.ttsDiag = Object.assign({ engine: fishKey ? "fish+edge" : "edge", voiceDop, voiceOpy, fishDop: fishDop ? "set" : "", fishOpy: fishOpy ? "set" : "" }, d);
+        const d = await synthDialogueAudio(payload.dialogue, "on", { fishKey, fishDop, fishOpy, perMs: Number(process.env.TTS_PER_MS || 12000), deadline: ttsDeadline });
+        payload.ttsDiag = Object.assign({ engine: "fish", fishKey: fishKey ? "set" : "", fishDop: fishDop ? "set" : "", fishOpy: fishOpy ? "set" : "", dlgSource: payload.dlgSource }, d);
       } catch (e) {
-        payload.ttsDiag = { engine: "tts", fatal: (e && e.message) || String(e) };
+        payload.ttsDiag = { engine: "fish", fatal: (e && e.message) || String(e) };
       }
       console.error("TTS_DIAG " + JSON.stringify(payload.ttsDiag));
     }
 
-    if (!degraded) cacheSet(cacheKey, payload);
+    if (!degraded && payload.dialogue.some((d) => d && d.audio)) cacheSet(cacheKey, payload);
     supaLogAnalyze(user.id);
     return res.status(200).json(payload);
   } catch (error) {
