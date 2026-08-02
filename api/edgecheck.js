@@ -1,5 +1,8 @@
-// api/edgecheck.js — тест Microsoft Edge TTS на Vercel. Открой /api/edgecheck в браузере.
+// api/edgecheck.js — тест Microsoft Edge TTS через ws. Открой /api/edgecheck.
 const crypto = require("crypto");
+let WS = null, wsErr = "";
+try { WS = require("ws"); } catch (e) { wsErr = (e && e.message) || String(e); }
+
 const EDGE_WSS = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_TRUSTED = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-131.0.2903.99";
@@ -16,49 +19,41 @@ function edgeUuid() { return crypto.randomUUID().replace(/-/g, ""); }
 
 function edgeTest() {
   return new Promise(function (resolve) {
-    const WS = globalThis.WebSocket;
-    const info = { wsAvailable: typeof WS === "function", gecVer: EDGE_GEC_VER };
-    if (typeof WS !== "function") { info.result = "NO_WEBSOCKET"; return resolve(info); }
+    const info = { wsModule: !!WS, gecVer: EDGE_GEC_VER };
+    if (!WS) { info.result = "NO_WS_MODULE"; info.error = wsErr; return resolve(info); }
     const url = EDGE_WSS + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
-    let done = false, bytes = 0, ws = null;
+    let done = false, bytes = 0, status = 0, ws = null;
     const to = setTimeout(function () { fin({ result: "TIMEOUT" }); }, 15000);
     function fin(extra) {
       if (done) return; done = true; clearTimeout(to);
-      try { if (ws && ws.readyState <= 1) ws.close(); } catch (e) {}
+      try { if (ws) ws.terminate(); } catch (e) {}
       resolve(Object.assign(info, extra));
     }
     try {
-      ws = new WS(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" } });
-    } catch (e) {
-      try { ws = new WS(url); info.headersMode = "none"; } catch (e2) { return fin({ result: "WS_CTOR_FAIL", error: (e2 && e2.message) || String(e2) }); }
-    }
-    try { ws.binaryType = "arraybuffer"; } catch (e) {}
-    ws.onopen = function () {
+      ws = new WS(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" }, perMessageDeflate: false, handshakeTimeout: 12000 });
+    } catch (e) { return fin({ result: "WS_CTOR_FAIL", error: (e && e.message) || String(e) }); }
+    ws.on("unexpected-response", function (req, res) { status = res && res.statusCode; });
+    ws.on("open", function () {
       info.connected = true;
       const cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" + JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
       const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'><voice name='ru-RU-DmitryNeural'><prosody pitch='+0Hz' rate='+0%'>Проверка связи.</prosody></voice></speak>";
       const msg = "X-RequestId:" + edgeUuid() + "\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:" + new Date().toString() + "Z\r\nPath:ssml\r\n\r\n" + ssml;
       try { ws.send(cfg); ws.send(msg); } catch (e) { fin({ result: "SEND_FAIL", error: (e && e.message) || String(e) }); }
-    };
-    ws.onmessage = function (ev) {
-      const d = ev.data;
-      if (typeof d === "string") { if (d.indexOf("Path:turn.end") !== -1) fin({ result: bytes > 0 ? "OK" : "EMPTY", bytes: bytes }); return; }
-      try { const b = Buffer.from(d); const hl = (b[0] << 8) | b[1]; bytes += Math.max(0, b.length - 2 - hl); } catch (e) {}
-    };
-    ws.onerror = function (ev) { fin({ result: "WS_ERROR", error: (ev && (ev.message || ev.error && ev.error.message)) || "connection error" }); };
-    ws.onclose = function (ev) { if (!done) fin({ result: bytes > 0 ? "OK" : "CLOSED", bytes: bytes, code: ev && ev.code, reason: ev && ev.reason }); };
+    });
+    ws.on("message", function (data, isBinary) {
+      if (!isBinary) { const s = data.toString(); if (s.indexOf("Path:turn.end") !== -1) fin({ result: bytes > 0 ? "OK" : "EMPTY", bytes: bytes }); return; }
+      try { const b = Buffer.isBuffer(data) ? data : Buffer.from(data); const hl = (b[0] << 8) | b[1]; bytes += Math.max(0, b.length - 2 - hl); } catch (e) {}
+    });
+    ws.on("error", function (err) { fin({ result: "WS_ERROR", status: status, error: (status ? ("HTTP " + status) : ((err && err.message) || "connection error")) }); });
+    ws.on("close", function (code, reason) { if (!done) fin({ result: bytes > 0 ? "OK" : "CLOSED", bytes: bytes, code: code, status: status, reason: reason ? reason.toString().slice(0, 200) : "" }); });
   });
 }
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  try {
-    const out = await edgeTest();
-    return res.status(200).json(out);
-  } catch (e) {
-    return res.status(200).json({ result: "FATAL", error: (e && e.message) || String(e) });
-  }
+  try { return res.status(200).json(await edgeTest()); }
+  catch (e) { return res.status(200).json({ result: "FATAL", error: (e && e.message) || String(e) }); }
 };
 module.exports.config = { maxDuration: 30 };
 module.exports.maxDuration = 30;
