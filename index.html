@@ -1126,7 +1126,7 @@
       actionVision:"الانتقال إلى Pulse Vision", actionQuick:"تشغيل Pulse Quick", quickPreparing:"نحلل السوق…",
       qs1:"نقرأ الزوج المختار", qs2:"نراقب حركة السعر", qs3:"نتحقق من المستويات القريبة", qs4:"نقيس نشاط السوق", qs5:"نُشكّل الإشارة",
       visionEyebrow:"PULSE VISION", visionTitle:"تحليل الرسم البياني", visionText:"حمّل لقطة شاشة كاملة — يحفظ التطبيق الأبعاد.",
-      uploadTitle:"اختيار لقطة الشاشة", uploadHint:"PNG أو JPG أو WEBP · حتى 8 ميغابايت", analyze:"تحليل الرسم البياني",
+      uploadTitle:"اختيار لقطة الشاشة", uploadHint:"PNG أو JPG أو WEBP · حتى 8 ميغابا��ت", analyze:"تحليل الرسم البياني",
       stage1:"نجهّز الصورة", stage2:"ندرس بنية الرسم", stage3:"نتحقق من المستويات الظاهرة", stage4:"نُشكّل النتيجة",
       confidence:"الثقة", asset:"الأصل", duration:"المدة", entry:"الدخول", outcomeBy:"حتى النتيجة",
       cdEntry:"الدخول بعد", cdResult:"النتيجة بعد", cdDone:"حان وقت النتيجة",
@@ -1331,7 +1331,7 @@
       pairOffMsg:"Signals for this pair will be available from {TIME}. Please pick another pair for now." },
     uz:{ pairOffTag:"signallar {TIME} dan", pairQuietTag:"sokin · {TIME}",
       pairOffMsg:"Bu juft uchun signallar {TIME} dan mavjud bo‘ladi. Hozircha boshqa juftni tanlang." },
-    hi:{ pairOffTag:"संकेत {TIME} से", pairQuietTag:"शांत · {TIME}",
+    hi:{ pairOffTag:"संकेत {TIME} से", pairQuietTag:"शां��� · {TIME}",
       pairOffMsg:"इस जोड़ी के संकेत {TIME} से उपलब्ध होंगे। अभी दूसरी जोड़ी चुनें।" },
     pt:{ pairOffTag:"sinais a partir de {TIME}", pairQuietTag:"calmo · {TIME}",
       pairOffMsg:"Os sinais deste par estarão disponíveis a partir de {TIME}. Escolha outro par por agora." },
@@ -2111,6 +2111,7 @@
   function showVisionResult(data){
     window.__pulseDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : null;
     window.__pulseDlgSource = (data && data.dlgSource) ? String(data.dlgSource) : null;
+    window.__pulseDlgDiag = (data && data.dlgDiag) ? String(data.dlgDiag) : null;
     if (data && data.ttsDiag) { try { console.warn("[TTS]", JSON.stringify(data.ttsDiag)); } catch(e){} var __td=data.ttsDiag; if(__td.key===false||__td.fatal||(__td.tried&&!__td.ok)){ var __vr=document.getElementById("visionRisk"); if(__vr){ __vr.textContent="TTS: "+JSON.stringify(__td); __vr.style.display="block"; } } }
     var d = dirInfo(data.direction), tm = timing();
     var assetOut = (data.asset && data.asset!=="Не распознан" && String(data.asset).toLowerCase().indexOf("not recognized")===-1) ? data.asset : state.asset;
@@ -2359,7 +2360,7 @@
     var sets = {
       ru: {
         atTop: ["Цена подошла к максимуму сессии — уровень тестируется.",
-                "Работа идёт у вершины дня, запаса хода вверх почти не осталось.",
+                "Работа идёт у вершины дня, запаса ��ода вверх почти не осталось.",
                 "Цена давит в верхнюю границу дневного диапазона."],
         upper: ["Цена работает в верхней части дневного диапазона.",
                 "Основная торговля дня идёт выше середины диапазона.",
@@ -2570,7 +2571,7 @@
       flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
       closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
       limit: { ru: "Поставщик занят — повтори через минуту", en: "Provider is busy — retry in a minute" },
-      nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
+      nodata: { ru: "Не�� данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
     };
     return {
       direction: "NO_SIGNAL",
@@ -2579,7 +2580,7 @@
       summary: "",
       reasons: (map[reasonKey] || map.nodata)[ru ? "ru" : "en"],
       strategy: ru
-        ? "Оставайся вне рынка и запроси сигнал заново, когда движение оживёт."
+        ? "Оставайся вне рынка и запроси сигнал заново, когда движение ��живёт."
         : "Stay out of the market and request the signal again once the move wakes up.",
       tips: []
     };
