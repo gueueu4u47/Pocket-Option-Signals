@@ -712,38 +712,40 @@
   }
 
   function driver(myGen) {
-    var ai = aiBeat();
-    if (ai && ai.length) {
-      S.inResolve = true;
-      var polls = 0;
-      playBeat(ai, myGen, false).then(function waitResult() {
-        if (myGen !== S.gen) return;
-        if (S.resolving || polls++ > 40) return wait(1200);
-        return wait(400).then(waitResult);
-      }).then(function () {
-        if (myGen !== S.gen) return;
-        reveal();
-      });
-      return;
-    }
-    var intro = pickIntro() || [];
-    playBeat(intro, myGen, false).then(function loop() {
+    // Ждём диалог от анализа (window.__pulseDialogue из index.html).
+    // НИКАКОГО зашитого LIB-заполнителя: показываем только реальные реплики.
+    var polls = 0;
+    (function waitDlg() {
       if (myGen !== S.gen) return;
-      if (S.resolving) return finale(myGen);
-      return wait(520).then(function () {
-        if (myGen !== S.gen) return;
-        if (S.resolving) return finale(myGen);
-        var mid = pickMiddle() || [];
-        return playBeat(mid, myGen, true).then(loop);
-      });
-    });
+      var dq = window.__pulseDialogue;
+      if (dq && dq.length) {
+        S.inResolve = true;
+        var ai = aiBeat();
+        if (ai && ai.length) {
+          playBeat(ai, myGen, false).then(function () {
+            if (myGen !== S.gen) return;
+            return wait(1200);
+          }).then(function () {
+            if (myGen !== S.gen) return;
+            reveal();
+          });
+        } else if (myGen === S.gen) {
+          reveal();
+        }
+        return;
+      }
+      if (polls++ > 200) { if (myGen === S.gen) reveal(); return; }
+      wait(300).then(waitDlg);
+    })();
   }
 
   function aiBeat() {
     var raw = window.__pulseDialogue;
     var src = window.__pulseDlgSource || "?";
+    var why = window.__pulseDlgDiag || "";
     window.__pulseDialogue = null;
     window.__pulseDlgSource = null;
+    window.__pulseDlgDiag = null;
     if (!raw || !raw.length || typeof raw.length !== "number") { dbg("dlg", "empty (no __pulseDialogue from index.html)"); return null; }
     var out = [];
     for (var i = 0; i < raw.length && out.length < 6; i++) {
@@ -767,7 +769,7 @@
       withAudio = 0;
       for (var k4 = 0; k4 < out.length; k4++) { if (out[k4].audio) withAudio++; }
     }
-    dbg("dlg", "src=" + src + " | " + raw.length + " raw / " + out.length + " shown / " + withAudio + " voiced");
+    dbg("dlg", "src=" + src + " | " + raw.length + " raw / " + out.length + " shown / " + withAudio + " voiced" + (why ? " | why=" + why : ""));
     return out.length ? out : null;
   }
 
