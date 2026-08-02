@@ -179,6 +179,10 @@
       AUDIO.pool.push(a);
       try { var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
     }
+    if (!VOICE.voiceEl) {
+      VOICE.voiceEl = new Audio(silent);
+      try { var pv = VOICE.voiceEl.play(); if (pv && pv.catch) pv.catch(function () {}); } catch (e) {}
+    }
   }
 
   function audioEl() {
@@ -254,9 +258,7 @@
   }
 
   function sfx(kind) {
-    if (!VOICE.on) return;
-    if (kind === "rise") { playTone(523, 150, 0.5); setTimeout(function () { playTone(784, 180, 0.5); }, 120); }
-    else { playTone(140, 200, 0.55); }
+    return;
   }
 
   function voiceProfile(who, kind) {
@@ -283,6 +285,21 @@
     playTone(base, ms, 0.55);
   }
 
+  function playLineAudio(uri) {
+    if (!VOICE.on || !uri) return false;
+    try {
+      if (!VOICE.voiceEl) VOICE.voiceEl = new Audio();
+      var el = VOICE.voiceEl;
+      try { el.pause(); } catch (e) {}
+      try { el.currentTime = 0; } catch (e) {}
+      el.src = uri;
+      el.volume = 1;
+      var pr = el.play();
+      if (pr && pr.catch) pr.catch(function () {});
+      return true;
+    } catch (e) { return false; }
+  }
+
   function speak(who, text, kind) {
     if (!VOICE.on) return;
     var clean = voiceStripText(text);
@@ -299,11 +316,10 @@
       u.voice = prof.voice; u.lang = prof.voice.lang;
       u.pitch = prof.pitch; u.rate = prof.rate; u.volume = prof.volume;
       u.onend = function () { duck(false); };
-      u.onerror = function () { duck(false); talkBlips(who, k, clean, gen); };
-      try { synth.speak(u); } catch (e) { duck(false); talkBlips(who, k, clean, gen); }
+      u.onerror = function () { duck(false); };
+      try { synth.speak(u); } catch (e) { duck(false); }
       return;
     }
-    talkBlips(who, k, clean, gen);
   }
 
   /* Ретро-озвучка: очередь коротких тонов на реплику = иллюзия речи (когда нет системных голосов) */
@@ -329,12 +345,12 @@
   function voiceStopAll() {
     VOICE.talkGen++;
     if (VOICE.supported) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+    if (VOICE.voiceEl) { try { VOICE.voiceEl.pause(); } catch (e) {} }
     duck(false);
   }
 
   function confirmBeep() {
-    playTone(330, 130, 0.6);
-    setTimeout(function () { playTone(494, 150, 0.6); }, 130);
+    /* без синтетических пиканий */
   }
 
   function voiceToggle(btn) {
@@ -596,7 +612,7 @@
         if (myGen !== S.gen) return resolve();
         bubble.classList.remove("typing");
         bubble.innerHTML = esc(line.text).replace(/\n/g, "<br>");
-        speak(line.who, line.text);
+        if (!(line.audio && playLineAudio(line.audio))) speak(line.who, line.text);
         autoscroll();
         return wait(readMs(line.text)).then(resolve);
       });
@@ -650,7 +666,7 @@
       var text = (typeof it.text === "string") ? it.text.trim() : "";
       if (!who || !text) continue;
       if (text.length > 160) text = text.slice(0, 157) + "\u2026";
-      out.push({ who: who, text: text });
+      out.push({ who: who, text: text, audio: (typeof it.audio === "string" && it.audio) ? it.audio : null });
     }
     return out.length ? out : null;
   }
