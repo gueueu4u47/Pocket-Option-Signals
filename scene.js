@@ -741,7 +741,9 @@
 
   function aiBeat() {
     var raw = window.__pulseDialogue;
+    var src = window.__pulseDlgSource || "?";
     window.__pulseDialogue = null;
+    window.__pulseDlgSource = null;
     if (!raw || !raw.length || typeof raw.length !== "number") { dbg("dlg", "empty (no __pulseDialogue from index.html)"); return null; }
     var out = [];
     for (var i = 0; i < raw.length && out.length < 6; i++) {
@@ -758,7 +760,14 @@
     }
     var withAudio = 0;
     for (var k2 = 0; k2 < out.length; k2++) { if (out[k2].audio) withAudio++; }
-    dbg("dlg", raw.length + " raw / " + out.length + " shown / " + withAudio + " with audio");
+    if (withAudio > 0 && withAudio < out.length) {
+      var voiced = [];
+      for (var k3 = 0; k3 < out.length; k3++) { if (out[k3].audio || out[k3].pause) voiced.push(out[k3]); }
+      if (voiced.length) out = voiced;
+      withAudio = 0;
+      for (var k4 = 0; k4 < out.length; k4++) { if (out[k4].audio) withAudio++; }
+    }
+    dbg("dlg", "src=" + src + " | " + raw.length + " raw / " + out.length + " shown / " + withAudio + " voiced");
     return out.length ? out : null;
   }
 
