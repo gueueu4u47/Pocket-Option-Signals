@@ -710,7 +710,7 @@ function fishTTS(text, refId, timeoutMs, who) {
     if (!refId) return resolve({ err: "no_fish_ref" });
     var model = (process.env.FISH_MODEL || "s2.1-pro-free").replace(/[^A-Za-z0-9._-]/g, "");
     var speed = (who === "opy") ? 0.9 : 1.14;
-    var volume = (who === "opy") ? 0 : 0.6;
+    var volume = (who === "opy") ? 0 : 0.15;
     var body = JSON.stringify({
       text: String(text || ""),
       reference_id: refId,
