@@ -3,24 +3,8 @@
     "api/analyze.js": {
       "maxDuration": 60
     },
-    "api/analyze-localized.js": {
-      "maxDuration": 60
-    },
-    "api/page.js": {
-      "maxDuration": 10
-    },
     "api/market.js": {
       "maxDuration": 15
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/analyze",
-      "destination": "/api/analyze-localized"
-    },
-    {
-      "source": "/",
-      "destination": "/api/page"
-    }
-  ]
+  }
 }
