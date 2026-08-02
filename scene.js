@@ -14,20 +14,7 @@
     en: { dop: "DOPAMINE", opy: "EXPERIENCE" }
   };
 
-  var SPAR = {
-    ru: {
-      q: "Ну что, сигнал зашёл?",
-      yes: "✅ Зашёл", no: "❌ Слился",
-      win:  { dop: "ХА! Я ЖЕ ГОВОРИЛ! 🚀\nКто тут гений, а?", opy: "Повезло. В этот раз.\nДисциплина всё равно решает.", verdict: "🐒 В этот раз прав был Дофамин" },
-      lose: { opy: "Вот поэтому мы ждём.\nЯ это кино уже видел.", dop: "Н��... статистика — жестокая штука 😤", verdict: "🧠 В этот раз прав был Опыт" }
-    },
-    en: {
-      q: "So, did the signal hit?",
-      yes: "✅ It hit", no: "❌ It missed",
-      win:  { dop: "HA! I TOLD YOU! 🚀\nWho's the genius now?", opy: "Lucky. This time.\nDiscipline still wins.", verdict: "🐒 This time Dopamine was right" },
-      lose: { opy: "That's why we wait.\nSeen this movie before.", dop: "Well... stats are brutal 😤", verdict: "🧠 This time Experience was right" }
-    }
-  };
+  var SPAR = {"ru":{"q":"Ну что, сигнал зашёл?","yes":"✅ Зашёл","no":"❌ Слился","win":[{"dop":"ХА! Я ЖЕ ГОВОРИЛ! Кто тут гений, а? 🚀","opy":"Повезло. В этот раз. Дисциплина всё равно решает.","verdict":"🐒 В этот раз прав был Дофамин"},{"dop":"ВИДЕЛ?! Надо было ВСЮ котлету заряжать! 🔥","opy":"Один раз — это не статистика. Не зазнавайся.","verdict":"🐒 Сегодня очко Дофамину"},{"dop":"ЗАШЛО, ДЕТКА! Я же чуял ракету! 🚀","opy":"Чуял он. Просто угадал. Завтра снова сольёшь.","verdict":"🐒 Раунд за Дофамином"},{"dop":"ПЛЮС НА СЧЁТ! Слушай меня почаще! 🤑","opy":"Слушать тебя — быстрый путь к нулю. Но да, зашло.","verdict":"🐒 На этот раз угадал Дофамин"}],"lose":[{"opy":"Вот поэтому мы ждём. Я это кино уже видел.","dop":"Н-да... статистика — жестокая штука 😤","verdict":"🧠 В этот раз прав был Опыт"},{"opy":"Терпение — тоже позиция. Сегодня оно спасло депозит.","dop":"Да ладно, чуть-чуть не хватило! 😩","verdict":"🧠 Очко Опыту"},{"opy":"Рынок наказал спешку. Как обычно.","dop":"Ммм... ну в следующий раз точно! 🙈","verdict":"🧠 Раунд за Опытом"},{"opy":"Я не угадываю. Я жду. Вот и вся магия.","dop":"Ладно, ладно, твоя взяла 😮‍💨","verdict":"🧠 На этот раз прав Опыт"}]},"en":{"q":"So, did the signal hit?","yes":"✅ It hit","no":"❌ It missed","win":[{"dop":"HA! I TOLD YOU! Who's the genius now? 🚀","opy":"Lucky. This time. Discipline still wins.","verdict":"🐒 This time Dopamine was right"},{"dop":"SEE?! Should've gone all in! 🔥","opy":"One trade isn't a stat. Don't get cocky.","verdict":"🐒 Point for Dopamine"},{"dop":"GREEN, BABY! Listen to me more often! 🚀","opy":"Listening to you is a fast track to zero. But fine, it hit.","verdict":"🐒 Round to Dopamine"}],"lose":[{"opy":"That's why we wait. Seen this movie before.","dop":"Well... stats are brutal 😤","verdict":"🧠 This time Experience was right"},{"opy":"Patience is a position too. It just saved the account.","dop":"Come on, so close! 😩","verdict":"🧠 Point for Experience"},{"opy":"The market punishes haste. As always.","dop":"Ok ok, next time for sure 🙈","verdict":"🧠 Round to Experience"}]}};
 
   var LIB = {
     ru: {
@@ -878,6 +865,18 @@
         .catch(function () { fallback(); });
     } catch (e) { fallback(); }
   }
+  var _sparUsed = {};
+  function sparPick(pool, key) {
+    if (!pool || !pool.length) return { dop: "", opy: "", verdict: "" };
+    if (pool.length === 1) return pool[0];
+    var used = _sparUsed[key] || [];
+    if (used.length >= pool.length) used = [];
+    var avail = [];
+    for (var i = 0; i < pool.length; i++) if (used.indexOf(i) === -1) avail.push(i);
+    var idx = avail[Math.floor(Math.random() * avail.length)];
+    used.push(idx); _sparUsed[key] = used;
+    return pool[idx];
+  }
   function spar() { return SPAR[lang()] || SPAR.en; }
   function showVerdict(text, who) {
     if (!box) return;
@@ -901,8 +900,8 @@
       }
     }
     var L1, L2, vText, vWho;
-    if (outcome === "yes") { L1 = [DOP, sp.win.dop]; L2 = [OPY, sp.win.opy]; vText = sp.win.verdict; vWho = "dop"; }
-    else { L1 = [OPY, sp.lose.opy]; L2 = [DOP, sp.lose.dop]; vText = sp.lose.verdict; vWho = "opy"; }
+    if (outcome === "yes") { var pw = sparPick(sp.win, "win"); L1 = [DOP, pw.dop]; L2 = [OPY, pw.opy]; vText = pw.verdict; vWho = "dop"; }
+    else { var pl = sparPick(sp.lose, "lose"); L1 = [OPY, pl.opy]; L2 = [DOP, pl.dop]; vText = pl.verdict; vWho = "opy"; }
     // Финал строго ПОСЛЕДОВАТЕЛЬНО: следующая реплика стартует только когда договорила предыдущая.
     var gap = 450;
     pushBubble(L1[0], L1[1], true);
