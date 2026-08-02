@@ -112,6 +112,28 @@
   }
   function txtOf(id) { var e = document.getElementById(id); return e ? (e.textContent || "").trim() : ""; }
 
+  var DBG = { on: true, el: null, lines: {} };
+  function dbgEnsure() {
+    if (!DBG.on || !document.body) return;
+    if (!DBG.el) {
+      var d = document.createElement("div");
+      d.id = "psDbg";
+      d.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:99999;max-width:78vw;font:11px/1.4 ui-monospace,monospace;color:#9fe3ff;background:rgba(0,0,0,.78);border:1px solid rgba(120,180,255,.45);border-radius:8px;padding:7px 9px;pointer-events:none;";
+      document.body.appendChild(d);
+      DBG.el = d;
+    }
+  }
+  function dbg(k, v) {
+    if (!DBG.on) return;
+    DBG.lines[k] = v;
+    dbgEnsure();
+    if (!DBG.el) return;
+    var order = ["voice", "ctx", "dlg", "play", "err"];
+    var s = [];
+    for (var i = 0; i < order.length; i++) { if (DBG.lines[order[i]] != null) s.push(order[i] + ": " + DBG.lines[order[i]]); }
+    DBG.el.textContent = "PS voice \u2014 " + s.join("  |  ");
+  }
+
   function Picker(getSet) {
     var used = [];
     return function () {
@@ -227,6 +249,7 @@
       VOICE.master.connect(VOICE.actx.destination);
     }
     if (VOICE.actx.state === "suspended") { try { VOICE.actx.resume(); } catch (e) {} }
+    dbg("ctx", VOICE.actx ? VOICE.actx.state : "no-AudioContext");
   }
 
   function bgStart() {
@@ -311,7 +334,8 @@
   // работает). Там, где HTML5 <audio> с data-URI блокируется (Telegram/iOS),
   // это единственный надёжный путь.
   function playLineAudio(uri) {
-    if (!VOICE.on || !uri) return false;
+    if (!VOICE.on) { dbg("play", "skip: voice OFF"); return false; }
+    if (!uri) { dbg("play", "skip: line has no audio"); return false; }
     ensureAudio();
     var canWebAudio = VOICE.actx && typeof VOICE.actx.decodeAudioData === "function" && /^data:audio\/(mpeg|mp3|mp4|aac|ogg|wav)/i.test(uri);
     if (canWebAudio) {
@@ -322,6 +346,7 @@
         if (VOICE.curSrc) { try { VOICE.curSrc.stop(); } catch (e) {} VOICE.curSrc = null; }
         if (VOICE.actx.state === "suspended") { try { VOICE.actx.resume(); } catch (e) {} }
         duck(true);
+        dbg("play", "decoding mp3, ctx=" + VOICE.actx.state);
         var onOk = function (audioBuf) {
           if (!VOICE.on || myGen !== VOICE.talkGen) { duck(false); return; }
           try {
@@ -334,16 +359,19 @@
             src.onended = function () { if (myGen === VOICE.talkGen) duck(false); };
             VOICE.curSrc = src;
             src.start(0);
-          } catch (e) { duck(false); playViaAudioEl(uri); }
+            dbg("play", "WEBAUDIO PLAYING " + (Math.round(audioBuf.duration * 10) / 10) + "s");
+          } catch (e) { duck(false); dbg("err", "src.start: " + ((e && e.message) || e)); playViaAudioEl(uri); }
         };
-        var onErr = function () { duck(false); playViaAudioEl(uri); };
+        var onErr = function (e) { duck(false); dbg("err", "decode failed -> audio el " + (e ? ((e && e.message) || e) : "")); playViaAudioEl(uri); };
         try {
           var ret = VOICE.actx.decodeAudioData(abuf, onOk, onErr);
           if (ret && ret.then) ret.then(onOk, onErr);
-        } catch (e) { onErr(); }
+        } catch (e) { onErr(e); }
         return true;
       }
+      dbg("err", "base64 decode returned null");
     }
+    dbg("play", "audio element fallback");
     return playViaAudioEl(uri);
   }
 
@@ -402,6 +430,7 @@
 
   function voiceToggle(btn) {
     VOICE.on = !VOICE.on;
+    dbg("voice", VOICE.on ? "ON" : "off");
     try { localStorage.setItem("ps_voice", VOICE.on ? "1" : "0"); } catch (e) {}
     if (VOICE.on) {
       unlockAudioPool();
@@ -698,7 +727,7 @@
   function aiBeat() {
     var raw = window.__pulseDialogue;
     window.__pulseDialogue = null;
-    if (!raw || !raw.length || typeof raw.length !== "number") return null;
+    if (!raw || !raw.length || typeof raw.length !== "number") { dbg("dlg", "empty (no __pulseDialogue from index.html)"); return null; }
     var out = [];
     for (var i = 0; i < raw.length && out.length < 6; i++) {
       var it = raw[i];
@@ -712,6 +741,9 @@
       if (text.length > 160) text = text.slice(0, 157) + "\u2026";
       out.push({ who: who, text: text, audio: (typeof it.audio === "string" && it.audio) ? it.audio : null });
     }
+    var withAudio = 0;
+    for (var k2 = 0; k2 < out.length; k2++) { if (out[k2].audio) withAudio++; }
+    dbg("dlg", raw.length + " raw / " + out.length + " shown / " + withAudio + " with audio");
     return out.length ? out : null;
   }
 
@@ -744,6 +776,8 @@
     document.body.classList.add("pulse-scene-on");
     box.classList.add("show");
     ensureVoiceBtn();
+    dbg("voice", VOICE.on ? "ON" : "off");
+    dbg("ctx", VOICE.actx ? VOICE.actx.state : "not created yet");
     startProgress(S.gen);
     driver(S.gen);
   }
