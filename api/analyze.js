@@ -495,9 +495,9 @@ function googleText(data) {
   return cand.content.parts.map((p) => (p && p.text) || "").join("").trim();
 }
 
-async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson) {
+async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens) {
   const mdl = googleModel(model);
-  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
+  const cap = Number(maxTokens || process.env.AI_MAX_TOKENS || 6000);
   const gParts = parts.map((p) => {
     if (p && p.inline_data) {
       return { inline_data: { mime_type: p.inline_data.mime_type, data: p.inline_data.data } };
@@ -555,8 +555,8 @@ async function callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJso
   return { ok: false, error: lastErr };
 }
 
-async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson) {
-  if (isGoogleKey(apiKey)) return callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson);
+async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens) {
+  if (isGoogleKey(apiKey)) return callGoogle(apiKey, model, parts, temperature, timeoutMs, forceJson, maxTokens);
   const content = parts.map((p) => {
     if (p && p.text) return { type: "text", text: p.text };
     if (p && p.inline_data) {
@@ -564,7 +564,7 @@ async function callModel(apiKey, model, parts, temperature, timeoutMs, forceJson
     }
     return { type: "text", text: "" };
   });
-  const cap = Number(process.env.AI_MAX_TOKENS || 6000);
+  const cap = Number(maxTokens || process.env.AI_MAX_TOKENS || 6000);
   const base = {
     model,
     messages: [{ role: "user", content }],
@@ -866,7 +866,7 @@ module.exports = async (req, res) => {
       if (!isOwner && DAILY_LIMIT > 0 && used >= DAILY_LIMIT) {
         return softCard(res, lang,
           lang === "ru"
-            ? `На сегодня анализы закончились (${DAILY_LIMIT} в день).`
+            ? `Н�� сегодня анализы закончились (${DAILY_LIMIT} в день).`
             : `Today's analyses are used up (${DAILY_LIMIT} per day).`,
           lang === "ru"
             ? ["Лимит обновится завтра утром.", "Пока можно разобрать свои прошлые сигналы в истории."]
@@ -911,7 +911,7 @@ module.exports = async (req, res) => {
     for (const model of MODELS) {
       const ms = budgetKeep(22000, 13000);
       if (ms < 7000) { diag.push(model + ": skipped (time)"); break; }
-      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true);
+      const r = await callModel(apiKey, model, [{ text: mainPrompt }, imagePart], 0.45, ms, true, 1500);
       if (!r.ok) { diag.push(model + ": " + r.error); continue; }
       rawSeen = r.text;
       const parsed = Object.assign(extractFields(r.text), r.parsed || {});
@@ -998,7 +998,7 @@ module.exports = async (req, res) => {
           .split("{DIR}").join(normDirection(best.direction))
           .split("{ASSET}").join(String(best.asset || "-"))
           .split("{REASONS}").join(bestReasons.join("; "));
-        const dr = await callModel(apiKey, MODELS[0], [{ text: dp }], 0.9, dms, true);
+        const dr = await callModel(apiKey, MODELS[0], [{ text: dp }], 0.9, dms, true, 1000);
         if (dr.ok) {
           const dex = Object.assign(extractFields(dr.text), dr.parsed || {});
           const dlg2 = sanitizeDialogue(dex.dialogue);
