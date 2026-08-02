@@ -3,6 +3,9 @@ const https = require("https");
 
 function synth(text, refId, key, model, who) {
   return new Promise(function (resolve) {
+    refId = String(refId || "").replace(/[^A-Za-z0-9_-]/g, "");
+    model = String(model || "").replace(/[^A-Za-z0-9._-]/g, "");
+    if (!refId) return resolve({ result: "NO_REF_AFTER_CLEAN" });
     const speed = who === "opy" ? 0.94 : 1.08;
     const body = JSON.stringify({ text: text, reference_id: refId, format: "mp3", mp3_bitrate: 128, chunk_length: 300, normalize: true, latency: "balanced", prosody: { speed: speed, volume: 0 } });
     let done = false, chunks = [], req = null;
