@@ -19,7 +19,7 @@
       q: "Ну что, сигнал зашёл?",
       yes: "✅ Зашёл", no: "❌ Слился",
       win:  { dop: "ХА! Я ЖЕ ГОВОРИЛ! 🚀\nКто тут гений, а?", opy: "Повезло. В этот раз.\nДисциплина всё равно решает.", verdict: "🐒 В этот раз прав был Дофамин" },
-      lose: { opy: "Вот поэтому мы ждём.\nЯ это кино уже видел.", dop: "Ну... статистика — жестокая штука 😤", verdict: "🧠 В этот раз прав был Опыт" }
+      lose: { opy: "Вот поэтому мы ждём.\nЯ это кино уже видел.", dop: "Н��... статистика — жестокая штука 😤", verdict: "🧠 В этот раз прав был Опыт" }
     },
     en: {
       q: "So, did the signal hit?",
@@ -333,7 +333,7 @@
   // Голоса идут через WebAudio — тот же канал, что и фон (который на телефоне
   // работает). Там, где HTML5 <audio> с data-URI блокируется (Telegram/iOS),
   // это единственный надёжный путь.
-  function playLineAudio(uri) {
+  function playLineAudio(uri, onEnded) {
     if (!VOICE.on) { dbg("play", "skip: voice OFF"); return false; }
     if (!uri) { dbg("play", "skip: line has no audio"); return false; }
     ensureAudio();
@@ -356,7 +356,7 @@
             g.gain.value = 1;
             src.connect(g);
             g.connect(VOICE.master || VOICE.actx.destination);
-            src.onended = function () { if (myGen === VOICE.talkGen) duck(false); };
+            src.onended = function () { if (myGen === VOICE.talkGen) { duck(false); if (onEnded) { try { onEnded(); } catch (e) {} } } };
             VOICE.curSrc = src;
             src.start(0);
             dbg("play", "WEBAUDIO PLAYING " + (Math.round(audioBuf.duration * 10) / 10) + "s");
@@ -824,18 +824,24 @@
     if (!silent) speak(who, text);
   }
   // Озвучка ФИНАЛЬНЫХ фиксированных реплик через /api/tts (голос Fish), с откатом на немой speak.
-  function voiceLine(who, text) {
-    if (!VOICE.on) return;
+  function voiceLine(who, text, onDone) {
+    var done = false;
+    var finish = function () { if (done) return; done = true; if (onDone) { try { onDone(); } catch (e) {} } };
+    if (!VOICE.on) { setTimeout(finish, 250); return; }
     var w = (who === OPY) ? "opy" : "dop";
     var initData = "";
     try { initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ""; } catch (e) {}
+    var guard = setTimeout(finish, 9000);
+    var wrapDone = function () { clearTimeout(guard); finish(); };
+    var estMs = Math.min(6500, Math.max(1600, String(text || "").length * 85));
+    var fallback = function () { try { speak(who, text); } catch (e) {} setTimeout(wrapDone, estMs); };
     try {
       fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: text, who: w, initData: initData }) })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) { if (d && d.uri) { playLineAudio(d.uri); } else { speak(who, text); } })
-        .catch(function () { speak(who, text); });
-    } catch (e) { speak(who, text); }
+        .then(function (d) { if (d && d.uri && playLineAudio(d.uri, wrapDone)) { return; } fallback(); })
+        .catch(function () { fallback(); });
+    } catch (e) { fallback(); }
   }
   function spar() { return SPAR[lang()] || SPAR.en; }
   function showVerdict(text, who) {
@@ -862,10 +868,20 @@
     var L1, L2, vText, vWho;
     if (outcome === "yes") { L1 = [DOP, sp.win.dop]; L2 = [OPY, sp.win.opy]; vText = sp.win.verdict; vWho = "dop"; }
     else { L1 = [OPY, sp.lose.opy]; L2 = [DOP, sp.lose.dop]; vText = sp.lose.verdict; vWho = "opy"; }
-    // Финал озвучиваем ПООЧЕРЕДНО (с запасом по времени), чтоб реплики не резали друг друга.
-    pushBubble(L1[0], L1[1], true); voiceLine(L1[0], L1[1]);
-    setTimeout(function () { pushBubble(L2[0], L2[1], true); voiceLine(L2[0], L2[1]); }, 2800);
-    setTimeout(function () { showVerdict(vText, vWho); voiceLine(vWho === "dop" ? DOP : OPY, vText); }, 5600);
+    // Финал строго ПОСЛЕДОВАТЕЛЬНО: следующая реплика стартует только когда договорила предыдущая.
+    var gap = 450;
+    pushBubble(L1[0], L1[1], true);
+    voiceLine(L1[0], L1[1], function () {
+      setTimeout(function () {
+        pushBubble(L2[0], L2[1], true);
+        voiceLine(L2[0], L2[1], function () {
+          setTimeout(function () {
+            showVerdict(vText, vWho);
+            voiceLine(vWho === "dop" ? DOP : OPY, vText);
+          }, gap);
+        });
+      }, gap);
+    });
   }
   function renderSpar() {
     if (!box) return;
