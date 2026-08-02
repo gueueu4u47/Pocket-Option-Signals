@@ -604,45 +604,40 @@ function softCard(res, lang, summary, reasons) {
 
 /* ============================================================ */
 /* ---------- Озвучка реплик через Microsoft Edge TTS (бесплатно, без ключа) ---------- */
-var EDGE_WSS = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+var EDGE_WSS = process.env.EDGE_WSS || "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+var EDGE_WSS_LEGACY = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 var EDGE_TRUSTED = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-var EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-131.0.2903.99";
-var EDGE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.2903.99";
+var EDGE_GEC_VER = process.env.EDGE_GEC_VERSION || "1-140.0.3485.14";
+var EDGE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.3485.14";
+var EDGE_SKEW = 0;
 
 function edgeSecGec() {
   var crypto = require("crypto");
   var WIN_EPOCH = 11644473600n;
-  var ticks = BigInt(Math.floor(Date.now() / 1000)) + WIN_EPOCH;
+  var ticks = BigInt(Math.floor(Date.now() / 1000) + EDGE_SKEW) + WIN_EPOCH;
   ticks = ticks - (ticks % 300n);
   ticks = ticks * 10000000n;
-  var str = ticks.toString() + EDGE_TRUSTED;
-  return crypto.createHash("sha256").update(str, "ascii").digest("hex").toUpperCase();
+  return crypto.createHash("sha256").update(ticks.toString() + EDGE_TRUSTED, "ascii").digest("hex").toUpperCase();
 }
 
-function edgeUuid() {
-  return require("crypto").randomUUID().replace(/-/g, "");
-}
+function edgeUuid() { return require("crypto").randomUUID().replace(/-/g, ""); }
 
 function edgeXmlEscape(v) {
   return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-async function edgeTTS(text, voiceName, timeoutMs, who) {
-  var WebSocket;
-  try { WebSocket = require("ws"); } catch (e) { return { err: "no_ws_module" }; }
-  var voice = voiceName || "ru-RU-DmitryNeural";
-  var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
-  var rate = (who === "opy") ? "-6%" : "+12%";
-  var url = EDGE_WSS + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
-  return await new Promise(function (resolve) {
-    var done = false, chunks = [], status = 0, ws = null;
+function edgeConnectOnce(endpoint, text, voice, pitch, rate, timeoutMs) {
+  return new Promise(function (resolve) {
+    var WebSocket = require("ws");
+    var done = false, chunks = [], status = 0, serverDate = "", ws = null;
     var to = setTimeout(function () { finish({ err: "timeout" }); }, Math.max(2500, timeoutMs || 9000));
     function pack() { return chunks.length ? ("data:audio/mpeg;base64," + Buffer.concat(chunks).toString("base64")) : null; }
     function finish(result) { if (done) return; done = true; clearTimeout(to); try { if (ws) ws.terminate(); } catch (e) {} resolve(result); }
+    var url = endpoint + "&Sec-MS-GEC=" + edgeSecGec() + "&Sec-MS-GEC-Version=" + encodeURIComponent(EDGE_GEC_VER) + "&ConnectionId=" + edgeUuid();
     try {
-      ws = new WebSocket(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" }, perMessageDeflate: false, handshakeTimeout: 10000 });
+      ws = new WebSocket(url, { headers: { "User-Agent": EDGE_UA, "Origin": "chrome-extension://jdiccldimpsojpoohpkozjmacepdlmdj", "Pragma": "no-cache", "Cache-Control": "no-cache" }, perMessageDeflate: false, handshakeTimeout: Math.max(2500, timeoutMs || 9000) });
     } catch (e) { return finish({ err: "ws_ctor:" + ((e && e.message) || "x") }); }
-    ws.on("unexpected-response", function (req, res) { status = res && res.statusCode; });
+    ws.on("unexpected-response", function (req, res) { status = res && res.statusCode; serverDate = (res && res.headers && res.headers.date) || ""; });
     ws.on("open", function () {
       var cfg = "X-Timestamp:" + new Date().toString() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" + JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" }, outputFormat: "audio-24khz-48kbitrate-mono-mp3" } } } });
       var ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ru-RU'><voice name='" + voice + "'><prosody pitch='" + pitch + "' rate='" + rate + "' volume='+0%'>" + edgeXmlEscape(text) + "</prosody></voice></speak>";
@@ -653,11 +648,29 @@ async function edgeTTS(text, voiceName, timeoutMs, who) {
       if (!isBinary) { var s = data.toString(); if (s.indexOf("Path:turn.end") !== -1) { var u = pack(); finish(u ? { uri: u } : { err: "empty audio" }); } return; }
       try { var b = Buffer.isBuffer(data) ? data : Buffer.from(data); var hl = (b[0] << 8) | b[1]; var audio = b.subarray(2 + hl); if (audio.length) chunks.push(Buffer.from(audio)); } catch (e) {}
     });
-    ws.on("error", function (err) { finish({ err: status ? ("http " + status) : ("ws_error:" + ((err && err.message) || "conn")) }); });
-    ws.on("close", function (code) { var u = pack(); if (u) finish({ uri: u }); else finish({ err: "closed:" + code + (status ? ("/" + status) : "") }); });
+    ws.on("error", function (err) { finish({ err: status ? ("http " + status) : ("ws_error:" + ((err && err.message) || "conn")), status: status, serverDate: serverDate }); });
+    ws.on("close", function (code) { var u = pack(); if (u) finish({ uri: u }); else finish({ err: "closed:" + code + (status ? ("/" + status) : ""), status: status, serverDate: serverDate }); });
   });
 }
 
+async function edgeTTS(text, voiceName, timeoutMs, who) {
+  try { require("ws"); } catch (e) { return { err: "no_ws_module" }; }
+  var voice = voiceName || "ru-RU-DmitryNeural";
+  var pitch = (who === "opy") ? "-10Hz" : "+15Hz";
+  var rate = (who === "opy") ? "-6%" : "+12%";
+  var endpoints = [EDGE_WSS, EDGE_WSS_LEGACY];
+  var last = { err: "fail" };
+  for (var i = 0; i < endpoints.length; i++) {
+    var r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs);
+    if (r && r.uri) return { uri: r.uri };
+    if (r && r.status === 403 && r.serverDate) {
+      var srv = Math.floor(new Date(r.serverDate).getTime() / 1000);
+      if (srv) { EDGE_SKEW = srv - Math.floor(Date.now() / 1000); r = await edgeConnectOnce(endpoints[i], text, voice, pitch, rate, timeoutMs); if (r && r.uri) return { uri: r.uri }; }
+    }
+    last = r || last;
+  }
+  return { err: (last && last.err) || "fail" };
+}
 
 async function synthDialogueAudio(dialogue, apiKey, opts) {
   const diag = { tried: 0, ok: 0, errs: [] };
