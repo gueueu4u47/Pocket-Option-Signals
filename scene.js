@@ -814,14 +814,28 @@
     S.resolving = true;
   }
 
-  function pushBubble(who, text) {
+  function pushBubble(who, text, silent) {
     if (!thread) return;
     var row = rowEl(who);
     thread.appendChild(row);
     var b = row.querySelector(".ps-bubble");
     if (b) { b.classList.remove("typing"); b.innerHTML = esc(text).replace(/\n/g, "<br>"); }
     autoscroll();
-    speak(who, text);
+    if (!silent) speak(who, text);
+  }
+  // Озвучка ФИНАЛЬНЫХ фиксированных реплик через /api/tts (голос Fish), с откатом на немой speak.
+  function voiceLine(who, text) {
+    if (!VOICE.on) return;
+    var w = (who === OPY) ? "opy" : "dop";
+    var initData = "";
+    try { initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ""; } catch (e) {}
+    try {
+      fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, who: w, initData: initData }) })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d && d.uri) { playLineAudio(d.uri); } else { speak(who, text); } })
+        .catch(function () { speak(who, text); });
+    } catch (e) { speak(who, text); }
   }
   function spar() { return SPAR[lang()] || SPAR.en; }
   function showVerdict(text, who) {
@@ -832,7 +846,6 @@
     v.textContent = text;
     host.appendChild(v);
     sfx("rise");
-    speak(who, text, "key");
     autoscroll();
   }
   function resolveSpar(outcome) {
@@ -846,13 +859,13 @@
         if (btns[i].getAttribute("data-o") === outcome) btns[i].classList.add("chosen");
       }
     }
-    if (outcome === "yes") {
-      pushBubble(DOP, sp.win.dop);
-      setTimeout(function () { pushBubble(OPY, sp.win.opy); showVerdict(sp.win.verdict, "dop"); }, 700);
-    } else {
-      pushBubble(OPY, sp.lose.opy);
-      setTimeout(function () { pushBubble(DOP, sp.lose.dop); showVerdict(sp.lose.verdict, "opy"); }, 700);
-    }
+    var L1, L2, vText, vWho;
+    if (outcome === "yes") { L1 = [DOP, sp.win.dop]; L2 = [OPY, sp.win.opy]; vText = sp.win.verdict; vWho = "dop"; }
+    else { L1 = [OPY, sp.lose.opy]; L2 = [DOP, sp.lose.dop]; vText = sp.lose.verdict; vWho = "opy"; }
+    // Финал озвучиваем ПООЧЕРЕДНО (с запасом по времени), чтоб реплики не резали друг друга.
+    pushBubble(L1[0], L1[1], true); voiceLine(L1[0], L1[1]);
+    setTimeout(function () { pushBubble(L2[0], L2[1], true); voiceLine(L2[0], L2[1]); }, 2800);
+    setTimeout(function () { showVerdict(vText, vWho); voiceLine(vWho === "dop" ? DOP : OPY, vText); }, 5600);
   }
   function renderSpar() {
     if (!box) return;
