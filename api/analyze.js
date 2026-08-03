@@ -269,14 +269,40 @@ module.exports = async function localizedAnalyze(req, res) {
     return res.json(sanitizePublicPayload(completeDialogue(localizePayload(payload, language), language)));
   };
 
-  const corePath = require.resolve("./analyze-core");
-  delete require.cache[corePath];
-  const analyzeCore = require("./analyze-core");
+  // This endpoint has its own Gemini key. Do not alter the existing
+  // GEMINI_API_KEY used by the Telegram assistant in Vercel.
+  const pulseKey = String(process.env.PULSE_APP_GEMINI || "").trim();
+  const previousEnv = {
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    AI_BASE_URL: process.env.AI_BASE_URL,
+    AI_MODELS: process.env.AI_MODELS
+  };
 
-  return storage.run(
-    { code: language, name: LANGUAGES[language] },
-    () => analyzeCore(innerReq, innerRes)
-  );
+  function restoreEnv(name, value) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+
+  if (pulseKey) {
+    process.env.GEMINI_API_KEY = pulseKey;
+    process.env.AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
+    process.env.AI_MODELS = "gemini-3.6-flash";
+  }
+
+  try {
+    const corePath = require.resolve("./analyze-core");
+    delete require.cache[corePath];
+    const analyzeCore = require("./analyze-core");
+
+    return await storage.run(
+      { code: language, name: LANGUAGES[language] },
+      () => analyzeCore(innerReq, innerRes)
+    );
+  } finally {
+    restoreEnv("GEMINI_API_KEY", previousEnv.GEMINI_API_KEY);
+    restoreEnv("AI_BASE_URL", previousEnv.AI_BASE_URL);
+    restoreEnv("AI_MODELS", previousEnv.AI_MODELS);
+  }
 };
 
 module.exports.config = { maxDuration: 60 };
