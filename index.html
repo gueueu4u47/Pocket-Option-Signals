@@ -11,6 +11,8 @@
 <style>
 /* Production: never render internal diagnostics in the user interface. */
 #psDbg{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+/* Show the whole uploaded frame in the scene thumbnail; never crop it visually. */
+#pulseScene .ps-file-thumb img{object-fit:contain!important;background:#080b12!important;}
   :root{
     --bg:#0A0A0A; --bg2:#111111; --card:#151515; --card2:#1B1B1B; --line:#2A2A2A;
     --text:#F4F4F4; --muted:#969696; --silver:#D7D9DD;
@@ -934,7 +936,7 @@
       dirUp:"ВВЕРХ", dirDown:"ВНИЗ", dirNone:"НЕТ СИГНАЛА", confLow:"низкая", confMid:"средняя", confHigh:"высокая",
       newAnalysis:"Новый анализ", newQuick:"Новый Pulse Quick", openHistory:"Открыть историю",
       profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настройки сохраняются на этом устройстве.",
-      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуск����", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
+      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезап��ск����", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
       hapticTitle:"Тактильный отклик", hapticHint:"Вибрация Telegram при нажатии", on:"Вкл", off:"Выкл",
       selAssetTitle:"Выбранный актив", selAssetHint:"Используется при создании результата",
       statsTitle:"Личная статистика", statAll:"Всего",
@@ -1059,7 +1061,7 @@
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
       dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
-      newAnalysis:"नया विश्लेष��", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
+      newAnalysis:"नया विश्���ेष��", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
       hapticTitle:"कंपन प्रतिक्रिया", hapticHint:"टैप पर Telegram कंपन", on:"चालू", off:"बंद",
@@ -1299,7 +1301,7 @@
   for (var _lc6 in EXTRA_T6){ if(T[_lc6]){ for(var _ek6 in EXTRA_T6[_lc6]){ T[_lc6][_ek6] = EXTRA_T6[_lc6][_ek6]; } } }
 
   var EXTRA_T8 = {
-    ru:{ camAskTitle:"Снять график камерой", camAskNo:"Не сейчас", camAskYes:"Продолжить",
+    ru:{ camAskTitle:"Снять график камерой", camAskNo:"Не сейч��с", camAskYes:"Продолжить",
       camAskText:"Сей��ас телефон спросит разрешение на камеру — нажми «Разрешить». Кадр нужен только для анализа графика и никуда не сохраняется. Камера выключается сразу после снимка." },
     en:{ camAskTitle:"Capture the chart", camAskNo:"Not now", camAskYes:"Continue",
       camAskText:"Your phone will now ask for camera access — tap Allow. The frame is used only to analyse the chart and is never saved. The camera turns off right after the shot." },
@@ -1333,7 +1335,7 @@
     uz:{ detailLoading:"Tahlil yozilmoqda…" },
     hi:{ detailLoading:"विश्लेषण लिखा जा रहा है…" },
     pt:{ detailLoading:"Escrevendo a análise…" },
-    ar:{ detailLoading:"جارٍ كتابة التحليل…" },
+    ar:{ detailLoading:"ج��رٍ كتابة التحليل…" },
     kk:{ detailLoading:"Талдау жазылуда…" }
   };
   for (var _lcA in EXTRA_T10){ if(T[_lcA]){ for(var _ekA in EXTRA_T10[_lcA]){ T[_lcA][_ekA] = EXTRA_T10[_lcA][_ekA]; } } }
@@ -2053,6 +2055,7 @@
   }
   function startProcessing(){
     var tm = timing();
+    var tip=$("shotTip"); if(tip) tip.classList.remove("show");
     $("procAssetLabel").childNodes[0].nodeValue = t("asset")+" ";
     $("procDurationLabel").childNodes[0].nodeValue = t("duration")+" ";
     $("procAsset").textContent = state.asset;
@@ -2121,7 +2124,12 @@
   }
 
   function showVisionResult(data){
-    window.__pulseDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : null;
+    var publicDialogue = (data && Array.isArray(data.dialogue)) ? data.dialogue : [];
+    // The scene must never wait silently when analysis returns without dialogue.
+    if(!publicDialogue.length && data && data.direction){
+      publicDialogue = [{who:"opy", text:String(data.summary || t("errDegraded") || "Analysis completed.")}];
+    }
+    window.__pulseDialogue = publicDialogue.length ? publicDialogue : null;
     window.__pulseDlgSource = null;
     window.__pulseDlgDiag = null;
     var d = dirInfo(data.direction), tm = timing();
@@ -2179,7 +2187,7 @@
       reasons: ru
         ? ["Анализ графика не завершился — сервис не ответил вовремя.",
            "Без подтверждения по графику вход не оправдан.",
-           "Повтори анализ через минуту или загрузи более чёткий скриншот."]
+           "Повтори анализ через минуту или загруз�� более чёткий скриншот."]
         : ["Chart analysis did not complete — the service did not respond in time.",
            "Without chart confirmation an entry is not justified.",
            "Retry in a minute or upload a clearer screenshot."],
@@ -2217,7 +2225,6 @@
         if(vr){
           vr.textContent = errTextFor(msg);
           vr.style.display="block";
-          if($("shotTip")) $("shotTip").classList.add("show");
         }
       }
       function finishWith(data, done, diag){
@@ -2345,7 +2352,7 @@
              "Инициатива слегка у покупателя, борьба почти равная.",
              "Спрос чуть впереди — основание шаткое."]
           : ["Перевес продавца есть, но он едва заметен.",
-             "Инициатива слегка у продавца, борьба почти равная.",
+             "Инициа��ива слегка у продавца, борьба почти равная.",
              "Предложение чуть впереди — основание шаткое."]
       },
       en: {
