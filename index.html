@@ -765,7 +765,7 @@
       <div class="processing" id="processing">
         <div class="proc-meta">
           <div id="procAssetLabel">Актив<b id="procAsset">—</b></div>
-          <div id="procDurationLabel">Длительность<b id="procDuration">��</b></div>
+          <div id="procDurationLabel">Длительность<b id="procDuration">����</b></div>
         </div>
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 132 132"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="55%" stop-color="var(--silver)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
@@ -816,7 +816,7 @@
         <button class="toggle" id="soundToggle">Выкл</button>
       </div>
       <div class="p-row">
-        <div><b id="hapticTitle">Тактильный отклик</b><span id="hapticHint">Вибрация Telegram при нажатии</span></div>
+        <div><b id="hapticTitle">��актильный отклик</b><span id="hapticHint">Вибрация Telegram при нажатии</span></div>
         <button class="toggle" id="hapticToggle">Вкл</button>
       </div>
       <div class="p-row">
@@ -918,7 +918,7 @@
       brand:"Личный помощник для работы с графиком", welcomeSub:"Signal Pulse готов к работе.",
       btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"Начать",
       navHistory:"История", navCreate:"Создать", navVision:"Vision", navProfile:"Профиль",
-      historyEyebrow:"ИСТОРИЯ", historyTitle:"История результатов", historyText:"Здесь появляются результаты Pulse Vision и Pulse Quick.",
+      historyEyebrow:"ИСТОРИЯ", historyTitle:"История результатов", historyText:"Здесь появляются рез��льтаты Pulse Vision и Pulse Quick.",
       emptyTitle:"История пока пуста", emptyText:"Загрузи график в Pulse Vision или создай быстрый результат.", goVision:"Перейти к Pulse Vision",
       createEyebrow:"СОЗДАТЬ", createTitle:"Параметры результата", createText:"Выбери OTC-актив, длительность, тип входа и режим.",
       assetLabel:"OTC-актив", searchPlaceholder:"Поиск актива", durationLabel:"Длительность", entryLabel:"Тип входа",
@@ -1059,7 +1059,7 @@
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
       dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
-      newAnalysis:"नया विश्लेषण", newQuick:"नय�� Pulse Quick", openHistory:"इतिहास खोलें",
+      newAnalysis:"नया विश्लेषण", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
       hapticTitle:"कंपन प्रतिक्रिया", hapticHint:"टैप पर Telegram कंपन", on:"चालू", off:"बंद",
@@ -1268,7 +1268,7 @@
       chartProxy:"Mostrando o gráfico do mercado real — o OTC tem a cotação própria da corretora, os números podem diferir.",
       chartExotic:"Este par não tem gráfico em nenhuma bolsa pública — a corretora desenha esses ativos por conta própria." },
     ar:{ tapToPick:"انقر للاختيار", pickGallery:"من المعرض", pickCamera:"التقاط صورة",
-      chartProxy:"يظهر رسم السوق الحقيقي — لـ OTC سعر خاص من الوسيط وقد تختلف الأرقام.",
+      chartProxy:"يظهر رسم السوق الحقيقي — لـ OTC سعر خاص من الوسيط و��د تختلف الأرقام.",
       chartExotic:"لا يوجد رسم لهذا الزوج في أي بورصة عامة — الوسيط يرسم مزل هذه الأصول بنفسه." },
     kk:{ tapToPick:"Таңдау үшін басыңыз", pickGallery:"Галереядан", pickCamera:"Суретке түсіру",
       chartProxy:"Нақты нарық графигі көрсетілген — OTC бағасы брокердің өзінде, сандар өзгеше болуы мүмкін.",
@@ -3024,9 +3024,10 @@
   }
   $("imageInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
   $("camInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
+  // Open the device camera picker directly. This avoids a separate
+  // getUserMedia permission request from the embedded Telegram WebView.
   $("camBtn").addEventListener("click", function(){
-    if(camAsked){ openCam(); return; }
-    var o = $("camAsk"); if(o) o.classList.add("show"); else openCam();
+    $("camInput").click();
   });
   $("camAskNo").addEventListener("click", function(){ $("camAsk").classList.remove("show"); });
   $("camAskYes").addEventListener("click", function(){
