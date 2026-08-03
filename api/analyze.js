@@ -40,6 +40,18 @@ if (!global.__pulseOriginalFetch) {
 
         let inserted = false;
         const content = body?.messages?.[0]?.content;
+        const googleParts = body?.contents?.[0]?.parts;
+        const hasImage =
+          (Array.isArray(content) && content.some((part) => part && part.type === "image_url")) ||
+          (Array.isArray(googleParts) && googleParts.some((part) => part && part.inline_data));
+        // Vision answers include reasons and six dialogue lines. A 1500-token cap
+        // caused valid chart reads to be truncated and returned as NO_SIGNAL.
+        if (hasImage) {
+          if (typeof body.max_tokens === "number" && body.max_tokens < 2600) body.max_tokens = 2600;
+          if (body.generationConfig && typeof body.generationConfig.maxOutputTokens === "number" && body.generationConfig.maxOutputTokens < 2600) {
+            body.generationConfig.maxOutputTokens = 2600;
+          }
+        }
         if (Array.isArray(content)) {
           const textPart = content.find((part) => part && part.type === "text");
           if (textPart) {
@@ -48,7 +60,7 @@ if (!global.__pulseOriginalFetch) {
           }
         }
 
-        const parts = body?.contents?.[0]?.parts;
+        const parts = googleParts;
         if (!inserted && Array.isArray(parts)) {
           const textPart = parts.find((part) => part && typeof part.text === "string");
           if (textPart) {
