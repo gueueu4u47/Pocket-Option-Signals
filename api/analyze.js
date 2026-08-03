@@ -34,7 +34,9 @@ if (!global.__pulseOriginalFetch) {
           "entryWindow, expiry, state and every dialogue text. Keep JSON keys, " +
           "direction values BUY/SELL/NO_SIGNAL and who values dop/opy unchanged. " +
           "Never use Russian or English unless the selected language is Russian or English. " +
-          "When dialogue is requested, return exactly 6 alternating lines, starting with dop.";
+          "When dialogue is requested, return exactly 6 alternating lines, starting with dop. " +
+          "A clear photograph of another phone screen is a valid chart image. Ignore the phone frame, hands, glare and surrounding app UI; focus on the largest visible chart area. " +
+          "Do not call a camera photo unreadable when candles and price structure are visibly distinguishable. Still return NO_SIGNAL when the chart is readable but no trading direction is actually confirmed.";
 
         let inserted = false;
         const content = body?.messages?.[0]?.content;
@@ -124,7 +126,7 @@ const FALLBACK = {
     NONE: ["Vamos apertar alguma coisa? Que tédio! 😎", "Sem sinal, sem operação.", "Minha mão tá coçando! 😤", "Tédio custa menos que prejuízo."]
   },
   ar: {
-    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سيهرب من دوننا! 😤", "ت��هب فرصة وتأتي أخرى. التزم بالخطة."],
+    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سي��رب من دوننا! 😤", "ت��هب فرصة وتأتي أخرى. التزم بالخطة."],
     SELL: ["ينهار للأسفل! بِع الآن! 🔥", "لا تتعجل. ليس كل هبوط إشارة.", "واضح أنه هابط! 😤", "من دون تأكيد قد يكون فخًا."],
     NONE: ["ألا نضغط أي شيء؟ ممل! 😎", "لا إشارة، لا صفقة.", "يدي تريد الضغط! 😤", "الملل أرخص من الخسارة."]
   },
