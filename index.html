@@ -934,7 +934,7 @@
       dirUp:"ВВЕРХ", dirDown:"ВНИЗ", dirNone:"НЕТ СИГНАЛА", confLow:"низкая", confMid:"средняя", confHigh:"высокая",
       newAnalysis:"Новый анализ", newQuick:"Новый Pulse Quick", openHistory:"Открыть историю",
       profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настройки сохраняются на этом устройстве.",
-      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуска", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
+      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуск��", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
       hapticTitle:"Тактильный отклик", hapticHint:"Вибрация Telegram при нажатии", on:"Вкл", off:"Выкл",
       selAssetTitle:"Выбранный актив", selAssetHint:"Используется при создании результата",
       statsTitle:"Личная статистика", statAll:"Всего",
@@ -1178,7 +1178,7 @@
       emptyTitle:"Тарих әзірге бос", emptyText:"Pulse Vision-ға график жүктеңіз немесе жылдам нәтиже жасаңыз.", goVision:"Pulse Vision-ға өту",
       createEyebrow:"ЖАСАУ", createTitle:"Нәтиже параметрлері", createText:"OTC активін, ұзақтығын, кіру түрін және режимді таңдаңыз.",
       assetLabel:"OTC активі", searchPlaceholder:"Актив іздеу", durationLabel:"Ұзақтығы", entryLabel:"Кіру түрі",
-      entryNearest:"Ең жақын нүкте", entryLater:"Ұзақтықтан кейін", modeLabel:"Режим",
+      entryNearest:"Ең жақын нүкте", entryLater:"Ұзақтықтан к��йін", modeLabel:"Режим",
       visionModeText:"Жүктелген графикті талдау", quickModeText:"Валюта жұбының қозғалысы мен нарық белсенділігі бойынша сигнал",
       actionVision:"Pulse Vision-ға өту", actionQuick:"Pulse Quick іске қосу", quickPreparing:"Нарықты талдап жатырмыз…",
       qs1:"Таңдалған жұпты оқып жатырмыз", qs2:"Баға қозғалысын қараймыз", qs3:"Жақын деңгейлерді тексереміз", qs4:"Нарық белсенділігін салыстырамыз", qs5:"Сигнал құрып жатырмыз",
@@ -2375,7 +2375,7 @@
                 "Работа идёт у вершины дня, запаса хода вверх почти не осталось.",
                 "Цена давит в верхнюю границу дневного диапазона."],
         upper: ["Цена работает в верхней части дневного диапазона.",
-                "Основная торговля дня идёт выше середины диапазона.",
+                "Основная торговля дн�� идёт выше середины диапазона.",
                 "Цена держится ближе к ве��хней границе сессии."],
         middle: ["Цена в середине дневного диапазона, смещения нет.",
                  "Торговля идёт по центру диапазона — ни одна сторона не забрала территорию.",
@@ -3024,10 +3024,10 @@
   }
   $("imageInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
   $("camInput").addEventListener("change", function(e){ handlePickedFile(e.target.files && e.target.files[0]); });
-  // Open the device camera picker directly. This avoids a separate
-  // getUserMedia permission request from the embedded Telegram WebView.
+  // Open the in-app camera directly. Some Telegram WebViews ignore the
+  // capture attribute and open the gallery, so getUserMedia is required.
   $("camBtn").addEventListener("click", function(){
-    $("camInput").click();
+    openCam();
   });
   $("camAskNo").addEventListener("click", function(){ $("camAsk").classList.remove("show"); });
   $("camAskYes").addEventListener("click", function(){
