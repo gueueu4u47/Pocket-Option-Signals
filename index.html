@@ -765,7 +765,7 @@
       <div class="processing" id="processing">
         <div class="proc-meta">
           <div id="procAssetLabel">Актив<b id="procAsset">—</b></div>
-          <div id="procDurationLabel">Длительность<b id="procDuration">����</b></div>
+          <div id="procDurationLabel">Длительность<b id="procDuration">������</b></div>
         </div>
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 132 132"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="55%" stop-color="var(--silver)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><circle class="bg" cx="66" cy="66" r="58"/><circle class="fg" id="ringFg" cx="66" cy="66" r="58"/></svg>
@@ -934,7 +934,7 @@
       dirUp:"ВВЕРХ", dirDown:"ВНИЗ", dirNone:"НЕТ СИГНАЛА", confLow:"низкая", confMid:"средняя", confHigh:"высокая",
       newAnalysis:"Новый анализ", newQuick:"Новый Pulse Quick", openHistory:"Открыть историю",
       profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настройки сохраняются на этом устройстве.",
-      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуск��", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
+      langTitle:"Язык интерфейса", langHint:"Сохраняется после перезапуск����", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
       hapticTitle:"Тактильный отклик", hapticHint:"Вибрация Telegram при нажатии", on:"Вкл", off:"Выкл",
       selAssetTitle:"Выбранный актив", selAssetHint:"Используется при создании результата",
       statsTitle:"Личная статистика", statAll:"Всего",
@@ -1059,7 +1059,7 @@
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
       dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
-      newAnalysis:"नया विश्लेषण", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
+      newAnalysis:"नया विश्लेष��", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
       hapticTitle:"कंपन प्रतिक्रिया", hapticHint:"टैप पर Telegram कंपन", on:"चालू", off:"बंद",
@@ -1156,7 +1156,7 @@
       detailWhy:"سبب هذه الإشارة", detailStrategy:"الاستراتيجية", detailTips:"نصائح", detailSummary:"باختصار", detailTimeframe:"الإطار الزمني", detailNoData:"لا يوجد تحليل مفصّل لهذه النتيجة.",
       win:"Win", loss:"Loss", skip:"تخطٍّ",
       errFailed:"Pulse Vision غير متاح حاليًا. حاول لاحقًا.",
-      errTimeout:"لم يكتمل التحليل في الوقت المحدد. حاول مرة أخرى.",
+      errTimeout:"��م يكتمل التحليل في الوقت المحدد. حاول مرة أخرى.",
       errNetwork:"لا اتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.",
       errServer:"أعادت خدمة التحليل خطأً. حاول بعد دقيقة.",
       errBusy:"تم استهلاك حد الطلبات. انتظر ثم حاول مرة أخرى.",
@@ -1268,7 +1268,7 @@
       chartProxy:"Mostrando o gráfico do mercado real — o OTC tem a cotação própria da corretora, os números podem diferir.",
       chartExotic:"Este par não tem gráfico em nenhuma bolsa pública — a corretora desenha esses ativos por conta própria." },
     ar:{ tapToPick:"انقر للاختيار", pickGallery:"من المعرض", pickCamera:"التقاط صورة",
-      chartProxy:"يظهر رسم السوق الحقيقي — لـ OTC سعر خاص من الوسيط و��د تختلف الأرقام.",
+      chartProxy:"يظهر رسم السوق الحقيقي — لـ OTC ��عر خاص من الوسيط و��د تختلف الأرقام.",
       chartExotic:"لا يوجد رسم لهذا الزوج في أي بورصة عامة — الوسيط يرسم مزل هذه الأصول بنفسه." },
     kk:{ tapToPick:"Таңдау үшін басыңыз", pickGallery:"Галереядан", pickCamera:"Суретке түсіру",
       chartProxy:"Нақты нарық графигі көрсетілген — OTC бағасы брокердің өзінде, сандар өзгеше болуы мүмкін.",
@@ -1816,12 +1816,12 @@
     var v = $("camVideo");
     var w = v.videoWidth, h = v.videoHeight;
     if(!w || !h){ return; }
-    var max = 760, sc = Math.min(1, max / Math.max(w, h));
+    var max = 1440, sc = Math.min(1, max / Math.max(w, h));
     var cv = document.createElement("canvas");
     cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
     var cx = cv.getContext("2d");
     cx.drawImage(v, 0, 0, cv.width, cv.height);
-    var data = cv.toDataURL("image/jpeg", 0.62);
+    var data = cv.toDataURL("image/jpeg", 0.86);
     closeCam();
     state.image = data;
     $("previewImg").src = data;
@@ -2018,13 +2018,13 @@
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max=760, w=img.width, h=img.height;
+          var max=1440, w=img.width, h=img.height;
           if(w>max||h>max){ var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
           var cv=document.createElement("canvas"); cv.width=w; cv.height=h;
           var ctx=cv.getContext("2d");
           try{ ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; }catch(e){}
           ctx.drawImage(img,0,0,w,h);
-          resolve(cv.toDataURL("image/jpeg",0.62));
+          resolve(cv.toDataURL("image/jpeg",0.86));
         };
         img.onerror = reject; img.src = reader.result;
       };
@@ -2067,10 +2067,8 @@
     procRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*4 + 1, 92); setRing(pct); }, 300);
     procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-2); setStage(si); }, 1800);
   }
-  function stopProcessing(done){
+  function stopProcessing(){
     clearInterval(procRingTimer); clearInterval(procTimer);
-    if(done){ setRing(100); }
-    setTimeout(function(){ $("processing").classList.remove("show"); }, done?350:0);
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 
@@ -2224,8 +2222,18 @@
       }
       function finishWith(data, done, diag){
         if(settled) return; settled=true;
-        stopProcessing(done);
-        setTimeout(function(){ showVisionResult(data); if(diag) showDiag(diag, data && data.diag); state.analyzing=false; $("analyzeBtn").disabled=false; }, done?380:0);
+        stopProcessing();
+        // Prepare the result and dialogue first. Only then complete and hide progress.
+        setTimeout(function(){
+          showVisionResult(data);
+          if(diag) showDiag(diag, data && data.diag);
+          setTimeout(function(){
+            if(done) setRing(100);
+            $("processing").classList.remove("show");
+            state.analyzing=false;
+            $("analyzeBtn").disabled=false;
+          }, 250);
+        }, 0);
       }
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
