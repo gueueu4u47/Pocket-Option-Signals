@@ -935,7 +935,7 @@
       cdEntry:"Вход через", cdResult:"Результат через", cdDone:"Время результата наступило",
       dirUp:"ВВЕРХ", dirDown:"ВНИЗ", dirNone:"НЕТ СИГНАЛА", confLow:"низкая", confMid:"средняя", confHigh:"высокая",
       newAnalysis:"Новый анализ", newQuick:"Новый Pulse Quick", openHistory:"Открыть историю",
-      profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настройки сохраняются на этом устройстве.",
+      profileEyebrow:"ПРОФИЛЬ", profileTitle:"Настройки", profileText:"Настро��ки сохраняются на этом устройстве.",
       langTitle:"Язык интерфейса", langHint:"Сохраняется после перезап��ск����", soundTitle:"Звук интерфейса", soundHint:"Тихий отклик при нажатии",
       hapticTitle:"Тактильный отклик", hapticHint:"Вибрация Telegram при нажатии", on:"Вкл", off:"Выкл",
       selAssetTitle:"Выбранный актив", selAssetHint:"Используется при создании результата",
@@ -1060,7 +1060,7 @@
       stage1:"छवि तैयार कर रहे हैं", stage2:"चार्ट संरचना पढ़ रहे हैं", stage3:"दिखने वाले स्तर जाँच रहे हैं", stage4:"परिणाम बना रहे हैं",
       confidence:"भरोसा", asset:"एसेट", duration:"अवधि", entry:"एंट्री", outcomeBy:"परिणाम तक",
       cdEntry:"एंट्री में", cdResult:"परिणाम में", cdDone:"परिणाम का समय आ गया",
-      dirUp:"ऊपर", dirDown:"नीचे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
+      dirUp:"ऊपर", dirDown:"न���चे", dirNone:"कोई संकेत नहीं", confLow:"कम", confMid:"मध्यम", confHigh:"उच्च",
       newAnalysis:"नया विश्���ेष��", newQuick:"नय���� Pulse Quick", openHistory:"इतिहास खोलें",
       profileEyebrow:"प्रोफ़ाइल", profileTitle:"सेटिंग", profileText:"सेटिंग इसी डिवाइस पर रहती हैं।",
       langTitle:"इंटरफ़ेस की भाषा", langHint:"पुनः शुरू करने पर भी बनी रहती है", soundTitle:"इंटरफ़ेस ध्वनि", soundHint:"टैप पर हल्की प्रतिक्रिया",
@@ -1319,7 +1319,7 @@
   for (var _lc8 in EXTRA_T8){ if(T[_lc8]){ for(var _ek8 in EXTRA_T8[_lc8]){ T[_lc8][_ek8] = EXTRA_T8[_lc8][_ek8]; } } }
 
   var EXTRA_T9 = {
-    ru:{ detailOpen:"Почему такой сигнал · тактика · советы", detailEntryWindow:"Когда входить", detailExpiry:"Сколько держать" },
+    ru:{ detailOpen:"Почему такой сигнал · тактика · советы", detailEntryWindow:"Когда входить", detailExpiry:"Ско��ько держать" },
     en:{ detailOpen:"Why this signal · tactics · tips", detailEntryWindow:"When to enter", detailExpiry:"How long to hold" },
     uz:{ detailOpen:"Nega bunday signal · taktika · maslahatlar", detailEntryWindow:"Qachon kirish", detailExpiry:"Qancha ushlash" },
     hi:{ detailOpen:"यह संकेत क्यों · रणनीति · सुझाव", detailEntryWindow:"कब प्रवेश करें", detailExpiry:"कितनी देर रखें" },
@@ -2595,7 +2595,7 @@
       }
     };
     var notes = {
-      flat: { ru: "Рынок стоит — вход не рекомендуется", en: "Market is flat — entry is not advised" },
+      flat: { ru: "Рынок стоит — вход не рекоменд��ется", en: "Market is flat — entry is not advised" },
       closed: { ru: "Рынок закрыт — вход не рекомендуется", en: "Market is closed — entry is not advised" },
       limit: { ru: "Поставщик занят — повтори через минуту", en: "Provider is busy — retry in a minute" },
       nodata: { ru: "Нет данных по паре — вход не рекомендуется", en: "No data for this pair — entry is not advised" }
@@ -3108,5 +3108,57 @@
 })();
 </script>
 <script src="scene.js"></script>
+<script>
+/* Scene compatibility guard: scene.js has its own progress UI. Keep it below
+   100% until the first real dialogue bubble is visible. */
+(function(){
+  "use strict";
+  var busy=false;
+  var completed=false;
+
+  function firstDialogueVisible(){
+    return !!document.querySelector("#psThread .ps-row .ps-bubble:not(.typing)");
+  }
+
+  function setProgress(value){
+    var pct=document.getElementById("psPct");
+    var fill=document.getElementById("psBarFill");
+    if(pct) pct.textContent=value+"%";
+    if(fill) fill.style.width=value+"%";
+  }
+
+  function guard(){
+    if(busy) return;
+    busy=true;
+    try{
+      var scene=document.getElementById("pulseScene");
+      var pct=document.getElementById("psPct");
+      var running=scene && scene.classList.contains("show") &&
+        document.body.classList.contains("pulse-scene-on");
+
+      if(!running){ completed=false; return; }
+
+      if(firstDialogueVisible()){
+        if(!completed){ completed=true; setProgress(100); }
+        return;
+      }
+
+      completed=false;
+      if(pct){
+        var n=parseInt(pct.textContent,10);
+        if(isFinite(n) && n>92) setProgress(92);
+      }
+    }finally{
+      busy=false;
+    }
+  }
+
+  new MutationObserver(guard).observe(document.documentElement,{
+    subtree:true,childList:true,characterData:true,attributes:true,
+    attributeFilter:["class","style"]
+  });
+  setInterval(guard,180);
+})();
+</script>
 </body>
           </html>
