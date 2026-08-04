@@ -478,7 +478,38 @@
   .brand-mark svg{width:34px;height:34px;overflow:visible;filter:drop-shadow(0 0 5px rgba(145,154,255,.3));}
   @keyframes avatarSheen{0%,68%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
 
-  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;}}
+
+  /* ---------- Candle Rise cinematic launch ---------- */
+  .candle-launch{background:radial-gradient(85% 62% at 50% 42%,#0b1c1c,#070a10 58%,#040509 100%);}
+  .candle-launch::before{width:620px;height:620px;background:radial-gradient(circle,rgba(29,212,134,.12),rgba(113,124,255,.07) 36%,transparent 69%);filter:blur(48px);animation:candleAmbient 4.6s ease-in-out infinite;}
+  .candle-launch .launch-grid{opacity:0;background-image:linear-gradient(rgba(92,154,142,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(92,154,142,.055) 1px,transparent 1px);animation:candleGridIn .8s ease .08s forwards;}
+  .candle-launch .launch-aura{display:none;}
+  .candle-launch .launch-inner{width:min(100%,430px);}
+  .launch-market{position:relative;width:min(94vw,410px);height:270px;margin:0 auto;transform-origin:50% 48%;animation:marketArrive .65s cubic-bezier(.2,.85,.25,1) both,marketSpiral .92s cubic-bezier(.55,0,.35,1) 2.82s forwards;}
+  .market-chart{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 22px 36px rgba(0,0,0,.38));}
+  .market-grid path{fill:none;stroke:rgba(177,210,204,.09);stroke-width:1;}
+  .market-area{fill:url(#marketGlow);opacity:0;animation:marketAreaIn .7s ease 1.55s forwards;}
+  .market-trend{fill:none;stroke:rgba(95,238,173,.27);stroke-width:1.5;stroke-dasharray:520;stroke-dashoffset:520;animation:trendDraw 2.1s cubic-bezier(.2,.75,.2,1) .16s forwards;}
+  .candle{opacity:0;transform-box:fill-box;transform-origin:center bottom;animation:candleGrow .42s cubic-bezier(.18,.9,.26,1.25) var(--d) forwards;filter:url(#candleGlow);}
+  .candle line{stroke-width:2.1;stroke-linecap:round}.candle rect{stroke:none}.candle.green line{stroke:#27E596}.candle.green rect{fill:#20D486}.candle.red line{stroke:#FF6573}.candle.red rect{fill:#F05262;}
+  .profit{opacity:0;transform-box:fill-box;transform-origin:center;filter:drop-shadow(0 7px 13px rgba(0,0,0,.4));}.profit rect{fill:rgba(12,24,25,.92);stroke:rgba(79,231,164,.48);stroke-width:1}.profit text{fill:#A8FFD4;font:700 12px Inter,sans-serif;text-anchor:middle;letter-spacing:.02em}.profit.p1{animation:profitPop .5s cubic-bezier(.2,1.45,.3,1) 1.02s forwards}.profit.p2{animation:profitPop .5s cubic-bezier(.2,1.45,.3,1) 1.66s forwards}.profit.p3{animation:profitPop .5s cubic-bezier(.2,1.45,.3,1) 2.14s forwards;}
+  .market-vortex{position:absolute;left:50%;top:48%;width:88px;height:88px;transform:translate(-50%,-50%);pointer-events:none}.market-vortex i{position:absolute;inset:0;border:1px solid rgba(171,178,255,.46);border-radius:50%;opacity:0}.market-vortex i:nth-child(1){animation:vortexRing .85s ease 2.74s forwards}.market-vortex i:nth-child(2){animation:vortexRing .85s ease 2.88s forwards}.market-vortex i:nth-child(3){animation:vortexRing .85s ease 3.02s forwards;}
+  .welcome-lockup{margin-top:-66px;position:relative;z-index:4;pointer-events:none}.welcome-lockup .launch-title{font-size:27px;opacity:0;animation:welcomeReveal .7s cubic-bezier(.18,.9,.26,1) 3.38s forwards}.welcome-lockup .launch-sub{margin-top:8px;font-size:15px;color:#AEB1C4;opacity:0;animation:welcomeReveal .65s cubic-bezier(.18,.9,.26,1) 3.5s forwards}.welcome-lockup .welcome{margin-top:25px;opacity:0;animation:welcomeReveal .7s cubic-bezier(.18,.9,.26,1) 3.68s forwards;pointer-events:auto;}
+  .welcome-candles{width:62px;height:46px;margin:0 auto 13px;display:flex;align-items:flex-end;justify-content:center;gap:6px;opacity:0;animation:badgeReveal .55s cubic-bezier(.18,1.4,.3,1) 3.28s forwards}.welcome-candles i{position:relative;width:8px;border-radius:2px}.welcome-candles i::before{content:"";position:absolute;left:50%;top:-7px;bottom:-7px;width:2px;transform:translateX(-50%);border-radius:2px;background:inherit;opacity:.8}.welcome-candles i:nth-child(1){height:17px;background:#F05262}.welcome-candles i:nth-child(2){height:27px;background:#20D486}.welcome-candles i:nth-child(3){height:38px;background:#20D486;box-shadow:0 0 16px rgba(32,212,134,.5)}
+  @keyframes marketArrive{from{opacity:0;transform:translateY(28px) scale(.94);filter:blur(9px)}to{opacity:1;transform:none;filter:blur(0)}}
+  @keyframes candleGrow{0%{opacity:0;transform:translateY(10px) scaleY(.05)}100%{opacity:1;transform:none}}
+  @keyframes trendDraw{to{stroke-dashoffset:0}}
+  @keyframes marketAreaIn{to{opacity:1}}
+  @keyframes profitPop{0%{opacity:0;transform:translateY(8px) scale(.7)}100%{opacity:1;transform:none}}
+  @keyframes vortexRing{0%{opacity:.7;transform:scale(.18) rotate(0)}100%{opacity:0;transform:scale(2.4) rotate(240deg)}}
+  @keyframes marketSpiral{0%{opacity:1;transform:rotate(0) scale(1);filter:blur(0)}55%{opacity:.78;transform:rotate(145deg) scale(.54);filter:blur(1px)}100%{opacity:0;transform:rotate(460deg) scale(.06);filter:blur(12px)}}
+  @keyframes welcomeReveal{from{opacity:0;transform:translateY(13px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+  @keyframes badgeReveal{from{opacity:0;transform:scale(.5) rotate(-20deg)}to{opacity:1;transform:none}}
+  @keyframes candleGridIn{to{opacity:.65}}
+  @keyframes candleAmbient{0%,100%{opacity:.32;transform:scale(.88)}50%{opacity:.58;transform:scale(1.08)}}
+  .candle-launch.hide{transform:scale(1.02);}
+
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;}}
   /* ---------- Tile overflow fix ---------- */
   .v-params{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:100%;}
   .v-param{min-width:0;max-width:100%;overflow:hidden;box-sizing:border-box;}
@@ -611,34 +642,46 @@
 </head>
 <body>
 <video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
-<div class="launch" id="launch">
+<div class="launch candle-launch" id="launch">
   <div class="launch-grid" aria-hidden="true"></div>
   <div class="launch-aura" aria-hidden="true"></div>
   <div class="launch-inner">
-    <div class="launch-symbol" aria-hidden="true">
-      <span class="launch-wave wave-a"></span><span class="launch-wave wave-b"></span>
-      <svg class="launch-logo" viewBox="0 0 180 140">
+    <div class="launch-market" aria-hidden="true">
+      <svg class="market-chart" viewBox="0 0 360 230">
         <defs>
-          <linearGradient id="pulseLaunchGradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#8B92FF"/><stop offset=".48" stop-color="#F2F3FF"/><stop offset="1" stop-color="#727CFF"/>
-          </linearGradient>
-          <filter id="pulseLaunchGlow" x="-50%" y="-80%" width="200%" height="260%">
-            <feGaussianBlur stdDeviation="3.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+          <linearGradient id="marketGlow" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1FD486" stop-opacity=".05"/><stop offset="1" stop-color="#1FD486" stop-opacity=".28"/></linearGradient>
+          <filter id="candleGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <path class="pl-track" d="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
-        <path class="l-line" d="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
-        <circle class="pl-origin" cx="14" cy="78" r="3"/>
-        <circle class="pl-runner" r="4.5">
-          <animateMotion begin=".18s" dur="1.25s" fill="freeze" path="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
-        </circle>
-        <circle class="pl-end" cx="166" cy="78" r="4"/>
+        <g class="market-grid">
+          <path d="M12 34H348M12 78H348M12 122H348M12 166H348M12 210H348"/>
+          <path d="M28 18V214M92 18V214M156 18V214M220 18V214M284 18V214M348 18V214"/>
+        </g>
+        <path class="market-area" d="M14 186 C40 174 60 160 82 166 S118 132 142 136 S180 103 202 108 S246 73 266 78 S307 44 338 48 L338 214 L14 214 Z"/>
+        <path class="market-trend" d="M14 186 C40 174 60 160 82 166 S118 132 142 136 S180 103 202 108 S246 73 266 78 S307 44 338 48"/>
+        <g class="candle green c1" style="--d:.20s"><line x1="25" y1="171" x2="25" y2="205"/><rect x="19" y="180" width="12" height="18" rx="2"/></g>
+        <g class="candle green c2" style="--d:.35s"><line x1="49" y1="153" x2="49" y2="190"/><rect x="43" y="160" width="12" height="23" rx="2"/></g>
+        <g class="candle red c3" style="--d:.50s"><line x1="73" y1="154" x2="73" y2="188"/><rect x="67" y="161" width="12" height="19" rx="2"/></g>
+        <g class="candle green c4" style="--d:.65s"><line x1="97" y1="130" x2="97" y2="176"/><rect x="91" y="140" width="12" height="28" rx="2"/></g>
+        <g class="candle green c5" style="--d:.80s"><line x1="121" y1="116" x2="121" y2="158"/><rect x="115" y="124" width="12" height="27" rx="2"/></g>
+        <g class="candle red c6" style="--d:.95s"><line x1="145" y1="119" x2="145" y2="154"/><rect x="139" y="126" width="12" height="20" rx="2"/></g>
+        <g class="candle green c7" style="--d:1.10s"><line x1="169" y1="91" x2="169" y2="140"/><rect x="163" y="101" width="12" height="31" rx="2"/></g>
+        <g class="candle green c8" style="--d:1.25s"><line x1="193" y1="77" x2="193" y2="121"/><rect x="187" y="86" width="12" height="27" rx="2"/></g>
+        <g class="candle red c9" style="--d:1.40s"><line x1="217" y1="83" x2="217" y2="119"/><rect x="211" y="91" width="12" height="20" rx="2"/></g>
+        <g class="candle green c10" style="--d:1.55s"><line x1="241" y1="55" x2="241" y2="105"/><rect x="235" y="66" width="12" height="31" rx="2"/></g>
+        <g class="candle green c11" style="--d:1.70s"><line x1="265" y1="40" x2="265" y2="84"/><rect x="259" y="49" width="12" height="27" rx="2"/></g>
+        <g class="candle red c12" style="--d:1.85s"><line x1="289" y1="46" x2="289" y2="79"/><rect x="283" y="53" width="12" height="18" rx="2"/></g>
+        <g class="candle green c13" style="--d:2s"><line x1="318" y1="18" x2="318" y2="66"/><rect x="311" y="29" width="14" height="30" rx="2"/></g>
+        <g class="profit p1"><rect x="70" y="112" width="66" height="27" rx="13.5"/><text x="103" y="130">+$120</text></g>
+        <g class="profit p2"><rect x="168" y="57" width="72" height="29" rx="14.5"/><text x="204" y="76">+$500</text></g>
+        <g class="profit p3"><rect x="266" y="4" width="82" height="30" rx="15"/><text x="307" y="24">+$1,250</text></g>
       </svg>
+      <div class="market-vortex"><i></i><i></i><i></i></div>
     </div>
-    <h1 class="launch-title" id="welcomeTitle">Signal Pulse</h1>
-    <p class="launch-sub" id="welcomeSub">Личный помощник для работы с графиком.</p>
-    <div class="welcome">
-      <button class="btn primary" id="wStart">Start</button>
+    <div class="welcome-lockup">
+      <div class="welcome-candles" aria-hidden="true"><i></i><i></i><i></i></div>
+      <h1 class="launch-title" id="welcomeTitle">Добро пожаловать</h1>
+      <p class="launch-sub" id="welcomeSub">в Signal Pulse</p>
+      <div class="welcome"><button class="btn primary" id="wStart">Start</button></div>
     </div>
   </div>
 </div>
@@ -3065,9 +3108,9 @@
   function drawLogo(el){
     if(!el) return;
     el.innerHTML='<svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">'
-      +'<defs><linearGradient id="brandPulseGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#858EFF"/><stop offset=".5" stop-color="#F1F2FF"/><stop offset="1" stop-color="#7782FF"/></linearGradient></defs>'
-      +'<path d="M9 55 H27 C30 55 31 53 33 49 L40 36 C42 32 45 33 47 38 L54 65 C56 71 60 71 63 65 L71 45 C73 41 76 41 79 46 L83 52 C85 54 87 55 91 55" fill="none" stroke="url(#brandPulseGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
-      +'<circle cx="91" cy="55" r="3.2" fill="#F4F5FF"/>'
+      +'<line x1="24" y1="66" x2="24" y2="36" stroke="#FF6573" stroke-width="4" stroke-linecap="round"/><rect x="17" y="44" width="14" height="15" rx="3" fill="#F05262"/>'
+      +'<line x1="50" y1="70" x2="50" y2="27" stroke="#2BE39A" stroke-width="4" stroke-linecap="round"/><rect x="43" y="39" width="14" height="22" rx="3" fill="#20D486"/>'
+      +'<line x1="76" y1="58" x2="76" y2="16" stroke="#2BE39A" stroke-width="4" stroke-linecap="round"/><rect x="69" y="26" width="14" height="23" rx="3" fill="#20D486"/>'
       +'</svg>';
   }
 
@@ -3150,7 +3193,15 @@
     return g+name;
   }
   function initLaunch(){
-    $("welcomeTitle").textContent = greeting();
+    var name=(tgUser&&tgUser.first_name)?String(tgUser.first_name).trim():"";
+    var copy={
+      ru:["Добро пожаловать","в Signal Pulse"], en:["Welcome","to Signal Pulse"],
+      uz:["Xush kelibsiz","Signal Pulse’ga"], hi:["स्वागत है","Signal Pulse में"],
+      pt:["Boas-vindas","ao Signal Pulse"], ar:["مرحبًا","في Signal Pulse"],
+      kk:["Қош келдіңіз","Signal Pulse жүйесіне"]
+    }[state.language]||["Welcome","to Signal Pulse"];
+    $("welcomeTitle").textContent=copy[0]+(name?", "+name:"");
+    $("welcomeSub").textContent=copy[1];
     applyTheme(resolveTheme("launch"));
   }
   function closeLaunch(target){
