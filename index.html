@@ -1046,7 +1046,7 @@
     hi:{
       brand:"चार्ट के लिए निजी सहायक", welcomeSub:"Signal Pulse तैयार है।",
       btnVision:"Pulse Vision", btnQuick:"Pulse Quick", btnStart:"शुरू करें",
-      navHistory:"इतिहास", navCreate:"बनाएँ", navVision:"Vision", navProfile:"प्रोफ़ाइल",
+      navHistory:"इतिहास", navCreate:"बनाएँ", navVision:"Vision", navProfile:"प्रोफाइल",
       historyEyebrow:"इतिहास", historyTitle:"परिणामों का इतिहास", historyText:"Pulse Vision और Pulse Quick के परिणाम यहाँ दिखते हैं।",
       emptyTitle:"इतिहास अभी खाली है", emptyText:"Pulse Vision में चार्ट अपलोड करें या तेज़ परिणाम बनाएँ।", goVision:"Pulse Vision खोलें",
       createEyebrow:"बनाएँ", createTitle:"परिणाम की सेटिंग", createText:"OTC एसेट, अवधि, एंट्री प्रकार और मोड चुनें।",
@@ -2075,6 +2075,62 @@
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 
+  var quotaTimer=null;
+  var QUOTA_COPY={
+    ru:{title:"Лимит анализа",text:"Новый анализ будет доступен через",ready:"Можно повторить анализ",button:"Повторить анализ"},
+    en:{title:"Analysis limit",text:"A new analysis will be available in",ready:"You can run the analysis again",button:"Retry analysis"},
+    uz:{title:"Tahlil cheklovi",text:"Yangi tahlil quyidagi vaqtdan so‘ng ochiladi",ready:"Tahlilni qayta boshlash mumkin",button:"Qayta tahlil qilish"},
+    hi:{title:"विश्लेषण सीमा",text:"नया विश्लेषण इतने समय बाद उपलब्ध होगा",ready:"अब दोबारा विश्लेषण कर सकते हैं",button:"दोबारा विश्लेषण करें"},
+    pt:{title:"Limite de análise",text:"Uma nova análise estará disponível em",ready:"Você já pode analisar novamente",button:"Tentar novamente"},
+    ar:{title:"حد التحليل",text:"سيصبح التحليل الجديد متاحًا خلال",ready:"يمكنك إعادة التحليل الآن",button:"إعادة التحليل"},
+    kk:{title:"Талдау шегі",text:"Жаңа талдау мына уақыттан кейін қолжетімді",ready:"Талдауды қайта бастауға болады",button:"Қайта талдау"}
+  };
+  function quotaCopy(){ return QUOTA_COPY[state.language]||QUOTA_COPY.en; }
+  function ensureQuotaOverlay(){
+    var box=$("quotaOverlay"); if(box) return box;
+    var style=document.createElement("style");
+    style.textContent="#quotaOverlay{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,12,.78);backdrop-filter:blur(12px)}#quotaOverlay.show{display:flex}#quotaCard{width:min(390px,100%);padding:28px 24px 22px;text-align:center;border:1px solid rgba(146,156,255,.28);border-radius:28px;background:linear-gradient(145deg,#17182b,#0d0e19);box-shadow:0 24px 80px rgba(0,0,0,.55)}#quotaIcon{width:72px;height:72px;margin:0 auto 16px;display:grid;place-items:center;border-radius:22px;background:rgba(125,135,255,.12);font-size:36px;animation:quotaPulse 1.5s ease-in-out infinite}#quotaTitle{margin:0 0 8px;font-size:24px;color:#f5f5ff}#quotaText{margin:0;color:#a9abc4;font-size:15px;line-height:1.45}#quotaTime{margin:18px 0 15px;font:800 44px/1 monospace;color:#aeb4ff;letter-spacing:2px}#quotaTrack{height:7px;overflow:hidden;border-radius:10px;background:#25263a}#quotaFill{height:100%;width:100%;border-radius:10px;background:linear-gradient(90deg,#747cff,#c3c7ff);transition:width .35s linear}#quotaRetry{width:100%;margin-top:20px;padding:14px;border:0;border-radius:16px;background:#7c83ff;color:white;font:700 15px inherit;opacity:.45}#quotaRetry.ready{opacity:1;cursor:pointer}@keyframes quotaPulse{50%{transform:scale(1.06);box-shadow:0 0 28px rgba(124,131,255,.22)}}";
+    document.head.appendChild(style);
+    box=document.createElement("div"); box.id="quotaOverlay";
+    box.innerHTML='<div id="quotaCard"><div id="quotaIcon">⌛</div><h3 id="quotaTitle"></h3><p id="quotaText"></p><div id="quotaTime">00:60</div><div id="quotaTrack"><div id="quotaFill"></div></div><button id="quotaRetry" type="button" disabled></button></div>';
+    document.body.appendChild(box);
+    $("quotaRetry").addEventListener("click",function(){
+      if(this.disabled) return;
+      box.classList.remove("show");
+      if(state.image) analyze();
+    });
+    return box;
+  }
+  function showQuotaCountdown(info){
+    var box=ensureQuotaOverlay(), copy=quotaCopy();
+    var seconds=Math.max(1,Math.ceil(Number(info&&info.retryAfter)||60));
+    var retryAt=Math.max(Date.now()+seconds*1000,Number(info&&info.retryAt)||0);
+    var total=Math.max(1,retryAt-Date.now());
+    $("quotaTitle").textContent=copy.title;
+    $("quotaText").textContent=copy.text;
+    $("quotaRetry").textContent=copy.button;
+    $("quotaRetry").disabled=true; $("quotaRetry").classList.remove("ready");
+    box.classList.add("show");
+    clearInterval(quotaTimer);
+    function tick(){
+      var left=Math.max(0,retryAt-Date.now());
+      var sec=Math.ceil(left/1000), min=Math.floor(sec/60), rem=sec%60;
+      $("quotaTime").textContent=String(min).padStart(2,"0")+":"+String(rem).padStart(2,"0");
+      $("quotaFill").style.width=Math.max(0,Math.min(100,left/total*100))+"%";
+      if(left<=0){
+        clearInterval(quotaTimer);
+        $("quotaText").textContent=copy.ready;
+        $("quotaIcon").textContent="✅";
+        $("quotaRetry").disabled=false; $("quotaRetry").classList.add("ready");
+        $("analyzeBtn").disabled=false;
+      }else{
+        $("quotaIcon").textContent="⌛";
+        $("analyzeBtn").disabled=true;
+      }
+    }
+    tick(); quotaTimer=setInterval(tick,250);
+  }
+
   function applyExplain(data, ex, rec){
     var got = ex && ex.ok;
     if(got && ex.reasons && ex.reasons.length){
@@ -2252,6 +2308,14 @@
         .then(function(res){ return res.text().then(function(tx){ var j=null; try{ j=JSON.parse(tx); }catch(e){} return {ok:res.ok, status:res.status, data:j}; }); })
         .then(function(r){
           clearTimeout(capTimer);
+          if(r.data && r.data.quotaLimited){
+            if(settled) return; settled=true;
+            stopProcessing();
+            $("processing").classList.remove("show");
+            state.analyzing=false;
+            showQuotaCountdown(r.data);
+            return;
+          }
           procFinalPhase();
           if(r.ok && r.data && r.data.direction){
             finishWith(r.data, true, r.data.degraded ? "degraded" : null);
