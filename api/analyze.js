@@ -294,7 +294,25 @@ module.exports = async function localizedAnalyze(req, res) {
   try {
     const corePath = require.resolve("./analyze-core");
     delete require.cache[corePath];
-    const analyzeCore = require("./analyze-core");
+
+    // Patch the legacy model mapper in memory. The stored core forced every
+    // Gemini 3.x request back to retired gemini-2.5-flash.
+    const fs = require("fs");
+    const path = require("path");
+    const Module = require("module");
+    const oldModelMap = 'if (!m || /^gemini-3/.test(m)) return "gemini-2.5-flash";';
+    const newModelMap = 'if (!m) return "gemini-3.6-flash";';
+    const originalCoreSource = fs.readFileSync(corePath, "utf8");
+    const patchedCoreSource = originalCoreSource.replace(oldModelMap, newModelMap);
+    if (patchedCoreSource === originalCoreSource) {
+      throw new Error("Gemini model mapper patch target was not found");
+    }
+    const coreModule = new Module(corePath, module);
+    coreModule.filename = corePath;
+    coreModule.paths = Module._nodeModulePaths(path.dirname(corePath));
+    require.cache[corePath] = coreModule;
+    coreModule._compile(patchedCoreSource, corePath);
+    const analyzeCore = coreModule.exports;
 
     return await storage.run(
       { code: language, name: LANGUAGES[language] },
