@@ -13,6 +13,37 @@ const LANGUAGES = {
 const storage = global.__pulseLanguageStorage ||
   (global.__pulseLanguageStorage = new AsyncLocalStorage());
 
+function canonicalDirection(value, language) {
+  const raw = String(value || "").trim();
+  const folded = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const maps = {
+    pt: { BUY:["para cima","cima","compra","comprar"], SELL:["para baixo","baixo","venda","vender"], NO_SIGNAL:["sem sinal","nenhum sinal"] },
+    uz: { BUY:["yuqoriga","sotib olish"], SELL:["pastga","sotish"], NO_SIGNAL:["signal yo'q","signal yo‘q"] },
+    hi: { BUY:["ऊपर","खरीद"], SELL:["नीचे","बेच"], NO_SIGNAL:["कोई संकेत नहीं"] },
+    ar: { BUY:["صعود","شراء","أعلى"], SELL:["هبوط","بيع","أسفل"], NO_SIGNAL:["لا إشارة"] },
+    kk: { BUY:["жоғары","сатып алу"], SELL:["төмен","сату"], NO_SIGNAL:["сигнал жоқ"] }
+  };
+  const map = maps[language];
+  if (!map) return raw;
+  for (const key of Object.keys(map)) {
+    if (map[key].some((item) => folded === item.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase())) return key;
+  }
+  return raw;
+}
+
+function repairDirectionFields(value, language) {
+  if (typeof value === "string") {
+    return value.replace(/("direction"\s*:\s*")([^"]+)(")/gi, function (_m, a, b, c) {
+      return a + canonicalDirection(b, language) + c;
+    });
+  }
+  if (Array.isArray(value)) return value.map((item) => repairDirectionFields(item, language));
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value)) value[key] = repairDirectionFields(value[key], language);
+  }
+  return value;
+}
+
 // Add the selected output language to every AI request made by analyze-core.js.
 if (!global.__pulseOriginalFetch) {
   global.__pulseOriginalFetch = global.fetch;
@@ -73,7 +104,22 @@ if (!global.__pulseOriginalFetch) {
       } catch (_) {}
     }
 
-    return global.__pulseOriginalFetch(input, init);
+    const response = await global.__pulseOriginalFetch(input, init);
+    if (!context || !response || !(/\/chat\/completions(?:\?|$)/.test(url) || /generativelanguage\.googleapis\.com/.test(url))) {
+      return response;
+    }
+    try {
+      const clone = response.clone();
+      const data = JSON.parse(await clone.text());
+      const repaired = repairDirectionFields(data, context.code);
+      return new Response(JSON.stringify(repaired), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+    } catch (_) {
+      return response;
+    }
   };
 }
 
