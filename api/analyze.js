@@ -285,7 +285,9 @@ module.exports = async function localizedAnalyze(req, res) {
 
   if (pulseKey) {
     process.env.GEMINI_API_KEY = pulseKey;
-    process.env.AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
+    // Leave AI_BASE_URL unset so analyze-core uses its native Google Gemini
+    // request path for Google-issued keys instead of the Unity/OpenAI path.
+    delete process.env.AI_BASE_URL;
     process.env.AI_MODELS = "gemini-3.6-flash";
   }
 
