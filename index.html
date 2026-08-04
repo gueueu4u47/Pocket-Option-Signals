@@ -3159,6 +3159,82 @@
   });
   setInterval(guard,180);
 })();
+
+/* Localize the post-result “hit / missed” scene and its TTS. */
+(function(){
+  "use strict";
+  var COPY={
+    uz:{lang:"uz-UZ",q:"Signal ish berdimi?",yes:"✅ Ish berdi",no:"❌ Ish bermadi",
+      win:["HA! AYTGAN EDIM! Signal ishladi! 🚀","Bu safar kirdi. Baribir intizom birinchi o‘rinda.","🐒 Bu safar Dofamin haq edi"],
+      lose:["Shuning uchun kutamiz. Shoshilish qimmatga tushdi.","Mayli... keyingi safar kutaman 😤","🧠 Bu safar Tajriba haq edi"]},
+    hi:{lang:"hi-IN",q:"तो, सिग्नल काम आया?",yes:"✅ काम आया",no:"❌ विफल रहा",
+      win:["हा! मैंने कहा था! सिग्नल काम कर गया! 🚀","इस बार सही रहा। अनुशासन फिर भी पहले है।","🐒 इस बार डोपामिन सही था"],
+      lose:["इसीलिए हम इंतज़ार करते हैं। जल्दबाज़ी भारी पड़ी।","ठीक है... अगली बार इंतज़ार करूँगा 😤","🧠 इस बार अनुभव सही था"]},
+    pt:{lang:"pt-BR",q:"E aí, o sinal deu certo?",yes:"✅ Deu certo",no:"❌ Falhou",
+      win:["HA! EU FALEI! O sinal deu certo! 🚀","Deu certo desta vez. A disciplina continua em primeiro lugar.","🐒 Desta vez, Dopamina acertou"],
+      lose:["É por isso que esperamos. A pressa custou caro.","Tá bom... na próxima eu espero 😤","🧠 Desta vez, Experiência acertou"]},
+    ar:{lang:"ar-SA",q:"هل نجحت الإشارة؟",yes:"✅ نجحت",no:"❌ فشلت",
+      win:["ها! قلت لك! نجحت الإشارة! 🚀","نجحت هذه المرة. الانضباط يبقى أولًا.","🐒 هذه المرة كان الدوبامين محقًا"],
+      lose:["لهذا ننتظر. التسرع كان مكلفًا.","حسنًا... سأنتظر في المرة القادمة 😤","🧠 هذه المرة كانت الخبرة محقة"]},
+    kk:{lang:"kk-KZ",q:"Сигнал сәтті болды ма?",yes:"✅ Сәтті болды",no:"❌ Сәтсіз болды",
+      win:["ХА! АЙТТЫМ ҒОЙ! Сигнал өтті! 🚀","Бұл жолы өтті. Бірақ тәртіп бәрібір бірінші орында.","🐒 Бұл жолы Дофамин дұрыс айтты"],
+      lose:["Сондықтан күтеміз. Асығыстық қымбатқа түсті.","Жарайды... келесіде күтемін 😤","🧠 Бұл жолы Тәжірибе дұрыс айтты"]}
+  };
+  var session=null;
+  function code(){ return String(document.documentElement.getAttribute("lang")||"ru").slice(0,2); }
+  function cfg(){ return COPY[code()]||null; }
+  function localize(){
+    var c=cfg(), spar=document.getElementById("psSpar");
+    if(!c||!spar) return;
+    var q=spar.querySelector(".ps-spar-q"); if(q) q.textContent=c.q;
+    var y=spar.querySelector('.ps-spar-btn[data-o="yes"]'); if(y) y.textContent=c.yes;
+    var n=spar.querySelector('.ps-spar-btn[data-o="no"]'); if(n) n.textContent=c.no;
+    if(!session) return;
+    var rows=document.querySelectorAll("#psThread .ps-row");
+    var lines=session.outcome==="yes"?session.copy.win:session.copy.lose;
+    for(var i=0;i<2;i++){
+      var row=rows[session.startRows+i];
+      if(row){ var b=row.querySelector(".ps-bubble"); if(b) b.textContent=lines[i]; }
+    }
+    var verdict=spar.querySelector(".ps-verdict"); if(verdict) verdict.textContent=lines[2];
+  }
+  document.addEventListener("click",function(e){
+    var b=e.target&&e.target.closest?e.target.closest("#psSpar .ps-spar-btn"):null;
+    var c=cfg(); if(!b||!c) return;
+    session={outcome:b.getAttribute("data-o")==="yes"?"yes":"no",copy:c,startRows:document.querySelectorAll("#psThread .ps-row").length,ttsIndex:0};
+    setTimeout(localize,0);
+  },true);
+  new MutationObserver(localize).observe(document.documentElement,{subtree:true,childList:true});
+
+  var nativeFetch=window.fetch&&window.fetch.bind(window);
+  if(nativeFetch){
+    window.fetch=function(input,init){
+      var url=String(input&&input.url?input.url:input||"");
+      if(session&&/\/api\/tts(?:\?|$)/.test(url)&&init&&typeof init.body==="string"){
+        try{
+          var body=JSON.parse(init.body);
+          var lines=session.outcome==="yes"?session.copy.win:session.copy.lose;
+          if(session.ttsIndex<3){ body.text=lines[session.ttsIndex++]; init=Object.assign({},init,{body:JSON.stringify(body)}); }
+        }catch(_e){}
+      }
+      return nativeFetch(input,init);
+    };
+  }
+
+  try{
+    var synth=window.speechSynthesis;
+    if(synth&&synth.speak){
+      var nativeSpeak=synth.speak.bind(synth);
+      synth.speak=function(u){
+        var c=cfg();
+        if(c&&u&&String(u.text||"").trim()==="Ну что, сигнал зашёл?"){
+          try{ u.text=c.q; u.lang=c.lang; u.voice=null; }catch(_e){}
+        }
+        return nativeSpeak(u);
+      };
+    }
+  }catch(_e){}
+})();
 </script>
 </body>
           </html>
