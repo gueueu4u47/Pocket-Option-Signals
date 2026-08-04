@@ -520,6 +520,16 @@
   .candle-launch:not(.launch-ready) .welcome-lockup *{animation-play-state:paused!important;}
   .candle-launch.hide{transform:scale(1.02);}
 
+
+  /* Keep the personalized final greeting centered on narrow Telegram screens. */
+  .candle-launch .launch-inner{width:100%;max-width:430px;min-width:0;padding:0 10px;margin:0 auto;}
+  .candle-launch .welcome-lockup{width:100%;max-width:100%;min-width:0;margin-left:auto;margin-right:auto;padding:0 4px;text-align:center;}
+  .candle-launch .welcome-lockup .launch-title{display:block;width:100%;max-width:100%;margin-left:auto;margin-right:auto;padding:0 2px;text-align:center;white-space:normal;overflow-wrap:anywhere;word-break:normal;font-size:clamp(22px,7vw,27px);line-height:1.14;}
+  .candle-launch .welcome-lockup .launch-sub{width:100%;max-width:100%;text-align:center;}
+  .candle-launch .welcome-lockup .welcome{width:100%;max-width:100%;margin-left:auto;margin-right:auto;}
+  .candle-launch .welcome-lockup .primary{width:100%;max-width:100%;margin-left:auto;margin-right:auto;}
+  @media (max-width:360px){.candle-launch .launch-inner{padding-left:14px;padding-right:14px}.candle-launch .welcome-lockup .launch-title{font-size:22px;}}
+
   @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;}}
   /* ---------- Tile overflow fix ---------- */
   .v-params{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:100%;}
