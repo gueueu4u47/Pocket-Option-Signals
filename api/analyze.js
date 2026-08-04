@@ -108,6 +108,27 @@ if (!global.__pulseOriginalFetch) {
     if (!context || !response || !(/\/chat\/completions(?:\?|$)/.test(url) || /generativelanguage\.googleapis\.com/.test(url))) {
       return response;
     }
+
+    // Preserve the provider's live cooldown so the client can show a real
+    // countdown instead of converting a quota error into NO_SIGNAL.
+    if (response.status === 429) {
+      try {
+        const quotaText = await response.clone().text();
+        const headerValue = Number(response.headers && response.headers.get("retry-after"));
+        const match = quotaText.match(/retry\s+in\s+([0-9]+(?:\.[0-9]+)?)s/i);
+        const seconds = Math.max(1, Math.ceil(
+          Number.isFinite(headerValue) && headerValue > 0
+            ? headerValue
+            : (match ? Number(match[1]) : 60)
+        ));
+        context.quotaRetryAfter = Math.max(Number(context.quotaRetryAfter || 0), seconds);
+        context.quotaRetryAt = Math.max(Number(context.quotaRetryAt || 0), Date.now() + seconds * 1000);
+      } catch (_) {
+        context.quotaRetryAfter = Math.max(Number(context.quotaRetryAfter || 0), 60);
+        context.quotaRetryAt = Math.max(Number(context.quotaRetryAt || 0), Date.now() + 60000);
+      }
+    }
+
     try {
       const clone = response.clone();
       const data = JSON.parse(await clone.text());
@@ -312,6 +333,16 @@ module.exports = async function localizedAnalyze(req, res) {
     return res.end(...args);
   };
   innerRes.json = function json(payload) {
+    const context = storage.getStore();
+    if (context && context.quotaRetryAt) {
+      const retryAfter = Math.max(1, Math.ceil((context.quotaRetryAt - Date.now()) / 1000));
+      return res.status(429).json({
+        ok: false,
+        quotaLimited: true,
+        retryAfter: retryAfter,
+        retryAt: Date.now() + retryAfter * 1000
+      });
+    }
     return res.json(sanitizePublicPayload(completeDialogue(localizePayload(payload, language), language)));
   };
 
