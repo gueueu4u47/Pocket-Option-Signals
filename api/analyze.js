@@ -138,7 +138,7 @@ const FALLBACK = {
     NONE: ["Vamos apertar alguma coisa? Que tédio! 😎", "Sem sinal, sem operação.", "Minha mão tá coçando! 😤", "Tédio custa menos que prejuízo."]
   },
   ar: {
-    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سي��رب من دوننا! 😤", "ت��هب فرصة وتأتي أخرى. التزم بالخطة."],
+    BUY: ["يصعد بسرعة! ندخل الآن! 🚀", "اهدأ. التأكيد أولًا، ثم الزر.", "سيهرب من دوننا! 😤", "تذهب فرصة وتأتي أخرى. التزم بالخطة."],
     SELL: ["ينهار للأسفل! بِع الآن! 🔥", "لا تتعجل. ليس كل هبوط إشارة.", "واضح أنه هابط! 😤", "من دون تأكيد قد يكون فخًا."],
     NONE: ["ألا نضغط أي شيء؟ ممل! 😎", "لا إشارة، لا صفقة.", "يدي تريد الضغط! 😤", "الملل أرخص من الخسارة."]
   },
@@ -175,11 +175,11 @@ function completeDialogue(payload, language) {
 function cleanBrokenText(value) {
   if (typeof value === "string") {
     return value
-      .replace(/А�ализ/g, "Анализ")
-      .replace(/загрузилс�/g, "загрузился")
-      .replace(/Н� сегодня/g, "На сегодня")
-      .replace(/тру�ишь/g, "трусишь")
-      .replace(/�оть/g, "хоть");
+      .replace(/А\uFFFD+ализ/g, "Анализ")
+      .replace(/загрузилс\uFFFD+/g, "загрузился")
+      .replace(/Н\uFFFD+ сегодня/g, "На сегодня")
+      .replace(/тру\uFFFD+ишь/g, "трусишь")
+      .replace(/\uFFFD+оть/g, "хоть");
   }
   if (Array.isArray(value)) return value.map(cleanBrokenText);
   if (value && typeof value === "object") {
