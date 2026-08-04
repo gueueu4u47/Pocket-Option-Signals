@@ -434,6 +434,50 @@
     background:radial-gradient(circle,color-mix(in srgb,var(--accent) 24%,transparent),transparent 68%);
     filter:blur(26px);pointer-events:none;animation:breathe 3.6s ease-in-out infinite;}
   @keyframes breathe{0%,100%{opacity:.35;transform:scale(.9);}50%{opacity:.7;transform:scale(1.08);}}
+
+  /* ---------- Pulse Line premium launch ---------- */
+  .launch{isolation:isolate;overflow:hidden;background:
+    radial-gradient(80% 55% at 50% 42%,color-mix(in srgb,var(--accent) 14%,#080914),#070810 62%,#05060b 100%);
+    transition:opacity .62s cubic-bezier(.22,.8,.25,1),visibility .62s ease,transform .62s cubic-bezier(.22,.8,.25,1);}
+  .launch.hide{opacity:0;transform:scale(1.025);}
+  .launch::before{width:520px;height:520px;opacity:.5;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 18%,transparent),transparent 66%);filter:blur(42px);animation:plAura 4.2s ease-in-out infinite;}
+  .launch::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(90% 68% at 50% 48%,transparent 45%,rgba(0,0,0,.64) 100%);}
+  .launch-grid{position:absolute;inset:-12%;z-index:-2;opacity:0;background-image:linear-gradient(rgba(139,146,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(139,146,255,.045) 1px,transparent 1px);background-size:34px 34px;transform:perspective(520px) rotateX(62deg) translateY(32%);transform-origin:center 68%;mask-image:radial-gradient(circle at 50% 54%,#000 0,transparent 64%);animation:plGridIn 1.2s ease .15s forwards;}
+  .launch-aura{position:absolute;left:50%;top:43%;width:1px;height:48%;transform:translate(-50%,-50%);background:linear-gradient(transparent,rgba(200,204,255,.42),transparent);box-shadow:0 0 42px 10px rgba(111,122,255,.08);opacity:0;animation:plBeam 1.35s ease .05s forwards;}
+  .launch-inner{width:min(100%,390px);text-align:center;position:relative;z-index:2;}
+  .launch-symbol{position:relative;width:190px;height:148px;margin:0 auto 12px;display:grid;place-items:center;}
+  .launch-logo{position:relative;z-index:2;width:180px;height:140px;margin:0;overflow:visible;filter:drop-shadow(0 15px 30px rgba(0,0,0,.42));}
+  .launch-logo path{fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  .launch-logo .pl-track{stroke:rgba(215,219,255,.1);stroke-width:3;opacity:0;animation:plTrackIn .4s ease .08s forwards;}
+  .launch-logo .l-line{stroke:url(#pulseLaunchGradient);stroke-width:4;filter:url(#pulseLaunchGlow);stroke-dasharray:360;stroke-dashoffset:360;animation:plDraw 1.25s cubic-bezier(.2,.72,.2,1) .18s forwards;}
+  .launch-logo .pl-origin{fill:#9DA4FF;opacity:0;filter:drop-shadow(0 0 6px #8992ff);animation:plDotIn .22s ease .1s forwards;}
+  .launch-logo .pl-runner{fill:#fff;opacity:0;filter:drop-shadow(0 0 8px #a8afff);animation:plRunner 1.25s linear .18s forwards;}
+  .launch-logo .pl-end{fill:#fff;opacity:0;filter:drop-shadow(0 0 9px #8b94ff);animation:plEnd .34s cubic-bezier(.2,1.6,.4,1) 1.34s forwards;}
+  .launch-wave{position:absolute;z-index:1;left:50%;top:53%;width:76px;height:76px;border:1px solid rgba(155,163,255,.34);border-radius:50%;opacity:0;transform:translate(-50%,-50%) scale(.45);}
+  .launch-wave.wave-a{animation:plWave 1.15s ease-out 1.15s forwards;}.launch-wave.wave-b{animation:plWave 1.15s ease-out 1.36s forwards;}
+  .launch-title{margin:0;font-size:29px;font-weight:800;letter-spacing:-.035em;opacity:0;animation:plTextIn .68s cubic-bezier(.2,.9,.25,1) 1.48s forwards;}
+  .launch-sub{margin:9px 0 0;color:var(--muted);font-size:14px;line-height:1.5;opacity:0;animation:plTextIn .68s cubic-bezier(.2,.9,.25,1) 1.62s forwards;}
+  .welcome{margin-top:26px;opacity:0;animation:plTextIn .7s cubic-bezier(.2,.9,.25,1) 1.78s forwards;}
+  .welcome .primary{position:relative;border:1px solid rgba(255,255,255,.14);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 94%,#fff),color-mix(in srgb,var(--accent) 74%,#5964ff));box-shadow:0 16px 44px -10px color-mix(in srgb,var(--accent) 62%,transparent),inset 0 1px 0 rgba(255,255,255,.38);}
+  .welcome .primary::after{content:"";position:absolute;inset:-2px;width:38%;transform:translateX(-170%) skewX(-24deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.34),transparent);animation:plShine 3.8s ease 2.4s infinite;}
+  @keyframes plDraw{to{stroke-dashoffset:0;}}
+  @keyframes plTrackIn{to{opacity:1;}}
+  @keyframes plDotIn{to{opacity:1;}}
+  @keyframes plRunner{0%{opacity:0}5%,88%{opacity:1}100%{opacity:0}}
+  @keyframes plEnd{from{opacity:0;transform-origin:166px 78px;transform:scale(.25)}to{opacity:1;transform:scale(1)}}
+  @keyframes plWave{0%{opacity:.5;transform:translate(-50%,-50%) scale(.45)}100%{opacity:0;transform:translate(-50%,-50%) scale(2.25)}}
+  @keyframes plTextIn{from{opacity:0;transform:translateY(14px);filter:blur(5px)}to{opacity:1;transform:none;filter:blur(0)}}
+  @keyframes plGridIn{to{opacity:.72;transform:perspective(520px) rotateX(62deg) translateY(27%)}}
+  @keyframes plBeam{0%{opacity:0;transform:translate(-50%,-50%) scaleY(.2)}45%{opacity:.8}100%{opacity:0;transform:translate(-50%,-50%) scaleY(1)}}
+  @keyframes plAura{0%,100%{transform:scale(.88);opacity:.34}50%{transform:scale(1.08);opacity:.62}}
+  @keyframes plShine{0%,58%{transform:translateX(-170%) skewX(-24deg)}82%,100%{transform:translateX(420%) skewX(-24deg)}}
+
+  /* Premium compact app avatar */
+  .brand-mark{position:relative;width:46px;height:46px;border:1px solid rgba(166,173,255,.28);border-radius:15px;background:radial-gradient(circle at 36% 24%,rgba(157,164,255,.2),transparent 42%),linear-gradient(145deg,rgba(24,26,47,.98),rgba(8,9,17,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 10px 26px rgba(0,0,0,.38),0 0 24px color-mix(in srgb,var(--accent) 10%,transparent);overflow:hidden;}
+  .brand-mark::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,transparent 22%,rgba(255,255,255,.12) 46%,transparent 64%);transform:translateX(-120%);animation:avatarSheen 6s ease 2.8s infinite;pointer-events:none;}
+  .brand-mark svg{width:34px;height:34px;overflow:visible;filter:drop-shadow(0 0 5px rgba(145,154,255,.3));}
+  @keyframes avatarSheen{0%,68%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
+
   @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;}}
   /* ---------- Tile overflow fix ---------- */
   .v-params{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:100%;}
@@ -568,11 +612,29 @@
 <body>
 <video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
 <div class="launch" id="launch">
+  <div class="launch-grid" aria-hidden="true"></div>
+  <div class="launch-aura" aria-hidden="true"></div>
   <div class="launch-inner">
-    <svg class="launch-logo" viewBox="0 0 120 120" aria-hidden="true">
-      <path class="l-line" d="M14 74 H40 L53 50 L66 86 L80 40"/>
-      <path class="l-arrow" d="M72 40 H86 V54"/>
-    </svg>
+    <div class="launch-symbol" aria-hidden="true">
+      <span class="launch-wave wave-a"></span><span class="launch-wave wave-b"></span>
+      <svg class="launch-logo" viewBox="0 0 180 140">
+        <defs>
+          <linearGradient id="pulseLaunchGradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8B92FF"/><stop offset=".48" stop-color="#F2F3FF"/><stop offset="1" stop-color="#727CFF"/>
+          </linearGradient>
+          <filter id="pulseLaunchGlow" x="-50%" y="-80%" width="200%" height="260%">
+            <feGaussianBlur stdDeviation="3.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <path class="pl-track" d="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
+        <path class="l-line" d="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
+        <circle class="pl-origin" cx="14" cy="78" r="3"/>
+        <circle class="pl-runner" r="4.5">
+          <animateMotion begin=".18s" dur="1.25s" fill="freeze" path="M14 78 H42 C47 78 48 74 51 68 L61 47 C63 42 67 43 69 49 L82 91 C84 98 89 98 92 91 L108 57 C111 51 115 52 118 58 L126 70 C129 76 132 78 139 78 H166"/>
+        </circle>
+        <circle class="pl-end" cx="166" cy="78" r="4"/>
+      </svg>
+    </div>
     <h1 class="launch-title" id="welcomeTitle">Signal Pulse</h1>
     <p class="launch-sub" id="welcomeSub">Личный помощник для работы с графиком.</p>
     <div class="welcome">
@@ -3002,9 +3064,10 @@
 
   function drawLogo(el){
     if(!el) return;
-    el.innerHTML='<svg viewBox="0 0 100 100" width="30" height="30" aria-hidden="true">'
-      +'<path d="M12 60 H34 L45 40 L57 74 L70 44" fill="none" stroke="var(--silver)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
-      +'<path d="M64 44 H82 V60" fill="none" stroke="var(--silver)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
+    el.innerHTML='<svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">'
+      +'<defs><linearGradient id="brandPulseGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#858EFF"/><stop offset=".5" stop-color="#F1F2FF"/><stop offset="1" stop-color="#7782FF"/></linearGradient></defs>'
+      +'<path d="M9 55 H27 C30 55 31 53 33 49 L40 36 C42 32 45 33 47 38 L54 65 C56 71 60 71 63 65 L71 45 C73 41 76 41 79 46 L83 52 C85 54 87 55 91 55" fill="none" stroke="url(#brandPulseGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+      +'<circle cx="91" cy="55" r="3.2" fill="#F4F5FF"/>'
       +'</svg>';
   }
 
