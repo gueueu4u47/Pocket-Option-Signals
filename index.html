@@ -2075,7 +2075,7 @@
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 
-  var quotaTimer=null;
+  var quotaTimer=null, quotaReadyAt=0;
   var QUOTA_COPY={
     ru:{title:"Лимит анализа",text:"Новый анализ будет доступен через",ready:"Можно повторить анализ",button:"Повторить анализ"},
     en:{title:"Analysis limit",text:"A new analysis will be available in",ready:"You can run the analysis again",button:"Retry analysis"},
@@ -2085,26 +2085,40 @@
     ar:{title:"حد التحليل",text:"سيصبح التحليل الجديد متاحًا خلال",ready:"يمكنك إعادة التحليل الآن",button:"إعادة التحليل"},
     kk:{title:"Талдау шегі",text:"Жаңа талдау мына уақыттан кейін қолжетімді",ready:"Талдауды қайта бастауға болады",button:"Қайта талдау"}
   };
+  QUOTA_COPY.ru.text="Сервер рекомендует подождать"; QUOTA_COPY.ru.ready="Указанная сервером пауза закончилась. Можно попробовать снова."; QUOTA_COPY.ru.button="Скрыть";
+  QUOTA_COPY.en.text="Server recommends waiting"; QUOTA_COPY.en.ready="The server-provided pause is over. You can try again."; QUOTA_COPY.en.button="Hide";
+  QUOTA_COPY.uz.text="Server kutishni tavsiya qilmoqda"; QUOTA_COPY.uz.ready="Server ko‘rsatgan tanaffus tugadi. Yana urinib ko‘rish mumkin."; QUOTA_COPY.uz.button="Yashirish";
+  QUOTA_COPY.hi.text="सर्वर प्रतीक्षा करने की सलाह देता है"; QUOTA_COPY.hi.ready="सर्वर द्वारा बताई गई प्रतीक्षा समाप्त हुई। अब फिर कोशिश कर सकते हैं।"; QUOTA_COPY.hi.button="छिपाएँ";
+  QUOTA_COPY.pt.text="O servidor recomenda aguardar"; QUOTA_COPY.pt.ready="A pausa informada pelo servidor terminou. Você pode tentar novamente."; QUOTA_COPY.pt.button="Ocultar";
+  QUOTA_COPY.ar.text="يوصي الخادم بالانتظار"; QUOTA_COPY.ar.ready="انتهت المهلة التي حددها الخادم. يمكنك المحاولة مرة أخرى."; QUOTA_COPY.ar.button="إخفاء";
+  QUOTA_COPY.kk.text="Сервер күтуді ұсынады"; QUOTA_COPY.kk.ready="Сервер көрсеткен үзіліс аяқталды. Қайта көруге болады."; QUOTA_COPY.kk.button="Жасыру";
   function quotaCopy(){ return QUOTA_COPY[state.language]||QUOTA_COPY.en; }
   function ensureQuotaOverlay(){
     var box=$("quotaOverlay"); if(box) return box;
     var style=document.createElement("style");
-    style.textContent="#quotaOverlay{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,12,.78);backdrop-filter:blur(12px)}#quotaOverlay.show{display:flex}#quotaCard{width:min(390px,100%);padding:28px 24px 22px;text-align:center;border:1px solid rgba(146,156,255,.28);border-radius:28px;background:linear-gradient(145deg,#17182b,#0d0e19);box-shadow:0 24px 80px rgba(0,0,0,.55)}#quotaIcon{width:72px;height:72px;margin:0 auto 16px;display:grid;place-items:center;border-radius:22px;background:rgba(125,135,255,.12);font-size:36px;animation:quotaPulse 1.5s ease-in-out infinite}#quotaTitle{margin:0 0 8px;font-size:24px;color:#f5f5ff}#quotaText{margin:0;color:#a9abc4;font-size:15px;line-height:1.45}#quotaTime{margin:18px 0 15px;font:800 44px/1 monospace;color:#aeb4ff;letter-spacing:2px}#quotaTrack{height:7px;overflow:hidden;border-radius:10px;background:#25263a}#quotaFill{height:100%;width:100%;border-radius:10px;background:linear-gradient(90deg,#747cff,#c3c7ff);transition:width .35s linear}#quotaRetry{width:100%;margin-top:20px;padding:14px;border:0;border-radius:16px;background:#7c83ff;color:white;font:700 15px inherit;opacity:.45}#quotaRetry.ready{opacity:1;cursor:pointer}@keyframes quotaPulse{50%{transform:scale(1.06);box-shadow:0 0 28px rgba(124,131,255,.22)}}";
+    style.textContent="#quotaOverlay{display:none;margin:16px 0}#quotaOverlay.show{display:block}#quotaCard{padding:18px;border:1px solid rgba(146,156,255,.28);border-radius:20px;background:linear-gradient(145deg,rgba(23,24,43,.96),rgba(13,14,25,.96));box-shadow:0 14px 38px rgba(0,0,0,.28);text-align:left}#quotaIcon{float:left;width:48px;height:48px;margin:0 14px 10px 0;display:grid;place-items:center;border-radius:15px;background:rgba(125,135,255,.12);font-size:25px;animation:quotaPulse 1.5s ease-in-out infinite}#quotaTitle{margin:1px 0 4px;font-size:18px;color:#f5f5ff}#quotaText{margin:0;color:#a9abc4;font-size:13px;line-height:1.4}#quotaTime{clear:both;margin:15px 0 10px;font:800 30px/1 monospace;color:#aeb4ff;letter-spacing:2px}#quotaTrack{height:6px;overflow:hidden;border-radius:10px;background:#25263a}#quotaFill{height:100%;width:100%;border-radius:10px;background:linear-gradient(90deg,#747cff,#c3c7ff);transition:width .35s linear}#quotaRetry{display:none;width:100%;margin-top:14px;padding:12px;border:0;border-radius:14px;background:#7c83ff;color:white;font-weight:700;opacity:.55}#quotaRetry.ready{display:block;opacity:1;cursor:pointer}@keyframes quotaPulse{50%{transform:scale(1.05);box-shadow:0 0 22px rgba(124,131,255,.2)}}";
     document.head.appendChild(style);
     box=document.createElement("div"); box.id="quotaOverlay";
     box.innerHTML='<div id="quotaCard"><div id="quotaIcon">⌛</div><h3 id="quotaTitle"></h3><p id="quotaText"></p><div id="quotaTime">00:60</div><div id="quotaTrack"><div id="quotaFill"></div></div><button id="quotaRetry" type="button" disabled></button></div>';
-    document.body.appendChild(box);
+    var anchor=$("analyzeBtn");
+    anchor.parentNode.insertBefore(box,anchor.nextSibling);
     $("quotaRetry").addEventListener("click",function(){
       if(this.disabled) return;
       box.classList.remove("show");
-      if(state.image) analyze();
+      $("analyzeBtn").disabled=!state.image;
     });
     return box;
   }
   function showQuotaCountdown(info){
     var box=ensureQuotaOverlay(), copy=quotaCopy();
     var seconds=Math.max(1,Math.ceil(Number(info&&info.retryAfter)||60));
-    var retryAt=Math.max(Date.now()+seconds*1000,Number(info&&info.retryAt)||0);
+    var providerAt=Math.max(Date.now()+seconds*1000,Number(info&&info.retryAt)||0);
+    // Show the exact RetryInfo supplied by the provider. It is a recommendation,
+    // not a guarantee: shared traffic can extend the next cooldown.
+    var retryAt=(info&&info.preserve)
+      ? Math.max(Date.now()+1000,Number(info.retryAt)||quotaReadyAt)
+      : providerAt;
+    quotaReadyAt=retryAt;
     var total=Math.max(1,retryAt-Date.now());
     $("quotaTitle").textContent=copy.title;
     $("quotaText").textContent=copy.text;
@@ -2119,10 +2133,11 @@
       $("quotaFill").style.width=Math.max(0,Math.min(100,left/total*100))+"%";
       if(left<=0){
         clearInterval(quotaTimer);
+        quotaReadyAt=0;
         $("quotaText").textContent=copy.ready;
         $("quotaIcon").textContent="✅";
         $("quotaRetry").disabled=false; $("quotaRetry").classList.add("ready");
-        $("analyzeBtn").disabled=false;
+        $("analyzeBtn").disabled=true;
       }else{
         $("quotaIcon").textContent="⌛";
         $("analyzeBtn").disabled=true;
@@ -2252,6 +2267,10 @@
   }
   function analyze(){
     if(!state.image || state.analyzing) return;
+    if(quotaReadyAt>Date.now()){
+      showQuotaCountdown({retryAt:quotaReadyAt,preserve:true});
+      return;
+    }
     var psV = pairState(state.asset);
     if(psV.code === "closed"){
       var vrx = $("visionRisk");
