@@ -29,7 +29,11 @@ function parseSignal(text,model){
   return normalize({direction:dm[1],confidence:cm?cm[1]:"LOW"},model);
 }
 function promptFor(pair,timeframe,utc){
-  return `Professional short-term FX scenario. Pair=${pair}; expiry=${timeframe}; UTC=${utc}. Markets are unpredictable, so analyze the most probable direction professionally without inventing exact prices or broker candles. OTC quotes may differ. Choose BUY or SELL; never HOLD, WAIT or PAUSED; never choose randomly. Return only JSON: {"direction":"BUY|SELL","confidence":"LOW|MEDIUM|HIGH","analysis":"one brief rationale"}.`;
+  return `Analyze this short-term FX scenario professionally. Pair=${pair}; expiry=${timeframe}; UTC=${utc}. Choose the more probable direction. Never choose randomly. Return exactly one compact JSON object with no explanation outside it: {"direction":"BUY or SELL","confidence":"LOW or MEDIUM or HIGH"}.`;
+}
+function messageText(data){
+  const message=data?.choices?.[0]?.message||{};
+  return [message.content,message.reasoning,message.reasoning_content].filter(Boolean).join("\n");
 }
 async function requestGroq(key,model,prompt,jsonMode){
   const controller=new AbortController();
@@ -38,12 +42,13 @@ async function requestGroq(key,model,prompt,jsonMode){
     const body={
       model,
       messages:[
-        {role:"system",content:"Analyze professionally. Direction must be BUY or SELL. No random selection. Return only the requested result."},
+        {role:"system",content:"Return final JSON only. Use BUY or SELL. Use LOW, MEDIUM or HIGH confidence. Do not output HOLD, WAIT, PAUSED or commentary outside JSON."},
         {role:"user",content:prompt}
       ],
       stream:false,
       temperature:0.2,
-      max_completion_tokens:180
+      reasoning_effort:"low",
+      max_completion_tokens:600
     };
     if(jsonMode) body.response_format={type:"json_object"};
     const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{
@@ -69,7 +74,7 @@ async function callGroq(key,prompt){
     if(jsonAttempt.ok){
       try{
         const data=JSON.parse(jsonAttempt.raw);
-        const text=data?.choices?.[0]?.message?.content||"";
+        const text=messageText(data);
         return {result:parseSignal(text,model),attempts};
       }catch(e){
         attempts.push({model,mode:"json",status:200,message:`parse: ${String(e.message||e)}`});
@@ -83,7 +88,7 @@ async function callGroq(key,prompt){
     if(plainAttempt.ok){
       try{
         const data=JSON.parse(plainAttempt.raw);
-        const text=data?.choices?.[0]?.message?.content||"";
+        const text=messageText(data);
         return {result:parseSignal(text,model),attempts};
       }catch(e){
         attempts.push({model,mode:"plain",status:200,message:`parse: ${String(e.message||e)}`});
