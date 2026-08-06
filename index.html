@@ -746,130 +746,6 @@
 })();
 </script>
 
-
-<script id="pulse-immediate-dialogue">
-(function(){
-  "use strict";
-  var COPY={
-    ru:[
-      {who:"dop",text:"Ну что там? Давай быстрее — свеча уже уходит! 🔥"},
-      {who:"opy",text:"Спокойно. Сначала разберём структуру графика."},
-      {who:"dop",text:"Пока ты разбираешь, рынок без нас улетит! 🚀"},
-      {who:"opy",text:"Улетит — значит, это был не наш вход. Спешка не стратегия."},
-      {who:"dop",text:"Ладно… Но если там ракета — я предупреждал!"},
-      {who:"opy",text:"Сейчас проверка закончится. Решение примем только по подтверждению."}
-    ],
-    en:[
-      {who:"dop",text:"Well? Hurry up — that candle is already leaving! 🔥"},
-      {who:"opy",text:"Easy. First we read the chart structure."},
-      {who:"dop",text:"While you read it, the market will fly without us! 🚀"},
-      {who:"opy",text:"Then it was not our entry. Haste is not a strategy."},
-      {who:"dop",text:"Fine… But if it rockets, remember I warned you!"},
-      {who:"opy",text:"The check is almost done. We act only after confirmation."}
-    ],
-    uz:[
-      {who:"dop",text:"Xo‘sh? Tezroq — sham allaqachon ketmoqda! 🔥"},
-      {who:"opy",text:"Shoshma. Avval grafik tuzilishini tekshiramiz."},
-      {who:"dop",text:"Sen tekshirguncha bozor bizsiz uchib ketadi! 🚀"},
-      {who:"opy",text:"Uchsa — demak, bu bizning kirishimiz emas. Shoshilish strategiya emas."},
-      {who:"dop",text:"Mayli… Lekin raketa bo‘lsa, men ogohlantirganman!"},
-      {who:"opy",text:"Tekshiruv tugayapti. Faqat tasdiq bo‘lsa kiramiz."}
-    ],
-    hi:[
-      {who:"dop",text:"तो? जल्दी करो — कैंडल निकल रही है! 🔥"},
-      {who:"opy",text:"शांत रहो। पहले चार्ट की संरचना समझते हैं।"},
-      {who:"dop",text:"जब तक तुम देखोगे, बाज़ार हमारे बिना उड़ जाएगा! 🚀"},
-      {who:"opy",text:"उड़ गया तो वह हमारी एंट्री नहीं थी। जल्दबाज़ी रणनीति नहीं है।"},
-      {who:"dop",text:"ठीक है… लेकिन रॉकेट निकला तो मैंने पहले कहा था!"},
-      {who:"opy",text:"जाँच पूरी होने वाली है। पुष्टि मिलने पर ही एंट्री करेंगे।"}
-    ],
-    pt:[
-      {who:"dop",text:"E aí? Anda logo — essa vela já está indo embora! 🔥"},
-      {who:"opy",text:"Calma. Primeiro vamos ler a estrutura do gráfico."},
-      {who:"dop",text:"Enquanto você analisa, o mercado vai voar sem a gente! 🚀"},
-      {who:"opy",text:"Se voar, não era a nossa entrada. Pressa não é estratégia."},
-      {who:"dop",text:"Tá bom… Mas se virar foguete, eu avisei!"},
-      {who:"opy",text:"A verificação está terminando. Só entramos com confirmação."}
-    ],
-    ar:[
-      {who:"dop",text:"ماذا ننتظر؟ أسرع، الشمعة بدأت تتحرك! 🔥"},
-      {who:"opy",text:"اهدأ. نقرأ بنية الرسم أولًا."},
-      {who:"dop",text:"وأنت تحلل، سيطير السوق من دوننا! 🚀"},
-      {who:"opy",text:"إن طار، فلم يكن دخولنا. التسرع ليس استراتيجية."},
-      {who:"dop",text:"حسنًا… لكن إن انطلق كالصاروخ فقد حذرتك!"},
-      {who:"opy",text:"شارف الفحص على الانتهاء. لن ندخل إلا بعد التأكيد."}
-    ],
-    kk:[
-      {who:"dop",text:"Не болды? Тезірек — шам кетіп барады! 🔥"},
-      {who:"opy",text:"Сабыр. Алдымен график құрылымын тексереміз."},
-      {who:"dop",text:"Сен тексергенше нарық бізсіз ұшып кетеді! 🚀"},
-      {who:"opy",text:"Ұшса — ол біздің кіру нүктеміз емес. Асығыстық стратегия емес."},
-      {who:"dop",text:"Жарайды… Бірақ ракета болса, мен ескерттім!"},
-      {who:"opy",text:"Тексеру аяқталып келеді. Растау болса ғана кіреміз."}
-    ]
-  };
-  var cancelled=false, active=false, promise=null, resolveRun=null, observer=null, hold=false;
-  function code(v){ return String(v||document.documentElement.getAttribute("lang")||"ru").slice(0,2); }
-  function cleanupObserver(){ if(observer){ observer.disconnect(); observer=null; } }
-  function removeWait(){ var w=document.getElementById("pulseDialogueWait"); if(w&&w.parentNode) w.parentNode.removeChild(w); }
-  function addWait(){
-    if(document.getElementById("pulseDialogueWait")) return;
-    var thread=document.getElementById("psThread"); if(!thread) return;
-    var src=thread.querySelector(".ps-row.opy:last-of-type");
-    var row=src?src.cloneNode(true):document.createElement("div");
-    if(!src){ row.className="ps-row opy"; row.innerHTML='<div class="ps-bubble typing"><i></i><i></i><i></i></div>'; }
-    row.id="pulseDialogueWait";
-    var bubble=row.querySelector(".ps-bubble");
-    if(bubble){ bubble.className="ps-bubble typing"; bubble.innerHTML="<i></i><i></i><i></i>"; }
-    thread.appendChild(row);
-    try{ row.scrollIntoView({behavior:"smooth",block:"nearest"}); }catch(e){}
-  }
-  function resultReady(){ var r=document.getElementById("visionResult"); return !!(r&&r.classList.contains("show")); }
-  function releaseHold(){
-    hold=false; removeWait();
-    var spar=document.getElementById("psSpar"); if(spar) spar.style.display="";
-    document.body.classList.remove("pulse-scene-on");
-  }
-  function watch(){
-    cleanupObserver();
-    observer=new MutationObserver(function(){
-      var spar=document.getElementById("psSpar");
-      if(spar&&active){
-        active=false;
-        if(!resultReady()){
-          hold=true; spar.style.display="none"; document.body.classList.add("pulse-scene-on"); addWait();
-        }
-        if(resolveRun){ var done=resolveRun; resolveRun=null; done(); }
-      }
-      if(hold&&resultReady()) releaseHold();
-    });
-    observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["class","style"]});
-  }
-  function prepare(){
-    cancelled=false; active=false; hold=false; promise=null; resolveRun=null; removeWait(); cleanupObserver();
-  }
-  function start(language){
-    if(cancelled) return Promise.resolve();
-    if(promise) return promise;
-    active=true;
-    promise=new Promise(function(resolve){ resolveRun=resolve; });
-    window.__pulseDialogue=(COPY[code(language)]||COPY.en).map(function(x){return {who:x.who,text:x.text};});
-    window.__pulseDlgSource="instant-intro";
-    window.__pulseDlgDiag=null;
-    watch();
-    setTimeout(function(){ if(resolveRun){ var done=resolveRun; resolveRun=null; active=false; done(); } },30000);
-    return promise;
-  }
-  function abort(){
-    cancelled=true; active=false; hold=false; window.__pulseDialogue=null; removeWait(); cleanupObserver();
-    var scene=document.getElementById("pulseScene"); if(scene) scene.classList.remove("show");
-    document.body.classList.remove("pulse-scene-on");
-    if(resolveRun){ var done=resolveRun; resolveRun=null; done(); }
-  }
-  window.PulseImmediateDialogue={prepare:prepare,start:start,abort:abort};
-})();
-</script>
-
 </head>
 <body>
 <video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
@@ -2617,19 +2493,12 @@
       return;
     }
     state.analyzing = true; $("analyzeBtn").disabled = true;
-    if(window.PulseImmediateDialogue && window.PulseImmediateDialogue.prepare){
-      window.PulseImmediateDialogue.prepare();
-    }
     var cinematicGate = (window.PulseVisionCinematic && window.PulseVisionCinematic.start)
       ? window.PulseVisionCinematic.start()
       : Promise.resolve();
-    var dialogueGate = Promise.resolve(cinematicGate).then(function(){
-      return (window.PulseImmediateDialogue && window.PulseImmediateDialogue.start)
-        ? window.PulseImmediateDialogue.start(state.language)
-        : Promise.resolve();
-    });
-    function afterCinematic(fn){ Promise.resolve(cinematicGate).then(fn).catch(fn); }
-    function afterDialogue(fn){ Promise.resolve(dialogueGate).then(fn).catch(fn); }
+    function afterCinematic(fn){
+      Promise.resolve(cinematicGate).then(fn).catch(fn);
+    }
     startProcessing();
     (function(){
       var settled=false;
@@ -2656,7 +2525,7 @@
         stopProcessing();
         // Keep the real request running in parallel with the cinematic intro.
         // Reveal the dialogue/result only after the white-flash transition ends.
-        afterDialogue(function(){
+        afterCinematic(function(){
           setTimeout(function(){
             showVisionResult(data);
             if(diag) showDiag(diag, data && data.diag);
@@ -2682,7 +2551,6 @@
           if(r.data && r.data.quotaLimited){
             if(settled) return; settled=true;
             stopProcessing();
-            if(window.PulseImmediateDialogue && window.PulseImmediateDialogue.abort){ window.PulseImmediateDialogue.abort(); }
             afterCinematic(function(){
               $("processing").classList.remove("show");
               state.analyzing=false;
