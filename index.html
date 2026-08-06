@@ -660,6 +660,92 @@
   new MutationObserver(removeInternalDiagnostics).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+
+<style id="vision-cinematic-style">
+  #visionCinema{position:fixed;inset:0;z-index:2147483000;display:none;overflow:hidden;background:#020407;opacity:0;transition:opacity .16s ease;isolation:isolate}
+  #visionCinema.show{display:block;opacity:1}
+  #visionCinemaVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#020407}
+  #visionCinema:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,transparent 24%,transparent 67%,rgba(0,0,0,.66) 100%)}
+  #visionCinema:after{content:"";position:absolute;inset:-8%;z-index:3;pointer-events:none;box-shadow:inset 0 0 110px rgba(0,0,0,.74)}
+  .vc-skip{position:absolute;z-index:6;top:max(14px,env(safe-area-inset-top));right:14px;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:9px 14px;background:rgba(5,8,12,.48);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;font:700 12px/1 system-ui,-apple-system,sans-serif;letter-spacing:.02em}
+  [dir="rtl"] .vc-skip{right:auto;left:14px}
+  .vc-caption{position:absolute;z-index:5;left:50%;bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px));width:min(88vw,430px);transform:translateX(-50%);text-align:center;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.9);font:800 clamp(16px,4.4vw,21px)/1.28 system-ui,-apple-system,sans-serif;letter-spacing:-.015em;animation:vcCaption 4s ease both}
+  .vc-caption small{display:block;margin:0 auto 9px;color:#6fffb2;font:800 10px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.18em;text-transform:uppercase}
+  .vc-progress{position:absolute;z-index:6;left:7%;right:7%;bottom:max(12px,env(safe-area-inset-bottom));height:2px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.18)}
+  .vc-progress span{display:block;width:100%;height:100%;transform-origin:left center;background:linear-gradient(90deg,#36ef8a,#f5fff9);animation:vcProgress 4s linear both}
+  #visionCinemaFlash{position:absolute;inset:0;z-index:8;pointer-events:none;background:#fff;opacity:0}
+  #visionCinema.flash #visionCinemaFlash{animation:vcFlash .18s ease-out both}
+  body.vision-cinema-on{overflow:hidden!important;touch-action:none}
+  @keyframes vcCaption{0%{opacity:0;transform:translate(-50%,14px)}15%,67%{opacity:1;transform:translate(-50%,0)}88%,100%{opacity:0;transform:translate(-50%,-7px)}}
+  @keyframes vcProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes vcFlash{0%{opacity:.05}42%{opacity:1}100%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.vc-caption,.vc-progress span{animation:none}.vc-caption{opacity:1}}
+</style>
+<script id="vision-cinematic-controller">
+(function(){
+  "use strict";
+  var VIDEO_URL="https://cdn.videovssylku.ru/2026/08/06/lv_0_20260806090138.mp4";
+  var COPY={
+    ru:{label:"ВНУТРИ ТРЕЙДЕРА",text:"В этот момент внутри трейдера начинается спор…",skip:"Пропустить"},
+    en:{label:"INSIDE THE TRADER",text:"At this moment, a debate begins inside the trader…",skip:"Skip"},
+    uz:{label:"TREYDER ICHIDA",text:"Shu payt treyder ichida bahs boshlanadi…",skip:"O‘tkazib yuborish"},
+    hi:{label:"ट्रेडर के भीतर",text:"इसी क्षण ट्रेडर के भीतर बहस शुरू होती है…",skip:"छोड़ें"},
+    pt:{label:"DENTRO DO TRADER",text:"Nesse momento, começa um debate dentro do trader…",skip:"Pular"},
+    ar:{label:"داخل المتداول",text:"في هذه اللحظة يبدأ الصراع داخل المتداول…",skip:"تخطي"},
+    kk:{label:"ТРЕЙДЕРДІҢ ІШІНДЕ",text:"Осы сәтте трейдердің ішінде тартыс басталады…",skip:"Өткізіп жіберу"}
+  };
+  var active=null, failTimer=0;
+  function lang(){ return String(document.documentElement.getAttribute("lang")||"ru").slice(0,2); }
+  function ensure(){
+    var root=document.getElementById("visionCinema");
+    if(root) return root;
+    root=document.createElement("div");
+    root.id="visionCinema"; root.setAttribute("aria-hidden","true");
+    root.innerHTML='<video id="visionCinemaVideo" playsinline webkit-playsinline preload="auto" muted><source src="'+VIDEO_URL+'" type="video/mp4"></video><button class="vc-skip" id="visionCinemaSkip" type="button"></button><div class="vc-caption"><small id="visionCinemaLabel"></small><span id="visionCinemaText"></span></div><div class="vc-progress"><span></span></div><div id="visionCinemaFlash"></div>';
+    document.body.appendChild(root);
+    document.getElementById("visionCinemaSkip").addEventListener("click",function(){ finish(true); });
+    var video=document.getElementById("visionCinemaVideo");
+    video.addEventListener("ended",function(){ finish(false); });
+    video.addEventListener("error",function(){ finish(true); });
+    return root;
+  }
+  function finish(skipped){
+    if(!active) return;
+    var run=active; active=null; clearTimeout(failTimer);
+    var root=ensure(), video=document.getElementById("visionCinemaVideo");
+    function close(){
+      try{ video.pause(); }catch(e){}
+      root.classList.remove("show","flash"); root.setAttribute("aria-hidden","true");
+      document.body.classList.remove("vision-cinema-on");
+      setTimeout(function(){ root.style.display="none"; },180);
+      run.resolve({skipped:!!skipped});
+    }
+    if(skipped){ close(); }
+    else { root.classList.add("flash"); setTimeout(close,150); }
+  }
+  function start(){
+    if(active) return active.promise;
+    var root=ensure(), video=document.getElementById("visionCinemaVideo"), c=COPY[lang()]||COPY.en;
+    document.getElementById("visionCinemaLabel").textContent=c.label;
+    document.getElementById("visionCinemaText").textContent=c.text;
+    document.getElementById("visionCinemaSkip").textContent=c.skip;
+    root.style.display="block"; root.setAttribute("aria-hidden","false");
+    root.classList.remove("flash"); document.body.classList.add("vision-cinema-on");
+    void root.offsetWidth; root.classList.add("show");
+    try{ video.currentTime=0; video.muted=true; }catch(e){}
+    var resolveFn;
+    var promise=new Promise(function(resolve){ resolveFn=resolve; });
+    active={promise:promise,resolve:resolveFn};
+    failTimer=setTimeout(function(){ finish(true); },7500);
+    var played;
+    try{ played=video.play(); }catch(e){ finish(true); }
+    if(played&&played.catch){ played.catch(function(){ finish(true); }); }
+    return promise;
+  }
+  window.PulseVisionCinematic={start:start,skip:function(){finish(true);},url:VIDEO_URL};
+})();
+</script>
+
 </head>
 <body>
 <video id="bgVid" autoplay muted loop playsinline preload="auto"><source src="bg.mp4" type="video/mp4"></video>
@@ -2407,6 +2493,12 @@
       return;
     }
     state.analyzing = true; $("analyzeBtn").disabled = true;
+    var cinematicGate = (window.PulseVisionCinematic && window.PulseVisionCinematic.start)
+      ? window.PulseVisionCinematic.start()
+      : Promise.resolve();
+    function afterCinematic(fn){
+      Promise.resolve(cinematicGate).then(fn).catch(fn);
+    }
     startProcessing();
     (function(){
       var settled=false;
@@ -2431,17 +2523,20 @@
       function finishWith(data, done, diag){
         if(settled) return; settled=true;
         stopProcessing();
-        // Prepare the result and dialogue first. Only then complete and hide progress.
-        setTimeout(function(){
-          showVisionResult(data);
-          if(diag) showDiag(diag, data && data.diag);
+        // Keep the real request running in parallel with the cinematic intro.
+        // Reveal the dialogue/result only after the white-flash transition ends.
+        afterCinematic(function(){
           setTimeout(function(){
-            if(done) setRing(100);
-            $("processing").classList.remove("show");
-            state.analyzing=false;
-            $("analyzeBtn").disabled=false;
-          }, 250);
-        }, 0);
+            showVisionResult(data);
+            if(diag) showDiag(diag, data && data.diag);
+            setTimeout(function(){
+              if(done) setRing(100);
+              $("processing").classList.remove("show");
+              state.analyzing=false;
+              $("analyzeBtn").disabled=false;
+            }, 250);
+          }, 0);
+        });
       }
       var capTimer = setTimeout(function(){
         if(controller){ try{ controller.abort(); }catch(e){} }
@@ -2456,9 +2551,11 @@
           if(r.data && r.data.quotaLimited){
             if(settled) return; settled=true;
             stopProcessing();
-            $("processing").classList.remove("show");
-            state.analyzing=false;
-            showQuotaCountdown(r.data);
+            afterCinematic(function(){
+              $("processing").classList.remove("show");
+              state.analyzing=false;
+              showQuotaCountdown(r.data);
+            });
             return;
           }
           procFinalPhase();
