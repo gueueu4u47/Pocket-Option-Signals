@@ -305,6 +305,32 @@ function sanitizePublicPayload(payload) {
   return payload;
 }
 
+// Gemini free-tier RPD resets at midnight America/Los_Angeles.
+// Add five minutes so the primary model is not retried on the reset boundary.
+function nextPacificResetAt(nowMs) {
+  const zone = "America/Los_Angeles";
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+  });
+  function parts(ms) {
+    const out = {};
+    fmt.formatToParts(new Date(ms)).forEach(function (p) {
+      if (p.type !== "literal") out[p.type] = Number(p.value);
+    });
+    return out;
+  }
+  function offsetAt(ms) {
+    const p = parts(ms);
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - ms;
+  }
+  const now = parts(Number(nowMs || Date.now()));
+  const nextDay = new Date(Date.UTC(now.year, now.month - 1, now.day + 1));
+  const wall = Date.UTC(nextDay.getUTCFullYear(), nextDay.getUTCMonth(), nextDay.getUTCDate(), 0, 5, 0);
+  const guess = wall + 8 * 60 * 60 * 1000;
+  return wall - offsetAt(guess);
+}
+
 module.exports = async function localizedAnalyze(req, res) {
   let body;
   try {
@@ -334,7 +360,10 @@ module.exports = async function localizedAnalyze(req, res) {
   };
   innerRes.json = function json(payload) {
     const context = storage.getStore();
-    if (context && context.quotaRetryAt) {
+    const fallbackSucceeded = !!(
+      context && context.quotaRetryAt && payload && payload.direction && !payload.degraded
+    );
+    if (context && context.quotaRetryAt && !fallbackSucceeded) {
       const retryAfter = Math.max(1, Math.ceil((context.quotaRetryAt - Date.now()) / 1000));
       return res.status(429).json({
         ok: false,
@@ -342,6 +371,10 @@ module.exports = async function localizedAnalyze(req, res) {
         retryAfter: retryAfter,
         retryAt: Date.now() + retryAfter * 1000
       });
+    }
+    if (fallbackSucceeded) {
+      payload.fallbackUsed = true;
+      payload.primaryRetryAt = nextPacificResetAt(Date.now());
     }
     return res.json(sanitizePublicPayload(completeDialogue(localizePayload(payload, language), language)));
   };
@@ -365,7 +398,12 @@ module.exports = async function localizedAnalyze(req, res) {
     // Leave AI_BASE_URL unset so analyze-core uses its native Google Gemini
     // request path for Google-issued keys instead of the Unity/OpenAI path.
     delete process.env.AI_BASE_URL;
-    process.env.AI_MODELS = "gemini-3.6-flash";
+    // Normally try 3.6 first and fall back to 3.1 Flash Lite on quota.
+    // After a fallback, the client sends preferFallback until the next Pacific reset,
+    // so following analyses use exactly one request. Then 3.6 returns automatically.
+    process.env.AI_MODELS = body.preferFallback
+      ? "gemini-3.1-flash-lite"
+      : "gemini-3.6-flash,gemini-3.1-flash-lite";
   }
 
   try {
@@ -380,9 +418,36 @@ module.exports = async function localizedAnalyze(req, res) {
     const oldModelMap = 'if (!m || /^gemini-3/.test(m)) return "gemini-2.5-flash";';
     const newModelMap = 'if (!m) return "gemini-3.6-flash";';
     const originalCoreSource = fs.readFileSync(corePath, "utf8");
-    const patchedCoreSource = originalCoreSource.replace(oldModelMap, newModelMap);
+    let patchedCoreSource = originalCoreSource.replace(oldModelMap, newModelMap);
     if (patchedCoreSource === originalCoreSource) {
       throw new Error("Gemini model mapper patch target was not found");
+    }
+
+    // One provider request per selected model: the animated dialogue is fixed now,
+    // so disable retry/enrichment/dialogue-generation calls inside the legacy core.
+    const corePatches = [
+      [
+        'const mainPrompt = lang === "ru" ? FAST_RU : FAST_EN;',
+        'const mainPrompt = lang === "ru" ? PROMPT_RU : PROMPT_EN;'
+      ],
+      [
+        'if (!best || !bestReasons.length || !best.direction || bestCut) {',
+        'if (false && (!best || !bestReasons.length || !best.direction || bestCut)) {'
+      ],
+      [
+        'if (best && best.direction && bestReasons.length && !(best.dialogue && best.dialogue.length >= 4)) {',
+        'if (false && best && best.direction && bestReasons.length && !(best.dialogue && best.dialogue.length >= 4)) {'
+      ],
+      [
+        'if (best && best.direction && sanitizeDialogue(best.dialogue).length < 2) {',
+        'if (false && best && best.direction && sanitizeDialogue(best.dialogue).length < 2) {'
+      ]
+    ];
+    for (const pair of corePatches) {
+      if (!patchedCoreSource.includes(pair[0])) {
+        throw new Error("Gemini optimization patch target was not found");
+      }
+      patchedCoreSource = patchedCoreSource.replace(pair[0], pair[1]);
     }
     const coreModule = new Module(corePath, module);
     coreModule.filename = corePath;
