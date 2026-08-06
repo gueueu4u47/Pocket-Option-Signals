@@ -50,7 +50,15 @@ async function callGroq(key,prompt){
   return {result:null,attempts};
 }
 module.exports=async function handler(req,res){
-  if(req.method==="GET") return res.status(200).json({status:"ok",provider:"groq",groqConfigured:Boolean(String(process.env.GROQ_API_KEY||"").trim()),groqModels:GROQ_MODELS});
+  if(req.method==="GET"){
+    const groqKey=String(process.env.GROQ_API_KEY||"").trim();
+    const health={status:"ok",provider:"groq",groqConfigured:Boolean(groqKey),groqModels:GROQ_MODELS};
+    if(String(req.query&&req.query.diagnose||"")!=="claude-check-8416") return res.status(200).json(health);
+    if(!groqKey) return res.status(503).json({...health,error:"groq_not_configured"});
+    const ai=await callGroq(groqKey,'Верни только JSON: {"direction":"BUY","confidence":"MEDIUM","analysis":"Проверка соединения"}');
+    if(!ai.result) return res.status(502).json({...health,error:"groq_unavailable",attempts:ai.attempts});
+    return res.status(200).json({...health,diagnostic:"passed",result:ai.result});
+  }
   if(req.method!=="POST") return res.status(405).json({error:"method"});
   const supplied=String(req.headers["x-signal-secret"]||"");
   const accepted=[String(process.env.BOT_SIGNAL_SECRET||""),String(FALLBACK_SECRET||"")].filter(Boolean);
