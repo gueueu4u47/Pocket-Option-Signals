@@ -1034,8 +1034,8 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
 <style id="market-cinema-max-style">
 :root{--mx-x:50%;--mx-y:50%;--mx-rx:0deg;--mx-ry:0deg;--mx-orange:#D97757;--mx-cream:#F3E9E3;--mx-ease:cubic-bezier(.16,1,.3,1)}
 /* Raw WebGL layer: procedural market topology, not a video or canned animation. */
-#marketTopology{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:.58;mix-blend-mode:screen;pointer-events:none;transition:opacity .5s ease}
-.cinema-deck[data-scene="history"] #marketTopology{opacity:.34}.cinema-deck[data-scene="vision"] #marketTopology{opacity:.7}
+#marketTopology{position:absolute;inset:0;z-index:6;width:100%;height:100%;opacity:.88;mix-blend-mode:screen;pointer-events:none;transition:opacity .5s ease}
+.cinema-deck[data-scene="history"] #marketTopology{opacity:.62}.cinema-deck[data-scene="vision"] #marketTopology{opacity:.96}
 .cinema-deck{transform-style:preserve-3d;perspective:1200px;will-change:transform;transition:transform .9s var(--mx-ease),height .65s var(--cinema-ease),filter .55s ease}
 .cinema-deck::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(260px circle at var(--mx-x) var(--mx-y),rgba(242,231,225,.08),transparent 68%);mix-blend-mode:screen}
 .cinema-video{will-change:transform;transform:scale(1.065) translate3d(calc((var(--mx-x) - 50%) * -.018),calc((var(--mx-y) - 50%) * -.018),0)!important}
@@ -1047,7 +1047,7 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
 /* Uncommon asymmetric module skeleton with optical borders. */
 .v5-module{isolation:isolate;overflow:visible!important}.v5-module::before{content:"";position:absolute;z-index:-1;inset:-1px;clip-path:polygon(0 0,calc(100% - 31px) 0,100% 31px,100% 100%,31px 100%,0 calc(100% - 31px));background:linear-gradient(135deg,rgba(217,119,87,.28),rgba(255,255,255,.05) 35%,rgba(255,255,255,.02) 70%,rgba(217,119,87,.14));opacity:.42;pointer-events:none}.v5-module::after{content:attr(data-module);position:absolute;right:-1px;top:82px;color:rgba(255,255,255,.035);font:700 clamp(42px,9vw,86px)/.8 "Space Grotesk";letter-spacing:-.07em;writing-mode:vertical-rl;pointer-events:none}
 /* Result develops like an exposed film frame instead of popping as a card. */
-.result{clip-path:inset(0 100% 0 0);opacity:0!important;transform:translateY(9px);transition:none!important}.result.show{animation:mxDevelop .92s var(--mx-ease) forwards!important}@keyframes mxDevelop{0%{clip-path:inset(0 100% 0 0);opacity:0;filter:brightness(3) saturate(0);transform:translateY(9px)}42%{opacity:1;filter:brightness(1.7) saturate(.35)}100%{clip-path:inset(0);opacity:1;filter:none;transform:none}}
+.result{clip-path:none;opacity:1;transform:none}.result.show{display:block!important;animation:mxDevelop .92s var(--mx-ease) forwards!important}@keyframes mxDevelop{0%{clip-path:inset(0 100% 0 0);opacity:0;filter:brightness(3) saturate(0);transform:translateY(9px)}42%{opacity:1;filter:brightness(1.7) saturate(.35)}100%{clip-path:inset(0);opacity:1;filter:none;transform:none}}
 .result.show .r-dir{animation:mxDirection .8s var(--mx-ease) .28s both}@keyframes mxDirection{from{opacity:0;transform:translateX(-20px);letter-spacing:.12em;filter:blur(5px)}to{opacity:1;transform:none;letter-spacing:-.02em;filter:none}}
 .mx-result-line{position:absolute;z-index:20;left:0;right:0;top:0;height:1px;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,transparent,var(--mx-orange),#fff,var(--mx-orange),transparent);box-shadow:0 0 19px rgba(217,119,87,.46)}.result.show .mx-result-line{animation:mxResultLine .85s var(--mx-ease) .05s forwards}@keyframes mxResultLine{to{transform:scaleX(1)}}
 /* Subtle physical depth: only fine-grained child movement, never whole-layout tilting. */
@@ -3975,6 +3975,23 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
  if(!reduce&&innerWidth>700){document.addEventListener("pointermove",function(e){var el=e.target.closest&&e.target.closest(".v-param,.mode-card,.h-item,.fact");if(!el)return;var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;el.style.setProperty("--dx",(x*2.8).toFixed(2)+"px");el.style.setProperty("--dy",(y*2.2).toFixed(2)+"px")},{passive:true});document.addEventListener("pointerout",function(e){var el=e.target.closest&&e.target.closest(".v-param,.mode-card,.h-item,.fact");if(el){el.style.setProperty("--dx","0px");el.style.setProperty("--dy","0px")}}, {passive:true})}
  var video=document.getElementById("cinemaVideo");if(video)video.classList.add("mx-film-breathe");
 })();
+</script>
+
+
+<style id="market-cinema-max-v2-visible-style">
+/* V2 deliberately exposes the procedural system; V1 was too subtle. */
+.cinema-title{max-width:56%!important}.cinema-video{opacity:.68!important}.cinema-grade{background:linear-gradient(90deg,rgba(0,0,0,.9),rgba(0,0,0,.35) 47%,rgba(0,0,0,.74)),linear-gradient(180deg,rgba(0,0,0,.5),transparent 30%,transparent 68%,rgba(0,0,0,.82))!important}
+.mx-topology-window{position:absolute;z-index:7;right:6%;top:50%;width:min(34%,310px);aspect-ratio:1;transform:translateY(-50%);border:1px solid rgba(217,119,87,.32);clip-path:polygon(0 0,82% 0,100% 18%,100% 100%,18% 100%,0 82%);pointer-events:none;box-shadow:0 0 0 18px rgba(217,119,87,.018),0 0 70px rgba(217,119,87,.12)}
+.mx-topology-window::before,.mx-topology-window::after{content:"";position:absolute;inset:13%;border:1px solid rgba(242,231,225,.16);border-radius:50%;animation:mxTopoSpin 9s linear infinite}.mx-topology-window::after{inset:29%;border-color:rgba(217,119,87,.42);animation-direction:reverse;animation-duration:6s}.mx-topology-window i{position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#F2E7E1;box-shadow:0 0 22px 5px rgba(217,119,87,.75);animation:mxTopoCore 2.2s ease-in-out infinite}.mx-topology-window b{position:absolute;left:14px;bottom:12px;color:#E8A38B;font:900 7px/1 Inter,sans-serif;letter-spacing:.17em}.mx-topology-window span{position:absolute;right:13px;top:12px;color:rgba(255,255,255,.42);font:800 7px/1 monospace;letter-spacing:.08em}
+@keyframes mxTopoSpin{to{transform:rotate(360deg)}}@keyframes mxTopoCore{50%{transform:translate(-50%,-50%) scale(1.8);opacity:.35}}
+.cinema-deck::after{content:"";position:absolute;z-index:7;left:59%;top:8%;bottom:8%;width:1px;background:linear-gradient(transparent,rgba(217,119,87,.55),transparent);box-shadow:0 0 18px rgba(217,119,87,.25);transform:rotate(7deg);transform-origin:center}
+/* Results are always readable; development is clip-only, never a permanent black state. */
+.result.show{visibility:visible!important;opacity:1!important}.result.show>*{visibility:visible!important}
+@media(max-width:700px){.cinema-title{max-width:74%!important}.mx-topology-window{right:-52px;width:190px;opacity:.7}.cinema-deck::after{left:72%}#marketTopology{opacity:.78!important}.result.show{clip-path:none!important}}
+@media(prefers-reduced-motion:reduce){.mx-topology-window::before,.mx-topology-window::after,.mx-topology-window i{animation:none!important}}
+</style>
+<script id="market-cinema-max-v2-visible-engine">
+(function(){var deck=document.getElementById('cinemaDeck');if(!deck)return;var w=document.createElement('div');w.className='mx-topology-window';w.innerHTML='<i></i><b>PROCEDURAL FIELD</b><span id="mxFieldClock">000.000</span>';deck.appendChild(w);var c=document.getElementById('mxFieldClock');setInterval(function(){if(c)c.textContent=(performance.now()/1000).toFixed(3).padStart(7,'0')},73);})();
 </script>
 
 </body>
