@@ -1002,6 +1002,54 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
 @media(max-height:690px){.cinema-access-frame{display:none}.cinema-access-shell{display:block!important}.cinema-access-form{padding:20px!important}}
 @media(prefers-reduced-motion:reduce){.cinema-grain,.cinema-scan,.cinema-focus span{animation:none!important}}
 </style>
+
+<style id="claude-darkroom-scan-style">
+:root{--dr-orange:#D97757;--dr-cream:#F2E7E1;--dr-ink:#040404;--dr-ease:cubic-bezier(.16,1,.3,1)}
+/* The old ring remains as a semantic fallback, but the visible analysis is the frame itself. */
+#processing{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%)!important;border:0!important;opacity:0!important;pointer-events:none!important}
+.darkroom{position:fixed;inset:0;z-index:180;display:none;overflow:hidden;background:#030303;color:var(--dr-cream);isolation:isolate;opacity:0;transition:opacity .34s ease}
+.darkroom.show{display:block;opacity:1}
+.darkroom.out{opacity:0;transition-duration:.48s}
+.dr-video{position:absolute;inset:-3%;width:106%;height:106%;object-fit:cover;filter:grayscale(1) brightness(.18) contrast(1.45);transform:scale(1.08);opacity:.52}
+.dr-grade{position:absolute;inset:0;z-index:1;background:radial-gradient(78% 56% at 50% 45%,transparent 23%,rgba(0,0,0,.74) 100%),linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,.08) 32%,rgba(0,0,0,.82));backdrop-filter:blur(2px)}
+.dr-grain{position:absolute;inset:-30%;z-index:2;opacity:.075;mix-blend-mode:screen;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:drGrain .22s steps(2) infinite}
+.dr-shell{position:absolute;z-index:4;inset:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px}
+.dr-head,.dr-foot{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:11px 2px;color:rgba(255,255,255,.52);font:800 8px/1.2 Inter,sans-serif;letter-spacing:.17em}
+.dr-head{border-bottom:1px solid rgba(255,255,255,.15)}.dr-foot{border-top:1px solid rgba(255,255,255,.15)}
+.dr-head b,.dr-foot b{color:var(--dr-cream);font-variant-numeric:tabular-nums}.dr-live{display:flex;align-items:center;gap:7px}.dr-live i{width:5px;height:5px;border-radius:50%;background:var(--dr-orange);box-shadow:0 0 13px var(--dr-orange);animation:drLive 1.2s ease-in-out infinite}
+.dr-stage{position:relative;min-height:0;display:grid;place-items:center;perspective:1000px}
+.dr-frame{position:relative;width:min(92vw,820px);height:min(59vh,520px);overflow:hidden;border:1px solid rgba(255,255,255,.19);background:#08090b;box-shadow:0 36px 90px rgba(0,0,0,.65),0 0 0 1px rgba(217,119,87,.06);transform:rotateX(1.1deg) rotateY(-1.3deg) scale(.965);animation:drFrameIn .72s var(--dr-ease) forwards}
+.dr-frame:before,.dr-frame:after{content:"";position:absolute;z-index:8;width:27px;height:27px;border-color:rgba(242,231,225,.65)}
+.dr-frame:before{left:12px;top:12px;border-left:1px solid;border-top:1px solid}.dr-frame:after{right:12px;bottom:12px;border-right:1px solid;border-bottom:1px solid}
+.dr-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#050608;filter:saturate(.72) contrast(1.13) brightness(.74);transform:scale(1.015);transition:filter .5s ease,transform 2.2s var(--dr-ease)}
+.darkroom.deep .dr-image{filter:saturate(.48) contrast(1.25) brightness(.64);transform:scale(1.035)}
+.dr-image-grade{position:absolute;inset:0;z-index:2;background:linear-gradient(90deg,rgba(217,119,87,.05),transparent 32%,rgba(242,231,225,.025)),radial-gradient(90% 80% at 50% 50%,transparent 58%,rgba(0,0,0,.52));pointer-events:none}
+.dr-grid{position:absolute;inset:0;z-index:3;opacity:.2;background-image:linear-gradient(rgba(242,231,225,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(242,231,225,.13) 1px,transparent 1px);background-size:10% 16.666%;mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
+.dr-vscan,.dr-hscan,.dr-wave{position:absolute;z-index:5;pointer-events:none;opacity:0}
+.dr-vscan{top:0;bottom:0;left:8%;width:1px;background:linear-gradient(transparent,var(--dr-orange) 12%,#fff 50%,var(--dr-orange) 88%,transparent);box-shadow:0 0 20px 5px rgba(217,119,87,.25)}
+.darkroom.phase-structure .dr-vscan,.darkroom.phase-levels .dr-vscan,.darkroom.phase-momentum .dr-vscan,.darkroom.phase-decision .dr-vscan{opacity:1;animation:drVScan 2.15s ease-in-out infinite}
+.dr-hscan{left:0;right:0;top:30%;height:1px;background:linear-gradient(90deg,transparent,var(--dr-cream) 20%,#fff 50%,var(--dr-cream) 80%,transparent);box-shadow:0 0 18px 4px rgba(242,231,225,.16)}
+.darkroom.phase-levels .dr-hscan,.darkroom.phase-momentum .dr-hscan,.darkroom.phase-decision .dr-hscan{opacity:.9;animation:drHScan 2.4s ease-in-out infinite}
+.dr-wave{left:-13%;top:58%;width:126%;height:54px;transform:rotate(-6deg);background:linear-gradient(180deg,transparent,rgba(217,119,87,.08),transparent);border-top:1px solid rgba(217,119,87,.7);filter:drop-shadow(0 0 8px rgba(217,119,87,.42))}
+.darkroom.phase-momentum .dr-wave,.darkroom.phase-decision .dr-wave{opacity:1;animation:drWave 1.45s ease-in-out infinite}
+.dr-tags{position:absolute;z-index:7;inset:0;pointer-events:none}.dr-tag{position:absolute;padding:6px 8px;border:1px solid rgba(255,255,255,.16);background:rgba(4,4,5,.72);backdrop-filter:blur(7px);color:rgba(242,231,225,.7);font:800 7px/1 Inter,sans-serif;letter-spacing:.14em;opacity:0;transform:translateY(5px);transition:opacity .35s ease,transform .35s ease}.dr-tag.structure{left:7%;top:12%}.dr-tag.levels{right:7%;top:29%}.dr-tag.momentum{left:52%;bottom:13%}
+.darkroom.phase-structure .dr-tag.structure,.darkroom.phase-levels .dr-tag.structure,.darkroom.phase-momentum .dr-tag.structure,.darkroom.phase-decision .dr-tag.structure,.darkroom.phase-levels .dr-tag.levels,.darkroom.phase-momentum .dr-tag.levels,.darkroom.phase-decision .dr-tag.levels,.darkroom.phase-momentum .dr-tag.momentum,.darkroom.phase-decision .dr-tag.momentum{opacity:1;transform:none}
+.dr-percent{position:absolute;z-index:1;right:-.03em;bottom:-.18em;color:rgba(255,255,255,.05);font:700 clamp(105px,30vw,310px)/.75 "Space Grotesk",Inter,sans-serif;letter-spacing:-.1em;font-variant-numeric:tabular-nums;pointer-events:none}
+.dr-copy{position:absolute;z-index:9;left:18px;right:18px;bottom:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;text-shadow:0 3px 18px rgba(0,0,0,.85)}
+.dr-copy small{display:block;margin-bottom:7px;color:var(--dr-orange);font:900 8px/1 Inter,sans-serif;letter-spacing:.18em}.dr-copy h3{margin:0;font:650 clamp(20px,5vw,35px)/.98 "Space Grotesk",Inter,sans-serif;letter-spacing:-.045em}.dr-copy p{max-width:470px;margin:7px 0 0;color:rgba(242,231,225,.57);font:500 10px/1.45 Inter,sans-serif}.dr-pct-mini{color:var(--dr-cream);font:700 24px/1 "Space Grotesk",Inter,sans-serif;font-variant-numeric:tabular-nums}
+.dr-chapters{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:min(92vw,820px);margin:0 auto}.dr-chapter{min-width:0;padding-top:8px;border-top:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.32);font:800 7px/1.25 Inter,sans-serif;letter-spacing:.09em;transition:color .3s ease,border-color .3s ease}.dr-chapter b{display:block;margin-bottom:4px;color:inherit;font-size:8px}.dr-chapter.on{color:var(--dr-cream);border-color:var(--dr-orange)}
+.dr-deep{position:absolute;z-index:12;left:50%;top:50%;width:min(86%,500px);padding:16px 18px;transform:translate(-50%,-50%) translateY(12px);border:1px solid rgba(217,119,87,.34);background:rgba(5,5,6,.78);backdrop-filter:blur(18px);text-align:center;opacity:0;visibility:hidden;transition:.45s var(--dr-ease)}.darkroom.deep .dr-deep{opacity:1;visibility:visible;transform:translate(-50%,-50%)}.dr-deep b{display:block;color:var(--dr-cream);font:700 14px "Space Grotesk";letter-spacing:.13em}.dr-deep span{display:block;margin-top:7px;color:rgba(242,231,225,.55);font:500 10px/1.45 Inter,sans-serif}
+.dr-lock{position:absolute;z-index:15;left:50%;top:50%;transform:translate(-50%,-50%) scale(.86);color:#fff;font:700 clamp(22px,6vw,46px)/1 "Space Grotesk",Inter,sans-serif;letter-spacing:.12em;text-align:center;white-space:nowrap;opacity:0;filter:blur(7px)}.darkroom.locked .dr-lock{animation:drLock .72s var(--dr-ease) forwards}.darkroom.locked .dr-vscan,.darkroom.locked .dr-hscan,.darkroom.locked .dr-wave{animation-play-state:paused}.darkroom.locked .dr-image{filter:grayscale(.25) contrast(1.2) brightness(.58)}
+.dr-flash{position:absolute;inset:0;z-index:30;pointer-events:none;background:#f4eee9;opacity:0}.darkroom.flash .dr-flash{animation:drFlash .52s ease-out both}.darkroom.result-up .dr-flash{background:#90f5bd}.darkroom.result-down .dr-flash{background:#a93542}.darkroom.result-none .dr-flash{background:#d9dde5}
+body.darkroom-active{overflow:hidden!important;touch-action:none}body.darkroom-active .cinema-video{filter:grayscale(.86) brightness(.32) contrast(1.38)!important;transform:scale(1.14)!important}
+@keyframes drFrameIn{from{opacity:0;transform:translateY(20px) rotateX(4deg) rotateY(-3deg) scale(.91);filter:blur(8px)}to{opacity:1;transform:rotateX(1.1deg) rotateY(-1.3deg) scale(1);filter:none}}
+@keyframes drVScan{0%,100%{left:8%;opacity:.28}50%{left:92%;opacity:1}}@keyframes drHScan{0%,100%{top:18%;opacity:.28}50%{top:82%;opacity:1}}@keyframes drWave{50%{transform:rotate(-6deg) translateY(-16px);opacity:.35}}@keyframes drGrain{25%{transform:translate(-2%,1%)}50%{transform:translate(1%,-2%)}75%{transform:translate(2%,2%)}}@keyframes drLive{50%{opacity:.28;transform:scale(.72)}}@keyframes drLock{to{opacity:1;filter:none;transform:translate(-50%,-50%) scale(1)}}@keyframes drFlash{0%{opacity:0}35%{opacity:.92}100%{opacity:0}}
+[dir="rtl"] .dr-copy{text-align:right}.darkroom[dir="rtl"] .dr-percent{right:auto;left:-.03em}
+@media(max-width:620px){.dr-shell{inset:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))}.dr-frame{width:100%;height:min(57vh,500px)}.dr-image{object-fit:contain}.dr-copy{left:13px;right:13px;bottom:12px}.dr-copy p{max-width:74%}.dr-chapters{width:100%;gap:3px}.dr-chapter{font-size:5.8px;letter-spacing:.035em}.dr-chapter b{font-size:7px}.dr-head,.dr-foot{font-size:7px}.dr-percent{font-size:42vw}}
+@media(max-height:620px){.dr-frame{height:54vh}.dr-copy p{display:none}.dr-chapters{display:none}}
+@media(prefers-reduced-motion:reduce){.dr-grain,.dr-vscan,.dr-hscan,.dr-wave,.dr-live{animation:none!important}.dr-frame{animation:none!important;transform:none!important}.darkroom *{transition-duration:.01ms!important}}
+</style>
+
 </head>
 <body>
 <div class="access-gate" id="accessGate" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
@@ -2577,7 +2625,7 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
     var si=0; setStage(0); setRing(6);
     var pct=6;
     clearInterval(procRingTimer); clearInterval(procTimer);
-    procRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*4 + 1, 92); setRing(pct); }, 300);
+    procRingTimer = setInterval(function(){ pct = Math.min(pct + (pct < 18 ? 3 : pct < 43 ? 2 : pct < 68 ? 1.35 : pct < 88 ? .8 : .25), 92); setRing(pct); }, 300);
     procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-2); setStage(si); }, 1800);
   }
   function stopProcessing(){
@@ -3886,5 +3934,102 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
 <script id="claude-v4-clean-motion">(function(){"use strict";var reduce=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;function animateView(){var v=document.querySelector(".view.active");if(!v||reduce||!Element.prototype.animate)return;Array.from(v.children).filter(function(x){return x.offsetParent!==null}).slice(0,9).forEach(function(x,i){x.animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:480,delay:i*58,easing:"cubic-bezier(.22,.9,.32,1)"})})}new MutationObserver(function(ms){if(ms.some(function(m){return m.target.classList&&m.target.classList.contains("view")}))requestAnimationFrame(animateView)}).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button,.btn");if(!b)return;b.animate&&b.animate([{transform:"scale(1)"},{transform:"scale(.965)"},{transform:"scale(1)"}],{duration:240,easing:"ease-out"})},{passive:true});})();</script>
 <script id="claude-v5-max-motion">(function(){"use strict";var flash=document.createElement("div");flash.className="v5-transition";document.body.appendChild(flash);document.addEventListener("pointerdown",function(e){var n=e.target.closest&&e.target.closest(".nav-item");if(!n)return;flash.style.setProperty("--tx",e.clientX+"px");flash.style.setProperty("--ty",e.clientY+"px");flash.classList.remove("go");void flash.offsetWidth;flash.classList.add("go")},{passive:true});var active=null;new MutationObserver(function(){var v=document.querySelector(".view.active");if(v&&v!==active){active=v;var cards=Array.from(v.querySelectorAll(":scope > .card,:scope > .result,:scope > #historyList > *")).slice(0,8);cards.forEach(function(el,i){el.animate&&el.animate([{opacity:0,transform:"translateY(18px)"},{opacity:1,transform:"none"}],{duration:520,delay:170+i*65,easing:"cubic-bezier(.16,1,.3,1)"})})}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});})();</script>
 <script id="concept2-cinema-controller">(function(){"use strict";var deck=document.getElementById("cinemaDeck"),vid=document.getElementById("cinemaVideo"),chapter=document.getElementById("cinemaChapter"),l1=document.getElementById("cinemaLine1"),l2=document.getElementById("cinemaLine2"),sub=document.getElementById("cinemaSubtitle"),status=document.getElementById("cinemaStatus"),tc=document.getElementById("cinemaTimecode"),sh=document.getElementById("cinemaShutter");if(!deck)return;var scene={history:["CHAPTER 01 · ARCHIVE","THE MARKET","REMEMBERS","Every signal becomes part of the intelligence.","MEMORY READY"],create:["CHAPTER 02 · SIGNAL","THE MARKET","IS MOVING","Build the parameters. Claude follows the motion.","AWAITING INPUT"],vision:["CHAPTER 03 · VISION","SEE WHAT","OTHERS MISS","One frame. Multiple layers of market intelligence.","CAMERA READY"],profile:["CHAPTER 04 · SYSTEM","YOUR ACCESS","YOUR CONTROL","Identity, language and intelligence in one place.","SYSTEM SECURE"]};var last="";function tab(){var v=document.querySelector(".view.active");return v?v.id.replace("View",""):"history"}function sync(){var t=tab(),proc=document.querySelector(".processing.show"),result=document.querySelector(".result.show");if(t!==last){last=t;var x=scene[t];deck.dataset.scene=t;chapter.textContent=x[0];l1.textContent=x[1];l2.textContent=x[2];sub.textContent=x[3];status.textContent=x[4]}document.body.classList.toggle("cinema-analyzing",!!proc);document.body.classList.toggle("cinema-result",!!result);if(vid){try{vid.playbackRate=proc?0.55:result?0.18:0.85;if(result)vid.pause();else vid.play().catch(function(){})}catch(e){}}if(proc)status.textContent="CLAUDE IS ANALYZING";else if(result)status.textContent="SIGNAL FRAME LOCKED"}document.addEventListener("pointerdown",function(e){if(!e.target.closest||!e.target.closest(".nav-item"))return;sh.classList.remove("go");void sh.offsetWidth;sh.classList.add("go")},{passive:true});new MutationObserver(sync).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});setInterval(function(){var d=new Date(),f=String(Math.floor((Date.now()/40)%25)).padStart(2,"0");tc.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,"0")}).join(":")+":"+f},80);sync();})();</script>
+
+<div class="darkroom" id="darkroomScan" aria-hidden="true">
+  <video class="dr-video" id="darkroomVideo" muted loop playsinline preload="metadata"><source src="bg.mp4" type="video/mp4"></video>
+  <div class="dr-grade"></div><div class="dr-grain"></div>
+  <div class="dr-shell">
+    <div class="dr-head"><span>CLAUDE DARKROOM · VISION ANALYSIS</span><b id="drTimecode">00:00:00:00</b></div>
+    <div class="dr-stage">
+      <div class="dr-frame">
+        <img class="dr-image" id="drImage" alt="">
+        <div class="dr-image-grade"></div><div class="dr-grid"></div>
+        <div class="dr-vscan"></div><div class="dr-hscan"></div><div class="dr-wave"></div>
+        <div class="dr-tags"><span class="dr-tag structure">STRUCTURE</span><span class="dr-tag levels">LEVELS</span><span class="dr-tag momentum">MOMENTUM</span></div>
+        <div class="dr-percent" id="drPercentBg">06</div>
+        <div class="dr-copy"><div><small id="drChapter">01 · FRAME</small><h3 id="drTitle">FRAME ACQUIRED</h3><p id="drSubtitle">Preparing the uploaded chart for visual analysis.</p></div><b class="dr-pct-mini" id="drPercent">06%</b></div>
+        <div class="dr-deep"><b id="drDeepTitle">DEEP ANALYSIS</b><span id="drDeepText">Claude is resolving conflicting market evidence</span></div>
+        <div class="dr-lock" id="drLock">FRAME LOCKED</div><div class="dr-flash"></div>
+      </div>
+    </div>
+    <div><div class="dr-chapters" id="drChapters"><span class="dr-chapter on"><b>01</b>FRAME</span><span class="dr-chapter"><b>02</b>STRUCTURE</span><span class="dr-chapter"><b>03</b>LEVELS</span><span class="dr-chapter"><b>04</b>MOMENTUM</span><span class="dr-chapter"><b>05</b>DECISION</span></div><div class="dr-foot"><span class="dr-live"><i></i><em id="drStatus" style="font-style:normal">ANALYSIS IN PROGRESS</em></span><b id="drAsset">—</b></div></div>
+  </div>
+</div>
+<script id="claude-darkroom-scan-controller">
+(function(){
+  "use strict";
+  var root=document.getElementById("darkroomScan"), img=document.getElementById("drImage"), video=document.getElementById("darkroomVideo");
+  if(!root) return;
+  var pct=document.getElementById("drPercent"), pctBg=document.getElementById("drPercentBg"), chapter=document.getElementById("drChapter"), title=document.getElementById("drTitle"), subtitle=document.getElementById("drSubtitle"), status=document.getElementById("drStatus"), asset=document.getElementById("drAsset"), tc=document.getElementById("drTimecode"), lock=document.getElementById("drLock");
+  var raf=0, active=false, finishing=false, started=0, lastPhase=-1, finishTimer=0;
+  var copy={
+    ru:[
+      ["01 · КАДР","КАДР ПРИНЯТ","Подготавливаем изображение и сохраняем полные пропорции графика."],
+      ["02 · СТРУКТУРА","ЧИТАЕМ СТРУКТУРУ","Claude определяет форму движения и последовательность свечей."],
+      ["03 · УРОВНИ","ИЩЕМ УРОВНИ","Проверяем видимые зоны реакции и положение цены."],
+      ["04 · ИМПУЛЬС","СВЕРЯЕМ ИМПУЛЬС","Сопоставляем направление, силу движения и рыночный контекст."],
+      ["05 · РЕШЕНИЕ","ФОРМИРУЕМ РЕШЕНИЕ","Ожидаем подтверждённый ответ модели — 100% только после результата."]
+    ],
+    en:[
+      ["01 · FRAME","FRAME ACQUIRED","Preparing the image while preserving the full chart proportions."],
+      ["02 · STRUCTURE","READING STRUCTURE","Claude is mapping price motion and candle sequence."],
+      ["03 · LEVELS","LOCATING LEVELS","Checking visible reaction zones and price position."],
+      ["04 · MOMENTUM","MEASURING MOMENTUM","Comparing direction, movement strength and market context."],
+      ["05 · DECISION","FORMING DECISION","Waiting for the verified model response — 100% only after it arrives."]
+    ]
+  };
+  var deepCopy={ru:["ГЛУБОКИЙ АНАЛИЗ","Claude разрешает противоречия между рыночными признаками"],en:["DEEP ANALYSIS","Claude is resolving conflicting market evidence"]};
+  function lang(){var c=String(document.documentElement.lang||"ru").slice(0,2);return c==="ru"?"ru":"en"}
+  function haptic(kind){try{var h=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.HapticFeedback;if(!h)return;if(kind==="success")h.notificationOccurred("success");else h.impactOccurred(kind||"light")}catch(e){}}
+  function setPhase(i){
+    if(i===lastPhase)return;lastPhase=i;
+    root.classList.remove("phase-frame","phase-structure","phase-levels","phase-momentum","phase-decision");
+    root.classList.add(["phase-frame","phase-structure","phase-levels","phase-momentum","phase-decision"][i]);
+    var c=(copy[lang()]||copy.en)[i];chapter.textContent=c[0];title.textContent=c[1];subtitle.textContent=c[2];
+    Array.prototype.forEach.call(document.querySelectorAll("#drChapters .dr-chapter"),function(n,k){n.classList.toggle("on",k<=i)});
+    status.textContent=i<4?"ANALYSIS IN PROGRESS":"AWAITING AI DECISION";
+    if(i>0)haptic(i===4?"medium":"light");
+    try{var cv=document.getElementById("cinemaVideo");if(cv){cv.playbackRate=[.45,.4,.32,.22,.08][i]}}catch(e){}
+  }
+  function phaseAt(ms){return ms<1200?0:ms<3400?1:ms<5700?2:ms<8000?3:4}
+  function progressAt(ms){
+    var a=[[0,1200,6,18],[1200,3400,18,43],[3400,5700,43,68],[5700,8000,68,88],[8000,10000,88,92]];
+    for(var i=0;i<a.length;i++){var x=a[i];if(ms<=x[1]){var q=Math.max(0,Math.min(1,(ms-x[0])/(x[1]-x[0])));q=1-Math.pow(1-q,2.2);return x[2]+(x[3]-x[2])*q}}
+    return 92;
+  }
+  function frame(now){
+    if(!active||finishing)return;var ms=now-started,i=phaseAt(ms),n=Math.round(progressAt(ms));setPhase(i);pct.textContent=n+"%";pctBg.textContent=String(n).padStart(2,"0");
+    if(ms>10000&&!root.classList.contains("deep")){root.classList.add("deep");var d=deepCopy[lang()]||deepCopy.en;document.getElementById("drDeepTitle").textContent=d[0];document.getElementById("drDeepText").textContent=d[1];status.textContent="DEEP ANALYSIS"}
+    raf=requestAnimationFrame(frame);
+  }
+  function start(){
+    if(active)return;active=true;finishing=false;lastPhase=-1;clearTimeout(finishTimer);root.className="darkroom phase-frame";root.setAttribute("dir",document.documentElement.dir||"ltr");
+    var p=document.getElementById("previewImg");img.src=(p&&p.src)||"";var pa=document.getElementById("procAsset");asset.textContent=pa&&pa.textContent?pa.textContent:"CLAUDE VISION";
+    document.body.classList.add("darkroom-active");root.setAttribute("aria-hidden","false");void root.offsetWidth;root.classList.add("show");
+    try{video.currentTime=0;video.playbackRate=.45;video.play().catch(function(){})}catch(e){}
+    started=performance.now();setPhase(0);pct.textContent="06%";pctBg.textContent="06";raf=requestAnimationFrame(frame);haptic("light");
+  }
+  function direction(){var d=document.getElementById("visionDir");if(!d)return"none";return d.classList.contains("up")?"up":d.classList.contains("down")?"down":"none"}
+  function finish(){
+    if(!active||finishing)return;finishing=true;cancelAnimationFrame(raf);root.classList.remove("deep");root.classList.add("locked","result-"+direction());setPhase(4);pct.textContent="100%";pctBg.textContent="100";status.textContent="SIGNAL FRAME LOCKED";
+    lock.textContent=lang()==="ru"?"КАДР ЗАФИКСИРОВАН":"FRAME LOCKED";haptic("medium");
+    setTimeout(function(){root.classList.add("flash");haptic("success")},330);
+    finishTimer=setTimeout(stop,1050);
+  }
+  function stop(){
+    cancelAnimationFrame(raf);root.classList.add("out");document.body.classList.remove("darkroom-active");
+    try{video.pause()}catch(e){}setTimeout(function(){root.className="darkroom";root.setAttribute("aria-hidden","true");active=false;finishing=false;lastPhase=-1},500);
+  }
+  function sync(){
+    var p=document.getElementById("processing"),r=document.getElementById("visionResult");
+    var running=!!(p&&p.classList.contains("show"));var ready=!!(r&&r.classList.contains("show"));
+    if(running&&!active&&!ready)start();if(active&&ready&&!finishing)finish();if(active&&!running&&!ready&&!finishing)stop();
+  }
+  new MutationObserver(sync).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});
+  setInterval(function(){if(!root.classList.contains("show"))return;var d=new Date(),f=String(Math.floor((Date.now()/40)%25)).padStart(2,"0");tc.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,"0")}).join(":")+":"+f},80);
+  sync();
+})();
+</script>
+
 </body>
           </html>
