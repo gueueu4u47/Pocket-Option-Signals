@@ -973,6 +973,21 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 @media(max-width:430px){.app{padding-left:14px!important;padding-right:14px!important}.topbar{margin-left:-14px!important;margin-right:-14px!important;padding-left:14px!important;padding-right:14px!important}.hero h2,.hero p{max-width:88%}.cs-command>div{padding:10px 8px}.cs-command b{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.cs-intro *{animation-duration:.01ms!important;animation-delay:0s!important}.view.active{animation:none!important}}
 </style>
+<style id="claude-v5-max-style">
+:root{--v5-orange:#D97757;--v5-peach:#F0B29D;--v5-black:#050505;--v5-ease:cubic-bezier(.16,1,.3,1)}
+/* New architecture, not a theme swap. */
+.app{max-width:920px!important;padding-bottom:124px!important}
+.v5-topbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;align-items:center!important;gap:12px!important;border-bottom:0!important}.v5-brand-zone{display:flex;align-items:center;gap:11px;min-width:0}.v5-topbar::after{display:none!important}.v5-live{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid rgba(53,242,140,.18);border-radius:999px;background:rgba(53,242,140,.045);color:#8CF7BB;font-size:8px;font-weight:900;letter-spacing:.13em}.v5-live i{width:5px;height:5px;border-radius:50%;background:#35F28C;box-shadow:0 0 10px #35F28C;animation:v5Live 1.55s ease-in-out infinite}@keyframes v5Live{50%{opacity:.34;transform:scale(.72)}}
+.v5-system-rail{position:relative;display:grid;grid-template-columns:.9fr 1.25fr .8fr;margin:13px 0 0;overflow:hidden;border:1px solid rgba(255,255,255,.075);border-radius:18px;background:rgba(5,5,5,.58);backdrop-filter:blur(18px)}.v5-system-rail>div{padding:11px 13px;border-right:1px solid rgba(255,255,255,.055)}.v5-system-rail>div:last-of-type{border:0}.v5-system-rail small{display:block;color:#77736F;font-size:7px;font-weight:900;letter-spacing:.17em}.v5-system-rail b{display:block;margin-top:4px;color:#D7D3CF;font-size:9px;letter-spacing:.045em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v5-system-rail b i{display:inline-block;width:5px;height:5px;margin-right:5px;border-radius:50%;background:#35F28C}.v5-rail-runner{position:absolute;left:-22%;bottom:0;width:22%;height:1px;background:linear-gradient(90deg,transparent,var(--v5-orange),#fff,transparent);box-shadow:0 0 13px rgba(217,119,87,.68);animation:v5Rail 4.5s ease-in-out infinite}@keyframes v5Rail{65%,100%{left:112%}}
+.v5-hero{position:relative;min-height:252px;margin:16px 0 14px;padding:28px 26px;overflow:hidden;border:1px solid rgba(255,255,255,.085);border-radius:29px;background:linear-gradient(145deg,rgba(17,17,18,.88),rgba(6,6,7,.70));box-shadow:inset 0 1px 0 rgba(255,255,255,.065),0 34px 80px -60px rgba(217,119,87,.9);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(210px,.75fr);align-items:center}.v5-hero::before{content:attr(data-code);position:absolute;right:-10px;bottom:-24px;color:rgba(255,255,255,.025);font:700 clamp(74px,15vw,132px)/.78 "Space Grotesk",sans-serif;letter-spacing:-.08em;pointer-events:none}.v5-hero::after{content:"";position:absolute;left:0;top:0;width:100%;height:1px;background:linear-gradient(90deg,transparent 4%,var(--v5-orange) 24%,transparent 63%);opacity:.8}.v5-hero-copy{position:relative;z-index:2}.v5-index{display:flex;align-items:center;gap:9px;margin-bottom:26px;color:#7E7975;font-size:9px;font-weight:900;letter-spacing:.12em}.v5-index span{color:var(--v5-peach)}.v5-index i{width:48px;height:1px;background:linear-gradient(90deg,var(--v5-orange),rgba(255,255,255,.12))}.v5-hero .eyebrow{margin:0 0 10px!important}.v5-hero h2{margin:0!important;max-width:590px;font-size:clamp(29px,5.6vw,48px)!important;line-height:.99!important;letter-spacing:-.06em!important}.v5-hero p:not(.eyebrow){max-width:530px;margin:14px 0 0;color:#9D9894;font-size:13px;line-height:1.58}
+.v5-visual{position:relative;width:220px;height:220px;justify-self:end;perspective:800px}.v5-orbit{position:absolute;border:1px solid rgba(232,163,139,.19);border-radius:50%}.v5-orbit.a{inset:5px;transform:rotateX(67deg);animation:v5OrbitA 9s linear infinite}.v5-orbit.b{inset:39px;transform:rotateY(64deg);animation:v5OrbitB 12s linear infinite}.v5-orbit i{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--v5-peach);box-shadow:0 0 14px var(--v5-orange)}.v5-orbit i:first-child{left:5%;top:48%}.v5-orbit i:last-child{right:5%;top:48%}.v5-orbit.b i{left:48%;top:-4px}.v5-core{position:absolute;left:50%;top:50%;width:86px;height:86px;display:grid;place-items:center;transform:translate(-50%,-50%);border:1px solid rgba(217,119,87,.34);border-radius:28px;background:radial-gradient(circle at 36% 28%,rgba(255,255,255,.16),rgba(217,119,87,.16) 28%,rgba(8,8,9,.92) 70%);box-shadow:0 0 46px rgba(217,119,87,.16),inset 0 1px 0 rgba(255,255,255,.12)}.v5-core::before{content:"";position:absolute;inset:-11px;border:1px solid rgba(217,119,87,.12);border-radius:36px;animation:v5Core 3s ease-in-out infinite}.v5-core span{font:700 20px "Space Grotesk";color:#F4E7E2;letter-spacing:-.05em}.v5-visual svg{position:absolute;left:-35px;right:-20px;bottom:13px;width:275px;height:72px;overflow:visible;filter:drop-shadow(0 0 7px rgba(217,119,87,.55))}.v5-visual path{fill:none;stroke:var(--v5-orange);stroke-width:1.7;stroke-dasharray:330;animation:v5Signal 3.2s var(--v5-ease) infinite}@keyframes v5OrbitA{to{transform:rotateX(67deg) rotateZ(360deg)}}@keyframes v5OrbitB{to{transform:rotateY(64deg) rotateZ(-360deg)}}@keyframes v5Core{50%{transform:scale(1.09);opacity:.36}}@keyframes v5Signal{0%{stroke-dashoffset:330;opacity:.18}48%,80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:-330;opacity:.1}}
+.v5-module{position:relative!important;padding-top:64px!important;border-radius:27px!important}.v5-module-head{position:absolute;left:0;right:0;top:0;height:44px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.018)}.v5-module-head span{color:var(--v5-peach);font-size:8px;font-weight:900;letter-spacing:.15em}.v5-module-head b{color:#87827E;font-size:8px;font-weight:900;letter-spacing:.14em}.v5-module-head i{width:7px;height:7px;border:1px solid var(--v5-orange);border-radius:50%;box-shadow:0 0 10px rgba(217,119,87,.7)}
+.view.active>.v5-hero{animation:v5HeroIn .7s var(--v5-ease) both}.view.active>.v5-hero .v5-hero-copy{animation:v5CopyIn .72s var(--v5-ease) .08s both}.view.active>.v5-hero .v5-visual{animation:v5VisualIn .9s var(--v5-ease) .12s both}@keyframes v5HeroIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}@keyframes v5CopyIn{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}@keyframes v5VisualIn{from{opacity:0;transform:translateX(22px) scale(.82);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.v5-transition{position:fixed;z-index:89;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--tx,50%) var(--ty,85%),rgba(232,163,139,.34),rgba(217,119,87,.10) 16%,transparent 47%)}.v5-transition.go{animation:v5Transition .55s ease-out}@keyframes v5Transition{0%{opacity:0;transform:scale(.72)}35%{opacity:1}100%{opacity:0;transform:scale(1.32)}}
+@media(max-width:700px){.app{max-width:100%!important}.v5-hero{min-height:232px;grid-template-columns:1fr;padding:24px 21px}.v5-visual{position:absolute;right:-51px;top:7px;width:190px;height:190px;opacity:.58}.v5-hero-copy{max-width:78%}.v5-hero h2{font-size:clamp(27px,8vw,38px)!important}.v5-hero p:not(.eyebrow){font-size:12px}.v5-index{margin-bottom:23px}.v5-topbar{grid-template-columns:minmax(0,1fr) auto!important}.v5-topbar .clock{display:none}.v5-system-rail>div{padding:10px 8px}.v5-system-rail b{font-size:8px}.v5-module{padding-left:17px!important;padding-right:17px!important}}
+@media(max-width:380px){.v5-live{display:none}.v5-hero-copy{max-width:85%}.v5-visual{right:-70px}.v5-system-rail{grid-template-columns:1fr 1fr}.v5-system-rail>div:last-of-type{display:none}}
+@media(prefers-reduced-motion:reduce){.v5-orbit,.v5-visual path,.v5-rail-runner,.v5-live i{animation:none!important}}
+</style>
 </head>
 <body>
 <div class="access-gate" id="accessGate" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
@@ -1007,24 +1022,22 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 </div>
 
 <main class="app">
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark" id="brandMark"><img src="https://cdn.phototourl.com/free/2026-08-07-fd833cf1-c58d-4f28-a38c-1405867bd6c4.png" alt="Claude Signal AI" referrerpolicy="no-referrer"></div>
-      <div class="brand-copy">
-        <div class="brand-name-row"><h1>Claude Signal AI</h1><span class="claude-chip">AI</span></div>
-        <p id="brandText">Личный помощник для работы с графиком</p>
-      </div>
-    </div>
-    <div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div>
-  </header>
-  <div class="cs-command" aria-hidden="true"><div><i></i><span>AI ONLINE</span></div><div><small>ENGINE</small><b>CLAUDE VISION</b></div><div><small>LATENCY</small><b>LIVE</b></div></div>
+  <header class="topbar v5-topbar">
+  <div class="v5-brand-zone">
+    <div class="brand-mark" id="brandMark"><img src="https://cdn.phototourl.com/free/2026-08-07-fd833cf1-c58d-4f28-a38c-1405867bd6c4.png" alt="Claude Signal AI" referrerpolicy="no-referrer"></div>
+    <div class="brand-copy"><div class="brand-name-row"><h1>Claude Signal AI</h1><span class="claude-chip">CORE</span></div><p id="brandText">Личный помощник для работы с графиком</p></div>
+  </div>
+  <div class="v5-live"><i></i><span>LIVE</span></div>
+  <div class="clock"><b id="clock">--:--:--</b><small>UTC+5</small></div>
+</header>
+<div class="v5-system-rail" aria-hidden="true"><div><small>STATUS</small><b><i></i> AI ONLINE</b></div><div><small>MODEL</small><b>CLAUDE VISION</b></div><div><small>STREAM</small><b>REAL-TIME</b></div><span class="v5-rail-runner"></span></div>
+<div><small>ENGINE</small><b>CLAUDE VISION</b></div><div><small>LATENCY</small><b>LIVE</b></div></div>
 
   <!-- HISTORY -->
   <section class="view active" id="historyView">
-    <div class="hero">
-      <p class="eyebrow" id="historyEyebrow">ИСТОРИЯ</p>
-      <h2 id="historyTitle">История результатов</h2>
-      <p id="historyText">Здесь появляются результаты Pulse Vision и Pulse Quick.</p>
+    <div class="v5-hero" data-code="ARCHIVE">
+      <div class="v5-hero-copy"><div class="v5-index"><span>01</span><i></i><b>04</b></div><p class="eyebrow" id="historyEyebrow">ИСТОРИЯ</p><h2 id="historyTitle">История результатов</h2><p id="historyText">Здесь появляются результаты Pulse Vision и Pulse Quick.</p></div>
+      <div class="v5-visual" aria-hidden="true"><div class="v5-orbit a"><i></i><i></i></div><div class="v5-orbit b"><i></i></div><div class="v5-core"><span>AR</span></div><svg viewBox="0 0 180 70"><path d="M2 45 C18 45 23 34 36 38 S58 55 72 40 S91 18 106 39 S128 51 143 32 S162 27 178 36"/></svg></div>
     </div>
     <div id="historyList"></div>
     <div class="card empty" id="emptyHistory">
@@ -1039,12 +1052,11 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 
   <!-- CREATE -->
   <section class="view" id="createView">
-    <div class="hero">
-      <p class="eyebrow" id="createEyebrow">СОЗДАТЬ</p>
-      <h2 id="createTitle">Параметры результат��</h2>
-      <p id="createText">Выбери OTC-актив, длительность, тип входа и режим.</p>
+    <div class="v5-hero" data-code="SIGNAL">
+      <div class="v5-hero-copy"><div class="v5-index"><span>02</span><i></i><b>04</b></div><p class="eyebrow" id="createEyebrow">СОЗДАТЬ</p><h2 id="createTitle">Параметры результат��</h2><p id="createText">Выбери OTC-актив, длительность, тип входа и режим.</p></div>
+      <div class="v5-visual" aria-hidden="true"><div class="v5-orbit a"><i></i><i></i></div><div class="v5-orbit b"><i></i></div><div class="v5-core"><span>SI</span></div><svg viewBox="0 0 180 70"><path d="M2 45 C18 45 23 34 36 38 S58 55 72 40 S91 18 106 39 S128 51 143 32 S162 27 178 36"/></svg></div>
     </div>
-    <div class="card">
+    <div class="card v5-module v5-signal-module" data-module="SIGNAL PARAMETERS"><div class="v5-module-head"><span>02—A</span><b>SIGNAL CONFIGURATION</b><i></i></div>
       <div class="v-params">
         <button class="v-param" id="cAssetBtn" type="button"><small id="cAssetCap">АКТИВ</small><b id="cAssetVal">—</b><span class="vp-hint" id="cAssetHint">Нажми, чтобы выбрать</span></button>
         <button class="v-param" id="cDurBtn" type="button"><small id="cDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="cDurVal">—</b><span class="vp-hint" id="cDurHint">Нажми, чтобы выбрать</span></button>
@@ -1131,12 +1143,11 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 
   <!-- VISION -->
   <section class="view" id="visionView">
-    <div class="hero">
-      <p class="eyebrow" id="visionEyebrow">PULSE VISION</p>
-      <h2 id="visionTitle">Анализ графика</h2>
-      <p id="visionText">Загрузи полный скриншот — приложение сохранит пропорции без обрезки.</p>
+    <div class="v5-hero" data-code="VISION">
+      <div class="v5-hero-copy"><div class="v5-index"><span>03</span><i></i><b>04</b></div><p class="eyebrow" id="visionEyebrow">PULSE VISION</p><h2 id="visionTitle">Анализ графика</h2><p id="visionText">Загрузи полный скриншот — приложение сохранит пропорции без обрезки.</p></div>
+      <div class="v5-visual" aria-hidden="true"><div class="v5-orbit a"><i></i><i></i></div><div class="v5-orbit b"><i></i></div><div class="v5-core"><span>VI</span></div><svg viewBox="0 0 180 70"><path d="M2 45 C18 45 23 34 36 38 S58 55 72 40 S91 18 106 39 S128 51 143 32 S162 27 178 36"/></svg></div>
     </div>
-    <div class="card">
+    <div class="card v5-module v5-vision-module" data-module="AI VISION"><div class="v5-module-head"><span>03—A</span><b>VISION INPUT</b><i></i></div>
       <div class="v-params">
         <button class="v-param" id="vAssetBtn" type="button"><small id="vAssetCap">АКТИВ</small><b id="vAssetVal">—</b><span class="vp-hint" id="vAssetHint">Нажми, чтобы выбрать</span></button>
         <button class="v-param" id="vDurBtn" type="button"><small id="vDurCap">ДЛИТЕЛЬНОСТЬ</small><b id="vDurVal">—</b><span class="vp-hint" id="vDurHint">Нажми, чтобы выбрать</span></button>
@@ -1229,10 +1240,9 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 
   <!-- PROFILE -->
   <section class="view" id="profileView">
-    <div class="hero">
-      <p class="eyebrow" id="profileEyebrow">ПРОФИЛЬ</p>
-      <h2 id="profileTitle">Настройки</h2>
-      <p id="profileText">Настройки сохраняются на этом устройстве.</p>
+    <div class="v5-hero" data-code="SYSTEM">
+      <div class="v5-hero-copy"><div class="v5-index"><span>04</span><i></i><b>04</b></div><p class="eyebrow" id="profileEyebrow">ПРОФИЛЬ</p><h2 id="profileTitle">Настройки</h2><p id="profileText">Настройки сохраняются на этом устройстве.</p></div>
+      <div class="v5-visual" aria-hidden="true"><div class="v5-orbit a"><i></i><i></i></div><div class="v5-orbit b"><i></i></div><div class="v5-core"><span>SY</span></div><svg viewBox="0 0 180 70"><path d="M2 45 C18 45 23 34 36 38 S58 55 72 40 S91 18 106 39 S128 51 143 32 S162 27 178 36"/></svg></div>
     </div>
     <div class="card">
       <div class="p-row">
@@ -3850,5 +3860,6 @@ body::after{background:linear-gradient(180deg,rgba(5,5,5,.30),rgba(5,5,5,.72)),r
 })();
 </script>
 <script id="claude-v4-clean-motion">(function(){"use strict";var reduce=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;function animateView(){var v=document.querySelector(".view.active");if(!v||reduce||!Element.prototype.animate)return;Array.from(v.children).filter(function(x){return x.offsetParent!==null}).slice(0,9).forEach(function(x,i){x.animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:480,delay:i*58,easing:"cubic-bezier(.22,.9,.32,1)"})})}new MutationObserver(function(ms){if(ms.some(function(m){return m.target.classList&&m.target.classList.contains("view")}))requestAnimationFrame(animateView)}).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button,.btn");if(!b)return;b.animate&&b.animate([{transform:"scale(1)"},{transform:"scale(.965)"},{transform:"scale(1)"}],{duration:240,easing:"ease-out"})},{passive:true});})();</script>
+<script id="claude-v5-max-motion">(function(){"use strict";var flash=document.createElement("div");flash.className="v5-transition";document.body.appendChild(flash);document.addEventListener("pointerdown",function(e){var n=e.target.closest&&e.target.closest(".nav-item");if(!n)return;flash.style.setProperty("--tx",e.clientX+"px");flash.style.setProperty("--ty",e.clientY+"px");flash.classList.remove("go");void flash.offsetWidth;flash.classList.add("go")},{passive:true});var active=null;new MutationObserver(function(){var v=document.querySelector(".view.active");if(v&&v!==active){active=v;var cards=Array.from(v.querySelectorAll(":scope > .card,:scope > .result,:scope > #historyList > *")).slice(0,8);cards.forEach(function(el,i){el.animate&&el.animate([{opacity:0,transform:"translateY(18px)"},{opacity:1,transform:"none"}],{duration:520,delay:170+i*65,easing:"cubic-bezier(.16,1,.3,1)"})})}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});})();</script>
 </body>
           </html>
