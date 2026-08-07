@@ -1003,51 +1003,60 @@ body.cinema-analyzing .cinema-deck{height:500px}body.cinema-analyzing .cinema-vi
 @media(prefers-reduced-motion:reduce){.cinema-grain,.cinema-scan,.cinema-focus span{animation:none!important}}
 </style>
 
-<style id="claude-darkroom-scan-style">
-:root{--dr-orange:#D97757;--dr-cream:#F2E7E1;--dr-ink:#040404;--dr-ease:cubic-bezier(.16,1,.3,1)}
-/* The old ring remains as a semantic fallback, but the visible analysis is the frame itself. */
-#processing{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%)!important;border:0!important;opacity:0!important;pointer-events:none!important}
-.darkroom{position:fixed;inset:0;z-index:180;display:none;overflow:hidden;background:#030303;color:var(--dr-cream);isolation:isolate;opacity:0;transition:opacity .34s ease}
-.darkroom.show{display:block;opacity:1}
-.darkroom.out{opacity:0;transition-duration:.48s}
-.dr-video{position:absolute;inset:-3%;width:106%;height:106%;object-fit:cover;filter:grayscale(1) brightness(.18) contrast(1.45);transform:scale(1.08);opacity:.52}
-.dr-grade{position:absolute;inset:0;z-index:1;background:radial-gradient(78% 56% at 50% 45%,transparent 23%,rgba(0,0,0,.74) 100%),linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,.08) 32%,rgba(0,0,0,.82));backdrop-filter:blur(2px)}
-.dr-grain{position:absolute;inset:-30%;z-index:2;opacity:.075;mix-blend-mode:screen;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:drGrain .22s steps(2) infinite}
-.dr-shell{position:absolute;z-index:4;inset:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px}
-.dr-head,.dr-foot{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:11px 2px;color:rgba(255,255,255,.52);font:800 8px/1.2 Inter,sans-serif;letter-spacing:.17em}
-.dr-head{border-bottom:1px solid rgba(255,255,255,.15)}.dr-foot{border-top:1px solid rgba(255,255,255,.15)}
-.dr-head b,.dr-foot b{color:var(--dr-cream);font-variant-numeric:tabular-nums}.dr-live{display:flex;align-items:center;gap:7px}.dr-live i{width:5px;height:5px;border-radius:50%;background:var(--dr-orange);box-shadow:0 0 13px var(--dr-orange);animation:drLive 1.2s ease-in-out infinite}
-.dr-stage{position:relative;min-height:0;display:grid;place-items:center;perspective:1000px}
-.dr-frame{position:relative;width:min(92vw,820px);height:min(59vh,520px);overflow:hidden;border:1px solid rgba(255,255,255,.19);background:#08090b;box-shadow:0 36px 90px rgba(0,0,0,.65),0 0 0 1px rgba(217,119,87,.06);transform:rotateX(1.1deg) rotateY(-1.3deg) scale(.965);animation:drFrameIn .72s var(--dr-ease) forwards}
-.dr-frame:before,.dr-frame:after{content:"";position:absolute;z-index:8;width:27px;height:27px;border-color:rgba(242,231,225,.65)}
-.dr-frame:before{left:12px;top:12px;border-left:1px solid;border-top:1px solid}.dr-frame:after{right:12px;bottom:12px;border-right:1px solid;border-bottom:1px solid}
-.dr-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#050608;filter:saturate(.72) contrast(1.13) brightness(.74);transform:scale(1.015);transition:filter .5s ease,transform 2.2s var(--dr-ease)}
-.darkroom.deep .dr-image{filter:saturate(.48) contrast(1.25) brightness(.64);transform:scale(1.035)}
-.dr-image-grade{position:absolute;inset:0;z-index:2;background:linear-gradient(90deg,rgba(217,119,87,.05),transparent 32%,rgba(242,231,225,.025)),radial-gradient(90% 80% at 50% 50%,transparent 58%,rgba(0,0,0,.52));pointer-events:none}
-.dr-grid{position:absolute;inset:0;z-index:3;opacity:.2;background-image:linear-gradient(rgba(242,231,225,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(242,231,225,.13) 1px,transparent 1px);background-size:10% 16.666%;mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
-.dr-vscan,.dr-hscan,.dr-wave{position:absolute;z-index:5;pointer-events:none;opacity:0}
-.dr-vscan{top:0;bottom:0;left:8%;width:1px;background:linear-gradient(transparent,var(--dr-orange) 12%,#fff 50%,var(--dr-orange) 88%,transparent);box-shadow:0 0 20px 5px rgba(217,119,87,.25)}
-.darkroom.phase-structure .dr-vscan,.darkroom.phase-levels .dr-vscan,.darkroom.phase-momentum .dr-vscan,.darkroom.phase-decision .dr-vscan{opacity:1;animation:drVScan 2.15s ease-in-out infinite}
-.dr-hscan{left:0;right:0;top:30%;height:1px;background:linear-gradient(90deg,transparent,var(--dr-cream) 20%,#fff 50%,var(--dr-cream) 80%,transparent);box-shadow:0 0 18px 4px rgba(242,231,225,.16)}
-.darkroom.phase-levels .dr-hscan,.darkroom.phase-momentum .dr-hscan,.darkroom.phase-decision .dr-hscan{opacity:.9;animation:drHScan 2.4s ease-in-out infinite}
-.dr-wave{left:-13%;top:58%;width:126%;height:54px;transform:rotate(-6deg);background:linear-gradient(180deg,transparent,rgba(217,119,87,.08),transparent);border-top:1px solid rgba(217,119,87,.7);filter:drop-shadow(0 0 8px rgba(217,119,87,.42))}
-.darkroom.phase-momentum .dr-wave,.darkroom.phase-decision .dr-wave{opacity:1;animation:drWave 1.45s ease-in-out infinite}
-.dr-tags{position:absolute;z-index:7;inset:0;pointer-events:none}.dr-tag{position:absolute;padding:6px 8px;border:1px solid rgba(255,255,255,.16);background:rgba(4,4,5,.72);backdrop-filter:blur(7px);color:rgba(242,231,225,.7);font:800 7px/1 Inter,sans-serif;letter-spacing:.14em;opacity:0;transform:translateY(5px);transition:opacity .35s ease,transform .35s ease}.dr-tag.structure{left:7%;top:12%}.dr-tag.levels{right:7%;top:29%}.dr-tag.momentum{left:52%;bottom:13%}
-.darkroom.phase-structure .dr-tag.structure,.darkroom.phase-levels .dr-tag.structure,.darkroom.phase-momentum .dr-tag.structure,.darkroom.phase-decision .dr-tag.structure,.darkroom.phase-levels .dr-tag.levels,.darkroom.phase-momentum .dr-tag.levels,.darkroom.phase-decision .dr-tag.levels,.darkroom.phase-momentum .dr-tag.momentum,.darkroom.phase-decision .dr-tag.momentum{opacity:1;transform:none}
-.dr-percent{position:absolute;z-index:1;right:-.03em;bottom:-.18em;color:rgba(255,255,255,.05);font:700 clamp(105px,30vw,310px)/.75 "Space Grotesk",Inter,sans-serif;letter-spacing:-.1em;font-variant-numeric:tabular-nums;pointer-events:none}
-.dr-copy{position:absolute;z-index:9;left:18px;right:18px;bottom:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;text-shadow:0 3px 18px rgba(0,0,0,.85)}
-.dr-copy small{display:block;margin-bottom:7px;color:var(--dr-orange);font:900 8px/1 Inter,sans-serif;letter-spacing:.18em}.dr-copy h3{margin:0;font:650 clamp(20px,5vw,35px)/.98 "Space Grotesk",Inter,sans-serif;letter-spacing:-.045em}.dr-copy p{max-width:470px;margin:7px 0 0;color:rgba(242,231,225,.57);font:500 10px/1.45 Inter,sans-serif}.dr-pct-mini{color:var(--dr-cream);font:700 24px/1 "Space Grotesk",Inter,sans-serif;font-variant-numeric:tabular-nums}
-.dr-chapters{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:min(92vw,820px);margin:0 auto}.dr-chapter{min-width:0;padding-top:8px;border-top:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.32);font:800 7px/1.25 Inter,sans-serif;letter-spacing:.09em;transition:color .3s ease,border-color .3s ease}.dr-chapter b{display:block;margin-bottom:4px;color:inherit;font-size:8px}.dr-chapter.on{color:var(--dr-cream);border-color:var(--dr-orange)}
-.dr-deep{position:absolute;z-index:12;left:50%;top:50%;width:min(86%,500px);padding:16px 18px;transform:translate(-50%,-50%) translateY(12px);border:1px solid rgba(217,119,87,.34);background:rgba(5,5,6,.78);backdrop-filter:blur(18px);text-align:center;opacity:0;visibility:hidden;transition:.45s var(--dr-ease)}.darkroom.deep .dr-deep{opacity:1;visibility:visible;transform:translate(-50%,-50%)}.dr-deep b{display:block;color:var(--dr-cream);font:700 14px "Space Grotesk";letter-spacing:.13em}.dr-deep span{display:block;margin-top:7px;color:rgba(242,231,225,.55);font:500 10px/1.45 Inter,sans-serif}
-.dr-lock{position:absolute;z-index:15;left:50%;top:50%;transform:translate(-50%,-50%) scale(.86);color:#fff;font:700 clamp(22px,6vw,46px)/1 "Space Grotesk",Inter,sans-serif;letter-spacing:.12em;text-align:center;white-space:nowrap;opacity:0;filter:blur(7px)}.darkroom.locked .dr-lock{animation:drLock .72s var(--dr-ease) forwards}.darkroom.locked .dr-vscan,.darkroom.locked .dr-hscan,.darkroom.locked .dr-wave{animation-play-state:paused}.darkroom.locked .dr-image{filter:grayscale(.25) contrast(1.2) brightness(.58)}
-.dr-flash{position:absolute;inset:0;z-index:30;pointer-events:none;background:#f4eee9;opacity:0}.darkroom.flash .dr-flash{animation:drFlash .52s ease-out both}.darkroom.result-up .dr-flash{background:#90f5bd}.darkroom.result-down .dr-flash{background:#a93542}.darkroom.result-none .dr-flash{background:#d9dde5}
-body.darkroom-active{overflow:hidden!important;touch-action:none}body.darkroom-active .cinema-video{filter:grayscale(.86) brightness(.32) contrast(1.38)!important;transform:scale(1.14)!important}
-@keyframes drFrameIn{from{opacity:0;transform:translateY(20px) rotateX(4deg) rotateY(-3deg) scale(.91);filter:blur(8px)}to{opacity:1;transform:rotateX(1.1deg) rotateY(-1.3deg) scale(1);filter:none}}
-@keyframes drVScan{0%,100%{left:8%;opacity:.28}50%{left:92%;opacity:1}}@keyframes drHScan{0%,100%{top:18%;opacity:.28}50%{top:82%;opacity:1}}@keyframes drWave{50%{transform:rotate(-6deg) translateY(-16px);opacity:.35}}@keyframes drGrain{25%{transform:translate(-2%,1%)}50%{transform:translate(1%,-2%)}75%{transform:translate(2%,2%)}}@keyframes drLive{50%{opacity:.28;transform:scale(.72)}}@keyframes drLock{to{opacity:1;filter:none;transform:translate(-50%,-50%) scale(1)}}@keyframes drFlash{0%{opacity:0}35%{opacity:.92}100%{opacity:0}}
-[dir="rtl"] .dr-copy{text-align:right}.darkroom[dir="rtl"] .dr-percent{right:auto;left:-.03em}
-@media(max-width:620px){.dr-shell{inset:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))}.dr-frame{width:100%;height:min(57vh,500px)}.dr-image{object-fit:contain}.dr-copy{left:13px;right:13px;bottom:12px}.dr-copy p{max-width:74%}.dr-chapters{width:100%;gap:3px}.dr-chapter{font-size:5.8px;letter-spacing:.035em}.dr-chapter b{font-size:7px}.dr-head,.dr-foot{font-size:7px}.dr-percent{font-size:42vw}}
-@media(max-height:620px){.dr-frame{height:54vh}.dr-copy p{display:none}.dr-chapters{display:none}}
-@media(prefers-reduced-motion:reduce){.dr-grain,.dr-vscan,.dr-hscan,.dr-wave,.dr-live{animation:none!important}.dr-frame{animation:none!important;transform:none!important}.darkroom *{transition-duration:.01ms!important}}
+<style id="market-cinema-corrected-style">
+/* Remove the tiring cinematic shutter/radial flash between ordinary tabs. */
+.cinema-shutter,.v5-transition{display:none!important;animation:none!important}
+.view.active{animation:none!important}
+.view.active .hero,.view.active > .card{animation:none!important}
+
+/* Quick only: restrained Claude market-read loader. */
+#quickProcessing{position:relative!important;overflow:hidden!important;padding:25px 20px 22px!important;border-radius:3px 25px 3px 25px!important;text-align:left!important;background:linear-gradient(145deg,rgba(15,14,14,.94),rgba(7,7,8,.90))!important;border-color:rgba(217,119,87,.18)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 22px 54px -42px rgba(217,119,87,.7)!important}
+#quickProcessing::before{content:"CLAUDE · MARKET READ";display:block;margin-bottom:19px;color:#E8A38B;font:900 8px/1 Inter,sans-serif;letter-spacing:.18em}
+#quickProcessing::after{content:"";position:absolute;left:0;top:0;width:74px;height:1px;background:linear-gradient(90deg,#D97757,transparent);box-shadow:0 0 12px rgba(217,119,87,.45)}
+#quickProcessing .proc-meta{justify-content:flex-start!important;gap:32px!important;margin:0 0 20px!important;color:#77716E!important;font-size:9px!important;letter-spacing:.09em;text-transform:uppercase}
+#quickProcessing .proc-meta b{margin-top:6px!important;color:#EEE8E4!important;font:700 12px/1.25 "Space Grotesk",Inter,sans-serif!important;letter-spacing:0;text-transform:none}
+#quickProcessing .ring-wrap{width:100%!important;height:auto!important;margin:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:end!important;gap:16px!important}
+#quickProcessing .ring{display:none!important}
+#quickProcessing .ring-pct{position:static!important;inset:auto!important;display:block!important;grid-column:2!important;grid-row:1!important;color:#F2E7E1!important;font:650 clamp(42px,12vw,62px)/.78 "Space Grotesk",Inter,sans-serif!important;letter-spacing:-.065em!important;text-shadow:none!important;font-variant-numeric:tabular-nums}
+#quickProcessing .ring-wrap::before{content:"ANALYSIS";grid-column:1!important;grid-row:1!important;align-self:end;color:rgba(255,255,255,.27);font:800 8px/1 Inter,sans-serif;letter-spacing:.16em}
+#quickProcessing .ring-wrap::after{display:none!important}
+#quickProcessing .proc-stage{position:relative;justify-content:flex-start!important;margin:24px 0 0!important;padding:15px 0 0!important;border-top:1px solid rgba(255,255,255,.09);color:#D6CFCA!important;font:600 12px/1.45 Inter,sans-serif!important;text-align:left!important}
+#quickProcessing .proc-stage::before{content:"";width:6px;height:6px;margin-right:9px;border-radius:50%;background:#D97757;box-shadow:0 0 13px rgba(217,119,87,.65);animation:qSoftPulse 1.4s ease-in-out infinite}
+[dir="rtl"] #quickProcessing,[dir="rtl"] #quickProcessing .proc-stage{text-align:right!important}
+[dir="rtl"] #quickProcessing .proc-stage::before{margin-right:0;margin-left:9px}
+#quickProcessing .proc-scan{height:2px!important;max-width:none!important;margin:17px 0 0!important;background:rgba(255,255,255,.07)!important;overflow:hidden!important}
+#quickProcessing .proc-scan span{left:-28%!important;width:28%!important;background:linear-gradient(90deg,transparent,#D97757,#F2E7E1,transparent)!important;animation:qCleanScan 1.75s cubic-bezier(.45,0,.55,1) infinite!important;box-shadow:0 0 9px rgba(217,119,87,.35)}
+@keyframes qCleanScan{to{left:100%}}@keyframes qSoftPulse{50%{opacity:.34;transform:scale(.72)}}
+@media(prefers-reduced-motion:reduce){#quickProcessing .proc-scan span,#quickProcessing .proc-stage::before{animation:none!important}}
+</style>
+
+
+<style id="market-cinema-max-style">
+:root{--mx-x:50%;--mx-y:50%;--mx-rx:0deg;--mx-ry:0deg;--mx-orange:#D97757;--mx-cream:#F3E9E3;--mx-ease:cubic-bezier(.16,1,.3,1)}
+/* Raw WebGL layer: procedural market topology, not a video or canned animation. */
+#marketTopology{position:absolute;inset:0;z-index:2;width:100%;height:100%;opacity:.58;mix-blend-mode:screen;pointer-events:none;transition:opacity .5s ease}
+.cinema-deck[data-scene="history"] #marketTopology{opacity:.34}.cinema-deck[data-scene="vision"] #marketTopology{opacity:.7}
+.cinema-deck{transform-style:preserve-3d;perspective:1200px;will-change:transform;transition:transform .9s var(--mx-ease),height .65s var(--cinema-ease),filter .55s ease}
+.cinema-deck::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(260px circle at var(--mx-x) var(--mx-y),rgba(242,231,225,.08),transparent 68%);mix-blend-mode:screen}
+.cinema-video{will-change:transform;transform:scale(1.065) translate3d(calc((var(--mx-x) - 50%) * -.018),calc((var(--mx-y) - 50%) * -.018),0)!important}
+.cinema-grade{z-index:3!important}.cinema-grain{z-index:4!important}.cinema-scan{z-index:5!important}.cinema-frame-top,.cinema-frame-bottom,.cinema-title{z-index:8!important}.cinema-focus{z-index:7!important;transform:translateY(-50%) rotateX(var(--mx-rx)) rotateY(var(--mx-ry))!important;transition:transform .7s var(--mx-ease),border-color .4s ease,box-shadow .4s ease}
+.mx-edge{position:absolute;z-index:8;right:16px;top:58px;bottom:57px;width:1px;background:rgba(255,255,255,.11);overflow:visible}.mx-edge::before{content:"";position:absolute;left:-2px;top:var(--mx-progress,0%);width:5px;height:5px;border-radius:50%;background:var(--mx-orange);box-shadow:0 0 15px var(--mx-orange);transition:top .85s var(--mx-ease)}.mx-edge span{position:absolute;right:9px;top:calc(var(--mx-progress,0%) - 3px);color:rgba(255,255,255,.37);font:800 6px/1 Inter,sans-serif;letter-spacing:.13em;writing-mode:vertical-rl;transition:top .85s var(--mx-ease)}
+/* Kinetic typography is rebuilt per chapter and revealed through individual masks. */
+.mx-word{display:block;overflow:hidden!important}.mx-word .mx-letter{display:inline-block;opacity:0;transform:translateY(112%) rotate(4deg);filter:blur(7px);animation:mxLetter .75s var(--mx-ease) forwards;animation-delay:calc(var(--i)*24ms)}.mx-word.outline .mx-letter{color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.66)}@keyframes mxLetter{to{opacity:1;transform:none;filter:none}}
+.cinema-title small.mx-kicker{animation:mxKicker .6s var(--mx-ease) both}@keyframes mxKicker{from{opacity:0;letter-spacing:.35em;transform:translateX(-10px)}to{opacity:1;letter-spacing:.19em;transform:none}}
+/* Uncommon asymmetric module skeleton with optical borders. */
+.v5-module{isolation:isolate;overflow:visible!important}.v5-module::before{content:"";position:absolute;z-index:-1;inset:-1px;clip-path:polygon(0 0,calc(100% - 31px) 0,100% 31px,100% 100%,31px 100%,0 calc(100% - 31px));background:linear-gradient(135deg,rgba(217,119,87,.28),rgba(255,255,255,.05) 35%,rgba(255,255,255,.02) 70%,rgba(217,119,87,.14));opacity:.42;pointer-events:none}.v5-module::after{content:attr(data-module);position:absolute;right:-1px;top:82px;color:rgba(255,255,255,.035);font:700 clamp(42px,9vw,86px)/.8 "Space Grotesk";letter-spacing:-.07em;writing-mode:vertical-rl;pointer-events:none}
+/* Result develops like an exposed film frame instead of popping as a card. */
+.result{clip-path:inset(0 100% 0 0);opacity:0!important;transform:translateY(9px);transition:none!important}.result.show{animation:mxDevelop .92s var(--mx-ease) forwards!important}@keyframes mxDevelop{0%{clip-path:inset(0 100% 0 0);opacity:0;filter:brightness(3) saturate(0);transform:translateY(9px)}42%{opacity:1;filter:brightness(1.7) saturate(.35)}100%{clip-path:inset(0);opacity:1;filter:none;transform:none}}
+.result.show .r-dir{animation:mxDirection .8s var(--mx-ease) .28s both}@keyframes mxDirection{from{opacity:0;transform:translateX(-20px);letter-spacing:.12em;filter:blur(5px)}to{opacity:1;transform:none;letter-spacing:-.02em;filter:none}}
+.mx-result-line{position:absolute;z-index:20;left:0;right:0;top:0;height:1px;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,transparent,var(--mx-orange),#fff,var(--mx-orange),transparent);box-shadow:0 0 19px rgba(217,119,87,.46)}.result.show .mx-result-line{animation:mxResultLine .85s var(--mx-ease) .05s forwards}@keyframes mxResultLine{to{transform:scaleX(1)}}
+/* Subtle physical depth: only fine-grained child movement, never whole-layout tilting. */
+.v-param,.mode-card,.h-item,.fact{--dx:0px;--dy:0px;transform:translate3d(var(--dx),var(--dy),0);transition:transform .35s var(--mx-ease),border-color .2s ease,background .2s ease}
+.mx-film-breathe{animation:mxFilmBreathe 7s ease-in-out infinite}@keyframes mxFilmBreathe{50%{filter:brightness(.53) saturate(.68) contrast(1.22)}}
+/* Keep tab changes calm: no full-screen flash, only typography and content. */
+.nav-item::after{content:"";position:absolute;inset:8px;border:1px solid transparent;border-radius:12px;transition:border-color .25s ease,transform .35s var(--mx-ease)}.nav-item.active::after{border-color:rgba(217,119,87,.16);transform:scale(1.04)}
+@media(max-width:700px){#marketTopology{opacity:.48}.mx-edge{right:10px}.v5-module::after{display:none}.cinema-deck{transform:none!important}.cinema-video{transform:scale(1.07)!important}}
+@media(prefers-reduced-motion:reduce){#marketTopology{display:none}.mx-letter,.result.show,.result.show .r-dir,.result.show .mx-result-line,.mx-film-breathe{animation:none!important;opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}}
 </style>
 
 </head>
@@ -2625,7 +2634,7 @@ body.darkroom-active{overflow:hidden!important;touch-action:none}body.darkroom-a
     var si=0; setStage(0); setRing(6);
     var pct=6;
     clearInterval(procRingTimer); clearInterval(procTimer);
-    procRingTimer = setInterval(function(){ pct = Math.min(pct + (pct < 18 ? 3 : pct < 43 ? 2 : pct < 68 ? 1.35 : pct < 88 ? .8 : .25), 92); setRing(pct); }, 300);
+    procRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*4 + 1, 92); setRing(pct); }, 300);
     procTimer = setInterval(function(){ si = Math.min(si+1, stages.length-2); setStage(si); }, 1800);
   }
   function stopProcessing(){
@@ -2964,7 +2973,7 @@ body.darkroom-active{overflow:hidden!important;touch-action:none}body.darkroom-a
     el.textContent = stages[0];
     var pct=5; setQRing(pct);
     clearInterval(qRingTimer); clearInterval(qStageTimer);
-    qRingTimer = setInterval(function(){ pct = Math.min(pct + Math.random()*5 + 2, 96); setQRing(pct); }, 220);
+    qRingTimer = setInterval(function(){ pct = Math.min(pct + (pct < 34 ? 4.2 : pct < 66 ? 2.6 : pct < 86 ? 1.35 : .42), 96); setQRing(pct); }, 220);
     qStageTimer = setInterval(function(){
       si = Math.min(si+1, stages.length-1);
       el.style.animation="none"; void el.offsetWidth; el.style.animation="";
@@ -3935,99 +3944,36 @@ body.darkroom-active{overflow:hidden!important;touch-action:none}body.darkroom-a
 <script id="claude-v5-max-motion">(function(){"use strict";var flash=document.createElement("div");flash.className="v5-transition";document.body.appendChild(flash);document.addEventListener("pointerdown",function(e){var n=e.target.closest&&e.target.closest(".nav-item");if(!n)return;flash.style.setProperty("--tx",e.clientX+"px");flash.style.setProperty("--ty",e.clientY+"px");flash.classList.remove("go");void flash.offsetWidth;flash.classList.add("go")},{passive:true});var active=null;new MutationObserver(function(){var v=document.querySelector(".view.active");if(v&&v!==active){active=v;var cards=Array.from(v.querySelectorAll(":scope > .card,:scope > .result,:scope > #historyList > *")).slice(0,8);cards.forEach(function(el,i){el.animate&&el.animate([{opacity:0,transform:"translateY(18px)"},{opacity:1,transform:"none"}],{duration:520,delay:170+i*65,easing:"cubic-bezier(.16,1,.3,1)"})})}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});})();</script>
 <script id="concept2-cinema-controller">(function(){"use strict";var deck=document.getElementById("cinemaDeck"),vid=document.getElementById("cinemaVideo"),chapter=document.getElementById("cinemaChapter"),l1=document.getElementById("cinemaLine1"),l2=document.getElementById("cinemaLine2"),sub=document.getElementById("cinemaSubtitle"),status=document.getElementById("cinemaStatus"),tc=document.getElementById("cinemaTimecode"),sh=document.getElementById("cinemaShutter");if(!deck)return;var scene={history:["CHAPTER 01 · ARCHIVE","THE MARKET","REMEMBERS","Every signal becomes part of the intelligence.","MEMORY READY"],create:["CHAPTER 02 · SIGNAL","THE MARKET","IS MOVING","Build the parameters. Claude follows the motion.","AWAITING INPUT"],vision:["CHAPTER 03 · VISION","SEE WHAT","OTHERS MISS","One frame. Multiple layers of market intelligence.","CAMERA READY"],profile:["CHAPTER 04 · SYSTEM","YOUR ACCESS","YOUR CONTROL","Identity, language and intelligence in one place.","SYSTEM SECURE"]};var last="";function tab(){var v=document.querySelector(".view.active");return v?v.id.replace("View",""):"history"}function sync(){var t=tab(),proc=document.querySelector(".processing.show"),result=document.querySelector(".result.show");if(t!==last){last=t;var x=scene[t];deck.dataset.scene=t;chapter.textContent=x[0];l1.textContent=x[1];l2.textContent=x[2];sub.textContent=x[3];status.textContent=x[4]}document.body.classList.toggle("cinema-analyzing",!!proc);document.body.classList.toggle("cinema-result",!!result);if(vid){try{vid.playbackRate=proc?0.55:result?0.18:0.85;if(result)vid.pause();else vid.play().catch(function(){})}catch(e){}}if(proc)status.textContent="CLAUDE IS ANALYZING";else if(result)status.textContent="SIGNAL FRAME LOCKED"}document.addEventListener("pointerdown",function(e){if(!e.target.closest||!e.target.closest(".nav-item"))return;sh.classList.remove("go");void sh.offsetWidth;sh.classList.add("go")},{passive:true});new MutationObserver(sync).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});setInterval(function(){var d=new Date(),f=String(Math.floor((Date.now()/40)%25)).padStart(2,"0");tc.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,"0")}).join(":")+":"+f},80);sync();})();</script>
 
-<div class="darkroom" id="darkroomScan" aria-hidden="true">
-  <video class="dr-video" id="darkroomVideo" muted loop playsinline preload="metadata"><source src="bg.mp4" type="video/mp4"></video>
-  <div class="dr-grade"></div><div class="dr-grain"></div>
-  <div class="dr-shell">
-    <div class="dr-head"><span>CLAUDE DARKROOM · VISION ANALYSIS</span><b id="drTimecode">00:00:00:00</b></div>
-    <div class="dr-stage">
-      <div class="dr-frame">
-        <img class="dr-image" id="drImage" alt="">
-        <div class="dr-image-grade"></div><div class="dr-grid"></div>
-        <div class="dr-vscan"></div><div class="dr-hscan"></div><div class="dr-wave"></div>
-        <div class="dr-tags"><span class="dr-tag structure">STRUCTURE</span><span class="dr-tag levels">LEVELS</span><span class="dr-tag momentum">MOMENTUM</span></div>
-        <div class="dr-percent" id="drPercentBg">06</div>
-        <div class="dr-copy"><div><small id="drChapter">01 · FRAME</small><h3 id="drTitle">FRAME ACQUIRED</h3><p id="drSubtitle">Preparing the uploaded chart for visual analysis.</p></div><b class="dr-pct-mini" id="drPercent">06%</b></div>
-        <div class="dr-deep"><b id="drDeepTitle">DEEP ANALYSIS</b><span id="drDeepText">Claude is resolving conflicting market evidence</span></div>
-        <div class="dr-lock" id="drLock">FRAME LOCKED</div><div class="dr-flash"></div>
-      </div>
-    </div>
-    <div><div class="dr-chapters" id="drChapters"><span class="dr-chapter on"><b>01</b>FRAME</span><span class="dr-chapter"><b>02</b>STRUCTURE</span><span class="dr-chapter"><b>03</b>LEVELS</span><span class="dr-chapter"><b>04</b>MOMENTUM</span><span class="dr-chapter"><b>05</b>DECISION</span></div><div class="dr-foot"><span class="dr-live"><i></i><em id="drStatus" style="font-style:normal">ANALYSIS IN PROGRESS</em></span><b id="drAsset">—</b></div></div>
-  </div>
-</div>
-<script id="claude-darkroom-scan-controller">
+<script id="market-cinema-max-engine">
 (function(){
-  "use strict";
-  var root=document.getElementById("darkroomScan"), img=document.getElementById("drImage"), video=document.getElementById("darkroomVideo");
-  if(!root) return;
-  var pct=document.getElementById("drPercent"), pctBg=document.getElementById("drPercentBg"), chapter=document.getElementById("drChapter"), title=document.getElementById("drTitle"), subtitle=document.getElementById("drSubtitle"), status=document.getElementById("drStatus"), asset=document.getElementById("drAsset"), tc=document.getElementById("drTimecode"), lock=document.getElementById("drLock");
-  var raf=0, active=false, finishing=false, started=0, lastPhase=-1, finishTimer=0;
-  var copy={
-    ru:[
-      ["01 · КАДР","КАДР ПРИНЯТ","Подготавливаем изображение и сохраняем полные пропорции графика."],
-      ["02 · СТРУКТУРА","ЧИТАЕМ СТРУКТУРУ","Claude определяет форму движения и последовательность свечей."],
-      ["03 · УРОВНИ","ИЩЕМ УРОВНИ","Проверяем видимые зоны реакции и положение цены."],
-      ["04 · ИМПУЛЬС","СВЕРЯЕМ ИМПУЛЬС","Сопоставляем направление, силу движения и рыночный контекст."],
-      ["05 · РЕШЕНИЕ","ФОРМИРУЕМ РЕШЕНИЕ","Ожидаем подтверждённый ответ модели — 100% только после результата."]
-    ],
-    en:[
-      ["01 · FRAME","FRAME ACQUIRED","Preparing the image while preserving the full chart proportions."],
-      ["02 · STRUCTURE","READING STRUCTURE","Claude is mapping price motion and candle sequence."],
-      ["03 · LEVELS","LOCATING LEVELS","Checking visible reaction zones and price position."],
-      ["04 · MOMENTUM","MEASURING MOMENTUM","Comparing direction, movement strength and market context."],
-      ["05 · DECISION","FORMING DECISION","Waiting for the verified model response — 100% only after it arrives."]
-    ]
-  };
-  var deepCopy={ru:["ГЛУБОКИЙ АНАЛИЗ","Claude разрешает противоречия между рыночными признаками"],en:["DEEP ANALYSIS","Claude is resolving conflicting market evidence"]};
-  function lang(){var c=String(document.documentElement.lang||"ru").slice(0,2);return c==="ru"?"ru":"en"}
-  function haptic(kind){try{var h=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.HapticFeedback;if(!h)return;if(kind==="success")h.notificationOccurred("success");else h.impactOccurred(kind||"light")}catch(e){}}
-  function setPhase(i){
-    if(i===lastPhase)return;lastPhase=i;
-    root.classList.remove("phase-frame","phase-structure","phase-levels","phase-momentum","phase-decision");
-    root.classList.add(["phase-frame","phase-structure","phase-levels","phase-momentum","phase-decision"][i]);
-    var c=(copy[lang()]||copy.en)[i];chapter.textContent=c[0];title.textContent=c[1];subtitle.textContent=c[2];
-    Array.prototype.forEach.call(document.querySelectorAll("#drChapters .dr-chapter"),function(n,k){n.classList.toggle("on",k<=i)});
-    status.textContent=i<4?"ANALYSIS IN PROGRESS":"AWAITING AI DECISION";
-    if(i>0)haptic(i===4?"medium":"light");
-    try{var cv=document.getElementById("cinemaVideo");if(cv){cv.playbackRate=[.45,.4,.32,.22,.08][i]}}catch(e){}
-  }
-  function phaseAt(ms){return ms<1200?0:ms<3400?1:ms<5700?2:ms<8000?3:4}
-  function progressAt(ms){
-    var a=[[0,1200,6,18],[1200,3400,18,43],[3400,5700,43,68],[5700,8000,68,88],[8000,10000,88,92]];
-    for(var i=0;i<a.length;i++){var x=a[i];if(ms<=x[1]){var q=Math.max(0,Math.min(1,(ms-x[0])/(x[1]-x[0])));q=1-Math.pow(1-q,2.2);return x[2]+(x[3]-x[2])*q}}
-    return 92;
-  }
-  function frame(now){
-    if(!active||finishing)return;var ms=now-started,i=phaseAt(ms),n=Math.round(progressAt(ms));setPhase(i);pct.textContent=n+"%";pctBg.textContent=String(n).padStart(2,"0");
-    if(ms>10000&&!root.classList.contains("deep")){root.classList.add("deep");var d=deepCopy[lang()]||deepCopy.en;document.getElementById("drDeepTitle").textContent=d[0];document.getElementById("drDeepText").textContent=d[1];status.textContent="DEEP ANALYSIS"}
-    raf=requestAnimationFrame(frame);
-  }
-  function start(){
-    if(active)return;active=true;finishing=false;lastPhase=-1;clearTimeout(finishTimer);root.className="darkroom phase-frame";root.setAttribute("dir",document.documentElement.dir||"ltr");
-    var p=document.getElementById("previewImg");img.src=(p&&p.src)||"";var pa=document.getElementById("procAsset");asset.textContent=pa&&pa.textContent?pa.textContent:"CLAUDE VISION";
-    document.body.classList.add("darkroom-active");root.setAttribute("aria-hidden","false");void root.offsetWidth;root.classList.add("show");
-    try{video.currentTime=0;video.playbackRate=.45;video.play().catch(function(){})}catch(e){}
-    started=performance.now();setPhase(0);pct.textContent="06%";pctBg.textContent="06";raf=requestAnimationFrame(frame);haptic("light");
-  }
-  function direction(){var d=document.getElementById("visionDir");if(!d)return"none";return d.classList.contains("up")?"up":d.classList.contains("down")?"down":"none"}
-  function finish(){
-    if(!active||finishing)return;finishing=true;cancelAnimationFrame(raf);root.classList.remove("deep");root.classList.add("locked","result-"+direction());setPhase(4);pct.textContent="100%";pctBg.textContent="100";status.textContent="SIGNAL FRAME LOCKED";
-    lock.textContent=lang()==="ru"?"КАДР ЗАФИКСИРОВАН":"FRAME LOCKED";haptic("medium");
-    setTimeout(function(){root.classList.add("flash");haptic("success")},330);
-    finishTimer=setTimeout(stop,1050);
-  }
-  function stop(){
-    cancelAnimationFrame(raf);root.classList.add("out");document.body.classList.remove("darkroom-active");
-    try{video.pause()}catch(e){}setTimeout(function(){root.className="darkroom";root.setAttribute("aria-hidden","true");active=false;finishing=false;lastPhase=-1},500);
-  }
-  function sync(){
-    var p=document.getElementById("processing"),r=document.getElementById("visionResult");
-    var running=!!(p&&p.classList.contains("show"));var ready=!!(r&&r.classList.contains("show"));
-    if(running&&!active&&!ready)start();if(active&&ready&&!finishing)finish();if(active&&!running&&!ready&&!finishing)stop();
-  }
-  new MutationObserver(sync).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});
-  setInterval(function(){if(!root.classList.contains("show"))return;var d=new Date(),f=String(Math.floor((Date.now()/40)%25)).padStart(2,"0");tc.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,"0")}).join(":")+":"+f},80);
-  sync();
+ "use strict";
+ var deck=document.getElementById("cinemaDeck");if(!deck)return;
+ var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+ /* ---------- Raw WebGL procedural topology ---------- */
+ var canvas=document.createElement("canvas");canvas.id="marketTopology";canvas.setAttribute("aria-hidden","true");deck.insertBefore(canvas,deck.firstChild);
+ var gl=null,program=null,start=performance.now(),pointer={x:.5,y:.5},target={x:.5,y:.5},scene=0;
+ function shader(type,source){var sh=gl.createShader(type);gl.shaderSource(sh,source);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));return sh}
+ var vs='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+ var fs='precision mediump float;uniform vec2 r,m;uniform float t,s;float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1)),f.x),f.y);}void main(){vec2 uv=gl_FragCoord.xy/r.xy;vec2 q=(uv-.5)*vec2(r.x/r.y,1.);float tt=t*.08;float warp=n(q*3.+tt)-.5;q+=vec2(warp*.06,sin(q.x*7.+tt)*.018);float g1=abs(fract((q.y+n(q*2.+tt)*.12)*11.)-.5);float g2=abs(fract((q.x+n(q*2.-tt)*.08)*13.)-.5);float grid=smoothstep(.048,.0,min(g1,g2));float wave=abs(q.y-(sin(q.x*5.8+tt*4.)*.075+sin(q.x*13.-tt*2.)*.025));float sig=smoothstep(.018,.001,wave);float lens=exp(-length(q-(m-.5)*vec2(r.x/r.y,-1.))*4.2);vec3 orange=vec3(.851,.467,.341),cream=vec3(.95,.91,.88);vec3 col=orange*grid*.13+mix(orange,cream,.62)*sig*(.4+.45*lens);col+=orange*lens*.055;col*=.72+.28*sin(s*1.7+tt);gl_FragColor=vec4(col,clamp(grid*.16+sig*.55+lens*.08,0.,.72));}';
+ try{gl=canvas.getContext("webgl",{alpha:true,antialias:false,premultipliedAlpha:false});if(gl&&!reduce){program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);gl.useProgram(program);var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);var a=gl.getAttribLocation(program,"p");gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0)}}catch(e){gl=null;canvas.style.display="none"}
+ function size(){if(!gl)return;var d=Math.min(devicePixelRatio||1,1.6),w=Math.max(1,Math.round(deck.clientWidth*d)),h=Math.max(1,Math.round(deck.clientHeight*d));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h)}}
+ function render(now){if(gl&&deck.offsetParent!==null){size();pointer.x+=(target.x-pointer.x)*.045;pointer.y+=(target.y-pointer.y)*.045;gl.uniform2f(gl.getUniformLocation(program,"r"),canvas.width,canvas.height);gl.uniform2f(gl.getUniformLocation(program,"m"),pointer.x,pointer.y);gl.uniform1f(gl.getUniformLocation(program,"t"),(now-start)/1000);gl.uniform1f(gl.getUniformLocation(program,"s"),scene);gl.drawArrays(gl.TRIANGLES,0,3)}requestAnimationFrame(render)}if(gl)requestAnimationFrame(render);
+ function point(clientX,clientY){var r=deck.getBoundingClientRect();target.x=Math.max(0,Math.min(1,(clientX-r.left)/r.width));target.y=Math.max(0,Math.min(1,(clientY-r.top)/r.height));deck.style.setProperty("--mx-x",target.x*100+"%");deck.style.setProperty("--mx-y",target.y*100+"%");deck.style.setProperty("--mx-rx",((.5-target.y)*4).toFixed(2)+"deg");deck.style.setProperty("--mx-ry",((target.x-.5)*5).toFixed(2)+"deg")}
+ deck.addEventListener("pointermove",function(e){point(e.clientX,e.clientY)},{passive:true});deck.addEventListener("pointerleave",function(){target.x=target.y=.5;deck.style.setProperty("--mx-x","50%");deck.style.setProperty("--mx-y","50%");deck.style.setProperty("--mx-rx","0deg");deck.style.setProperty("--mx-ry","0deg")},{passive:true});
+ window.addEventListener("deviceorientation",function(e){if(innerWidth>700||e.gamma==null)return;target.x=Math.max(.15,Math.min(.85,.5+e.gamma/90));target.y=Math.max(.15,Math.min(.85,.5+(e.beta-35)/160))},{passive:true});
+ /* ---------- Optical chapter rail ---------- */
+ var edge=document.createElement("div");edge.className="mx-edge";edge.innerHTML="<span>SCENE POSITION</span>";deck.appendChild(edge);
+ var sceneNames={history:0,create:1,vision:2,profile:3};function activeTab(){var v=document.querySelector(".view.active");return v?v.id.replace("View",""):"history"}
+ function syncScene(){var tab=activeTab();scene=sceneNames[tab]||0;edge.style.setProperty("--mx-progress",(scene/3*100)+"%");animateTitle()}
+ /* ---------- Per-letter kinetic chapter typography ---------- */
+ var lastTitle="";function letters(el,outline){if(!el)return;var text=el.textContent,wrap=document.createElement("span");wrap.className="mx-word"+(outline?" outline":"");Array.from(text).forEach(function(ch,i){var x=document.createElement("span");x.className="mx-letter";x.style.setProperty("--i",i);x.textContent=ch===" "?"\u00a0":ch;wrap.appendChild(x)});el.textContent="";el.appendChild(wrap)}
+ function animateTitle(){requestAnimationFrame(function(){var a=document.getElementById("cinemaLine1"),b=document.getElementById("cinemaLine2"),k=document.getElementById("cinemaChapter");var key=(a?a.textContent:"")+"|"+(b?b.textContent:"");if(key===lastTitle)return;lastTitle=key;letters(a,false);letters(b,true);if(k){k.classList.remove("mx-kicker");void k.offsetWidth;k.classList.add("mx-kicker")}})}
+ new MutationObserver(syncScene).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"],childList:true,characterData:true});syncScene();
+ /* ---------- Film-development result line ---------- */
+ document.querySelectorAll(".result").forEach(function(r){if(!r.querySelector(".mx-result-line")){var l=document.createElement("i");l.className="mx-result-line";r.appendChild(l)}});
+ /* ---------- Local magnetic micro-depth (desktop precision only) ---------- */
+ if(!reduce&&innerWidth>700){document.addEventListener("pointermove",function(e){var el=e.target.closest&&e.target.closest(".v-param,.mode-card,.h-item,.fact");if(!el)return;var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;el.style.setProperty("--dx",(x*2.8).toFixed(2)+"px");el.style.setProperty("--dy",(y*2.2).toFixed(2)+"px")},{passive:true});document.addEventListener("pointerout",function(e){var el=e.target.closest&&e.target.closest(".v-param,.mode-card,.h-item,.fact");if(el){el.style.setProperty("--dx","0px");el.style.setProperty("--dy","0px")}}, {passive:true})}
+ var video=document.getElementById("cinemaVideo");if(video)video.classList.add("mx-film-breathe");
 })();
 </script>
 
