@@ -981,4 +981,13 @@
   }
 
   window.PulseScene = { start: start, resolve: resolveWith };
-})();
+})();classList.contains("up")) return "up";
+    if (d.classList.contains("down")) return "down";
+    return "none";
+  }
+
+  function wire() {
+    if (!VOICE.uiInit) { VOICE.uiInit = true; restoreVoicePref(); ensureVoiceBtn(); }
+    var proc = document.getElementById("processing");
+    var res = document.getElementById("visionResult");
+    if (!proc || !res) { return setTimeo
